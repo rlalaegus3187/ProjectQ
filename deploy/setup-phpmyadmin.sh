@@ -62,9 +62,15 @@ else
 fi
 
 step "3. phpMyAdmin 설정"
+# php-fpm 이 실행되는 사용자 (www 풀 설정에서 읽음, 기본 apache)
+PHP_USER="$(sudo awk -F= '/^[[:space:]]*user[[:space:]]*=/ { gsub(/[[:space:]]/, "", $2); print $2; exit }' /etc/php-fpm.d/www.conf 2>/dev/null || true)"
+PHP_USER="${PHP_USER:-apache}"
+PHP_GROUP="$(id -gn "$PHP_USER")"
+echo "php-fpm 사용자: $PHP_USER"
+
 sudo mkdir -p "$PMA_DIR/tmp"
 sudo chown -R root:root "$PMA_DIR"
-sudo chown apache:apache "$PMA_DIR/tmp"
+sudo chown "$PHP_USER:$PHP_GROUP" "$PMA_DIR/tmp"
 sudo chmod 750 "$PMA_DIR/tmp"
 if [[ ! -f "$PMA_DIR/config.inc.php" ]]; then
   SECRET="$(openssl rand -base64 24)"   # 32자
@@ -88,9 +94,11 @@ declare(strict_types=1);
 \$cfg['LoginCookieValidity'] = 3600;
 \$cfg['VersionCheck'] = false;
 PHP
-  sudo chown root:apache "$PMA_DIR/config.inc.php"
-  sudo chmod 640 "$PMA_DIR/config.inc.php"
 fi
+# 매 실행마다 권한 지정 (위의 chown -R 이 그룹을 root 로 되돌리므로)
+# 비밀키(blowfish_secret)가 있어 php-fpm 만 읽을 수 있게 640
+sudo chown "root:$PHP_GROUP" "$PMA_DIR/config.inc.php"
+sudo chmod 640 "$PMA_DIR/config.inc.php"
 
 step "4. Nginx: /phpmyadmin 연결"
 ALLOW_RULES=""
