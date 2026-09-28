@@ -2,7 +2,9 @@
 //   계정: demo@projectq.local / demo1234
 const pool = require('../src/db');
 const { hashPassword } = require('../src/password');
-const { getDefinitions, validateCharacterInput, createCharacter, withTransaction } = require('../src/characters');
+const {
+  getDefinitions, validateCharacterInput, validateProfileInput, DEFAULT_PROFILE_NAME, createCharacter, withTransaction,
+} = require('../src/characters');
 
 async function main() {
   const email = 'demo@projectq.local';
@@ -12,9 +14,12 @@ async function main() {
     return;
   }
 
-  const character = validateCharacterInput(
-    { name: '데모 캐릭터', hp: 100, details: { original_name: 'Demo Character', age: 20 } },
-    await getDefinitions(),
+  const defs = await getDefinitions();
+  const character = validateCharacterInput({ name: '데모 캐릭터', hp: 100 }, defs);
+  const profile = validateProfileInput(
+    { details: { original_name: 'Demo Character', age: 20 } },
+    defs,
+    { defaultName: DEFAULT_PROFILE_NAME },
   );
   const passwordHash = await hashPassword('demo1234');
 
@@ -23,7 +28,7 @@ async function main() {
       "INSERT INTO users (email, name, role, password_hash) VALUES (?, ?, 'admin', ?)",
       [email, '데모 사용자', passwordHash],
     );
-    await createCharacter(conn, result.insertId, character);
+    await createCharacter(conn, result.insertId, character, profile);
   });
   console.log('[seed] 샘플 계정 생성: demo@projectq.local / demo1234 (관리자, 캐릭터 포함)');
 }

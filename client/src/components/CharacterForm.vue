@@ -1,14 +1,17 @@
 <script setup>
-// 캐릭터 입력 폼 (기본정보 / 캐릭터 스탯 / 프로필). 회원가입·마이페이지에서 함께 사용
+// 캐릭터 입력 폼 (기본정보 / 캐릭터 스탯 [/ 첫 프로필])
+//   withProfile: 새 캐릭터(회원가입·캐릭터 만들기)일 때 첫 프로필도 함께 입력. 수정 때는 false (프로필은 따로 수정)
 // 캐릭터 스탯/프로필 입력칸은 관리자 페이지에서 정의한 항목(definitions)대로 자동 생성
 // 숫자형 캐릭터 스탯은 투자 포인트(definitions.statPoints)를 나눠 주는 방식
 import { computed } from 'vue';
 import { isPointStat } from '../character';
 import AttributeInput from './AttributeInput.vue';
 import StatPointInput from './StatPointInput.vue';
+import ProfileFields from './ProfileFields.vue';
 
 const props = defineProps({
   definitions: { type: Object, required: true },
+  withProfile: { type: Boolean, default: true },
 });
 const form = defineModel({ type: Object, required: true });
 
@@ -42,9 +45,6 @@ const remaining = computed(() => totalPoints.value - usedPoints.value);
     </template>
   </fieldset>
 
-  <fieldset class="fieldset">
-    <legend>프로필</legend>
-    <p v-if="!definitions.details.length" class="muted">등록된 프로필 양식이 없습니다.</p>
-    <AttributeInput v-for="def in definitions.details" :key="def.code" v-model="form.details[def.code]" :def="def" />
-  </fieldset>
+  <ProfileFields v-if="withProfile" v-model:name="form.profileName" v-model:details="form.details" :definitions="definitions"
+    legend="첫 프로필 (대표)" :name-required="false" name-placeholder="비워두면 '기본 프로필'" />
 </template>

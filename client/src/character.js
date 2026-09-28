@@ -19,18 +19,28 @@ export async function fetchAttributes() {
   return api('/attributes');
 }
 
-// 폼 상태 만들기. character 가 있으면 기존 값으로 채움
+const valuesOf = (list) => Object.fromEntries((list || []).map((a) => [a.code, a.value ?? '']));
+// 투자 포인트 스탯은 빈칸 대신 0 에서 시작
+const fill = (defs, values) => Object.fromEntries(
+  defs.map((d) => [d.code, values[d.code] || (isPointStat(d) ? 0 : '')]),
+);
+
+// 캐릭터 폼 (기본정보 + 스탯 [+ 첫 프로필]). character 가 있으면 기존 값으로 채움
+// 새 캐릭터(회원가입/캐릭터 만들기)일 때는 첫 프로필(profileName, details)도 함께 입력
 export function toCharacterForm(definitions, character = null) {
-  const valuesOf = (list) => Object.fromEntries((list || []).map((a) => [a.code, a.value ?? '']));
-  const current = { stats: valuesOf(character?.stats), details: valuesOf(character?.details) };
-  // 투자 포인트 스탯은 빈칸 대신 0 에서 시작
-  const fill = (defs, values) => Object.fromEntries(
-    defs.map((d) => [d.code, values[d.code] || (isPointStat(d) ? 0 : '')]),
-  );
   return {
     name: character?.name ?? '',
     hp: character?.hp ?? '',
-    stats: fill(definitions.stats, current.stats),
-    details: fill(definitions.details, current.details),
+    stats: fill(definitions.stats, valuesOf(character?.stats)),
+    profileName: '',
+    details: fill(definitions.details, {}),
+  };
+}
+
+// 프로필 폼 { name, details }. profile 이 있으면 기존 값으로 채움
+export function toProfileForm(definitions, profile = null) {
+  return {
+    name: profile?.name ?? '',
+    details: fill(definitions.details, valuesOf(profile?.details)),
   };
 }

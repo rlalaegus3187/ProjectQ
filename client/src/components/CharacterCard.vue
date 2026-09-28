@@ -1,5 +1,5 @@
 <script setup>
-// 캐릭터 정보 표시 (기본정보 / 캐릭터 스탯 / 프로필)
+// 캐릭터 정보 표시 (기본정보 / 캐릭터 스탯) — 프로필은 ProfileSection
 import AttributeValue from './AttributeValue.vue';
 
 defineProps({
@@ -31,14 +31,5 @@ defineProps({
       </dl>
     </section>
 
-    <section>
-      <h3>프로필</h3>
-      <p v-if="!character.details.length" class="muted">등록된 프로필 양식이 없습니다.</p>
-      <dl v-else class="kv">
-        <template v-for="detail in character.details" :key="detail.code">
-          <dt>{{ detail.label }}</dt><dd><AttributeValue :attr="detail" /></dd>
-        </template>
-      </dl>
-    </section>
   </div>
 </template>

@@ -23,12 +23,17 @@ is_required   필수 여부
 sort_order    표시 순서
 is_active     0 이면 숨김 (저장된 값은 보존)
 
-character_stats                    character_details
+character_stats (캐릭터당 1세트)      character_profiles (캐릭터당 여러 개, 최대 10)
 ─────────────────────              ─────────────────────
-character_id   FK → characters     character_id   FK → characters
-definition_id  FK → attribute_…    definition_id  FK → attribute_…
-value          TEXT                value          TEXT
-PK(character_id, definition_id)    PK(character_id, definition_id)
+character_id   FK → characters     id, character_id FK → characters
+definition_id  FK → attribute_…    name (프로필 이름), is_main (대표 1개), sort_order
+value          TEXT
+PK(character_id, definition_id)    character_details (프로필 양식 값, 프로필마다)
+                                   ─────────────────────
+                                   profile_id     FK → character_profiles (삭제 시 함께 삭제)
+                                   definition_id  FK → attribute_…
+                                   value          TEXT
+                                   PK(profile_id, definition_id)
 
 settings  (전역 설정 키-값)  stat_initial_points = 초기 투자 포인트
 posts          게시글  board: qna(Q&A) — 화면에서 쓰는 게시판은 Q&A 뿐

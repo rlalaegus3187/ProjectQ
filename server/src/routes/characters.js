@@ -7,8 +7,14 @@ const {
   getStatPoints,
   groupDefinitions,
   validateCharacterInput,
+  validateProfileInput,
+  DEFAULT_PROFILE_NAME,
   createCharacter,
   updateCharacter,
+  createProfile,
+  updateProfile,
+  deleteProfile,
+  setMainProfile,
   getCharacterByUserId,
   withTransaction,
 } = require('../characters');
@@ -21,25 +27,65 @@ router.get('/attributes', async (req, res) => {
   res.json({ ...groupDefinitions(defs), statPoints });
 });
 
-// 내 캐릭터 (없으면 character: null)
-router.get('/characters/me', requireAuth, async (req, res) => {
-  res.json({ character: await getCharacterByUserId(req.session.userId) });
-});
-
-// 캐릭터 생성 (계정당 1개 — 이미 있으면 409)
-router.post('/characters', requireAuth, async (req, res) => {
-  const data = validateCharacterInput(req.body, await getDefinitions(), await getStatPoints());
-  await withTransaction((conn) => createCharacter(conn, req.session.userId, data));
-  res.status(201).json({ character: await getCharacterByUserId(req.session.userId) });
-});
-
-// 내 캐릭터 수정
-router.put('/characters/me', requireAuth, async (req, res) => {
+async function myCharacterId(req) {
   const [rows] = await pool.execute('SELECT id FROM characters WHERE user_id = ?', [req.session.userId]);
   if (!rows[0]) throw new HttpError(404, '캐릭터가 없습니다.');
+  return rows[0].id;
+}
+
+const sendMine = async (req, res, status = 200) => {
+  res.status(status).json({ character: await getCharacterByUserId(req.session.userId) });
+};
+
+// 내 캐릭터 (없으면 character: null) — profiles 포함 (대표 프로필이 맨 앞)
+router.get('/characters/me', requireAuth, (req, res) => sendMine(req, res));
+
+// 캐릭터 생성 (계정당 1개 — 이미 있으면 409): { name, hp, stats, profileName?, details } → 대표 프로필 1개 함께 생성
+router.post('/characters', requireAuth, async (req, res) => {
+  const defs = await getDefinitions();
+  const data = validateCharacterInput(req.body, defs, await getStatPoints());
+  const profile = validateProfileInput({ name: req.body?.profileName, details: req.body?.details }, defs, { defaultName: DEFAULT_PROFILE_NAME });
+  await withTransaction((conn) => createCharacter(conn, req.session.userId, data, profile));
+  await sendMine(req, res, 201);
+});
+
+// 기본정보 + 스탯 수정: { name, hp, stats }  (프로필은 아래 프로필 API 로)
+router.put('/characters/me', requireAuth, async (req, res) => {
+  const characterId = await myCharacterId(req);
   const data = validateCharacterInput(req.body, await getDefinitions(), await getStatPoints());
-  await withTransaction((conn) => updateCharacter(conn, rows[0].id, data));
-  res.json({ character: await getCharacterByUserId(req.session.userId) });
+  await withTransaction((conn) => updateCharacter(conn, characterId, data));
+  await sendMine(req, res);
+});
+
+// ---------- 프로필 (여러 개) ----------
+// 추가: { name, details }
+router.post('/characters/me/profiles', requireAuth, async (req, res) => {
+  const characterId = await myCharacterId(req);
+  const profile = validateProfileInput(req.body, await getDefinitions());
+  await withTransaction((conn) => createProfile(conn, characterId, profile));
+  await sendMine(req, res, 201);
+});
+
+// 수정: { name, details }
+router.put('/characters/me/profiles/:profileId', requireAuth, async (req, res) => {
+  const characterId = await myCharacterId(req);
+  const profile = validateProfileInput(req.body, await getDefinitions());
+  await withTransaction((conn) => updateProfile(conn, characterId, req.params.profileId, profile));
+  await sendMine(req, res);
+});
+
+// 대표 프로필로 지정
+router.put('/characters/me/profiles/:profileId/main', requireAuth, async (req, res) => {
+  const characterId = await myCharacterId(req);
+  await withTransaction((conn) => setMainProfile(conn, characterId, req.params.profileId));
+  await sendMine(req, res);
+});
+
+// 삭제 (대표 프로필은 불가)
+router.delete('/characters/me/profiles/:profileId', requireAuth, async (req, res) => {
+  const characterId = await myCharacterId(req);
+  await withTransaction((conn) => deleteProfile(conn, characterId, req.params.profileId));
+  await sendMine(req, res);
 });
 
 module.exports = router;

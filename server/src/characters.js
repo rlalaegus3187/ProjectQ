@@ -132,7 +132,10 @@ function validateValue(def, text) {
   }
 }
 
-// 캐릭터 입력 전체 검증: { name, hp, stats: {code: value}, details: {code: value} }
+const MAX_PROFILES = 10;
+const DEFAULT_PROFILE_NAME = '기본 프로필';
+
+// 캐릭터 입력 검증 (기본정보 + 스탯): { name, hp, stats: {code: value} }
 // statPoints: 투자 포인트 총량 (숫자형 스탯 합계 상한). null 이면 검사 안 함
 function validateCharacterInput(input, defs, statPoints = null) {
   const name = String(input?.name ?? '').trim();
@@ -144,57 +147,108 @@ function validateCharacterInput(input, defs, statPoints = null) {
     throw new HttpError(400, 'HP는 0 이상의 정수로 입력해주세요.');
   }
 
-  const { stats, details } = groupDefinitions(defs);
+  const { stats } = groupDefinitions(defs);
   const statValues = validateValues(input?.stats, stats);
   const used = usedStatPoints(statValues);
   if (statPoints !== null && used > statPoints) {
     throw new HttpError(400, `스탯에 투자한 포인트(${used})가 전체 포인트(${statPoints})보다 많습니다.`);
   }
-  return {
-    name,
-    hp,
-    stats: statValues,
-    details: validateValues(input?.details, details),
-  };
+  return { name, hp, stats: statValues };
 }
 
-async function saveValues(conn, table, characterId, values) {
+// 프로필 입력 검증: { name, details: {code: value} } — name 이 비면 기본 이름
+function validateProfileInput(input, defs, { defaultName = null } = {}) {
+  const name = String(input?.name ?? '').trim() || defaultName || '';
+  if (!name || name.length > 50) throw new HttpError(400, '프로필 이름은 1~50자로 입력해주세요.');
+  const { details } = groupDefinitions(defs);
+  return { name, details: validateValues(input?.details, details) };
+}
+
+// 값 저장: keyColumn = character_id(스탯) / profile_id(프로필)
+async function saveValues(conn, table, keyColumn, keyId, values) {
   for (const { def, value } of values) {
     if (value === null) {
-      await conn.execute(`DELETE FROM ${table} WHERE character_id = ? AND definition_id = ?`, [characterId, def.id]);
+      await conn.execute(`DELETE FROM ${table} WHERE ${keyColumn} = ? AND definition_id = ?`, [keyId, def.id]);
     } else {
       await conn.execute(
-        `INSERT INTO ${table} (character_id, definition_id, value) VALUES (?, ?, ?)
+        `INSERT INTO ${table} (${keyColumn}, definition_id, value) VALUES (?, ?, ?)
          ON DUPLICATE KEY UPDATE value = VALUES(value)`,
-        [characterId, def.id, value],
+        [keyId, def.id, value],
       );
     }
   }
 }
 
-// conn 은 트랜잭션 중인 커넥션. data 는 validateCharacterInput 결과
-async function createCharacter(conn, userId, data) {
+// conn 은 트랜잭션 중인 커넥션. data = validateCharacterInput 결과, profile = validateProfileInput 결과
+// 캐릭터와 함께 대표 프로필 1개를 만듦
+async function createCharacter(conn, userId, data, profile) {
+  let characterId;
   try {
     const [result] = await conn.execute(
       'INSERT INTO characters (user_id, name, hp) VALUES (?, ?, ?)',
       [userId, data.name, data.hp],
     );
-    await saveValues(conn, 'character_stats', result.insertId, data.stats);
-    await saveValues(conn, 'character_details', result.insertId, data.details);
-    return result.insertId;
+    characterId = result.insertId;
   } catch (err) {
     if (err.code === 'ER_DUP_ENTRY') throw new HttpError(409, '이미 캐릭터가 있습니다. (계정당 1개)');
     throw err;
   }
+  await saveValues(conn, 'character_stats', 'character_id', characterId, data.stats);
+  await createProfile(conn, characterId, profile, { isMain: true });
+  return characterId;
 }
 
+// 기본정보 + 스탯만 수정 (프로필은 따로)
 async function updateCharacter(conn, characterId, data) {
   await conn.execute('UPDATE characters SET name = ?, hp = ? WHERE id = ?', [data.name, data.hp, characterId]);
-  await saveValues(conn, 'character_stats', characterId, data.stats);
-  await saveValues(conn, 'character_details', characterId, data.details);
+  await saveValues(conn, 'character_stats', 'character_id', characterId, data.stats);
+}
+
+// ---------- 프로필 ----------
+async function createProfile(conn, characterId, profile, { isMain = false } = {}) {
+  const [[{ count, maxOrder }]] = await conn.query(
+    'SELECT COUNT(*) AS count, COALESCE(MAX(sort_order), 0) AS maxOrder FROM character_profiles WHERE character_id = ? FOR UPDATE',
+    [characterId],
+  );
+  if (Number(count) >= MAX_PROFILES) throw new HttpError(400, `프로필은 최대 ${MAX_PROFILES}개까지 만들 수 있습니다.`);
+  const [result] = await conn.execute(
+    'INSERT INTO character_profiles (character_id, name, is_main, sort_order) VALUES (?, ?, ?, ?)',
+    [characterId, profile.name, isMain || Number(count) === 0 ? 1 : 0, Number(maxOrder) + 1],
+  );
+  await saveValues(conn, 'character_details', 'profile_id', result.insertId, profile.details);
+  return result.insertId;
+}
+
+// 내 캐릭터의 프로필인지 확인 → 프로필 행
+async function findProfile(conn, characterId, profileId) {
+  const [rows] = await conn.execute(
+    'SELECT id, is_main FROM character_profiles WHERE id = ? AND character_id = ? FOR UPDATE',
+    [Number(profileId), characterId],
+  );
+  if (!rows[0]) throw new HttpError(404, '프로필을 찾을 수 없습니다.');
+  return rows[0];
+}
+
+async function updateProfile(conn, characterId, profileId, profile) {
+  const row = await findProfile(conn, characterId, profileId);
+  await conn.execute('UPDATE character_profiles SET name = ? WHERE id = ?', [profile.name, row.id]);
+  await saveValues(conn, 'character_details', 'profile_id', row.id, profile.details);
+}
+
+// 대표 프로필은 삭제 불가 (다른 프로필을 대표로 지정한 뒤 삭제)
+async function deleteProfile(conn, characterId, profileId) {
+  const row = await findProfile(conn, characterId, profileId);
+  if (row.is_main) throw new HttpError(400, '대표 프로필은 삭제할 수 없습니다. 다른 프로필을 대표로 지정한 뒤 삭제해주세요.');
+  await conn.execute('DELETE FROM character_profiles WHERE id = ?', [row.id]);
+}
+
+async function setMainProfile(conn, characterId, profileId) {
+  const row = await findProfile(conn, characterId, profileId);
+  await conn.execute('UPDATE character_profiles SET is_main = (id = ?) WHERE character_id = ?', [row.id, characterId]);
 }
 
 // 활성 항목 기준으로 값을 붙여서 반환 (값이 없는 항목은 value: null)
+// profiles: 대표 프로필이 맨 앞, 나머지는 만든 순서
 async function getCharacterByUserId(userId, conn = pool) {
   const [rows] = await conn.execute(
     'SELECT id, name, hp, created_at, updated_at FROM characters WHERE user_id = ?',
@@ -205,9 +259,15 @@ async function getCharacterByUserId(userId, conn = pool) {
 
   const [defs, totalPoints] = await Promise.all([getDefinitions(conn), getStatPoints(conn)]);
   const [statRows] = await conn.execute('SELECT definition_id, value FROM character_stats WHERE character_id = ?', [character.id]);
-  const [detailRows] = await conn.execute('SELECT definition_id, value FROM character_details WHERE character_id = ?', [character.id]);
+  const [profileRows] = await conn.execute(
+    'SELECT id, name, is_main, created_at, updated_at FROM character_profiles WHERE character_id = ? ORDER BY is_main DESC, sort_order, id',
+    [character.id],
+  );
+  const [detailRows] = profileRows.length
+    ? await conn.query('SELECT profile_id, definition_id, value FROM character_details WHERE profile_id IN (?)', [profileRows.map((p) => p.id)])
+    : [[]];
+
   const statValues = new Map(statRows.map((r) => [r.definition_id, r.value]));
-  const detailValues = new Map(detailRows.map((r) => [r.definition_id, r.value]));
   const { stats, details } = groupDefinitions(defs);
   const usedPoints = usedStatPoints(stats.map((def) => ({ def, value: statValues.get(def.id) ?? null })));
   const withValue = (valueMap) => (def) => ({
@@ -222,8 +282,12 @@ async function getCharacterByUserId(userId, conn = pool) {
     name: character.name,
     hp: character.hp,
     stats: stats.map(withValue(statValues)),
-    details: details.map(withValue(detailValues)),
     statPoints: { total: totalPoints, used: usedPoints },
+    profiles: profileRows.map((p) => {
+      const values = new Map(detailRows.filter((d) => d.profile_id === p.id).map((d) => [d.definition_id, d.value]));
+      return { id: p.id, name: p.name, isMain: !!p.is_main, details: details.map(withValue(values)), updatedAt: p.updated_at };
+    }),
+    maxProfiles: MAX_PROFILES,
     createdAt: character.created_at,
     updatedAt: character.updated_at,
   };
@@ -255,8 +319,14 @@ module.exports = {
   getDefinitions,
   groupDefinitions,
   validateCharacterInput,
+  validateProfileInput,
+  DEFAULT_PROFILE_NAME,
   createCharacter,
   updateCharacter,
+  createProfile,
+  updateProfile,
+  deleteProfile,
+  setMainProfile,
   getCharacterByUserId,
   withTransaction,
 };

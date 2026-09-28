@@ -8,7 +8,8 @@ Vue 3 + Node.js/Express + MySQL 로 만든 SPA 로그인 샘플입니다.
 - **Q&A 게시판**: 회원 질문·비밀글, 관리자 답변·메인 글 (마크다운 등록툴 + 이미지)
 - **알림**: 내 Q&A 질문에 답변이 달리면 상단 `알림` 에 표시
 - **아이템 / 인벤토리**: 관리자가 아이템 등록(이미지·효과·귀속·판매가능) 후 캐릭터에게 지급/회수, 회원은 `인벤토리` 에서 확인·버리기
-- **계정당 캐릭터 1개** — 가입할 때 함께 등록, 로그인하면 마이페이지에서 내 캐릭터(기본정보/캐릭터 스탯/프로필) 표시·수정
+- **계정당 캐릭터 1개** — 가입할 때 함께 등록, 마이페이지에서 기본정보·캐릭터 스탯 표시·수정
+- **캐릭터 프로필 여러 개** (최대 10) — 프로필 양식 값만 프로필마다 따로, 대표 프로필 지정 (스탯·인벤토리는 캐릭터에 하나)
 - **관리자/일반 권한** (지금은 가입하면 모두 관리자) — 관리자는 `/admin` 에서 캐릭터 스탯·프로필 양식 항목을 추가/수정/삭제
 - 항목 형식: 숫자, 짧은 텍스트, 긴 텍스트(마크다운 편집기), 링크, 이미지(업로드), 드롭다운
 - **스탯 투자 포인트**: 관리자가 초기 투자 포인트를 정하고, 캐릭터는 숫자형 스탯에 포인트를 나눠 투자 (합계 ≤ 전체 포인트)
@@ -47,7 +48,7 @@ ProjectQ/
 │  ├─ scripts/migrate.js   DB 마이그레이션
 │  └─ scripts/seed.js      샘플 계정 생성
 ├─ db/                    MySQL 스키마 (구조 설명: db/README.md)
-│  └─ migrations/          001_init.sql … 007_items_inventory.sql
+│  └─ migrations/          001_init.sql … 008_character_profiles.sql
 ├─ deploy/
 │  ├─ mount-instance-store.sh  ① NVMe Instance Store → /data 마운트
 │  ├─ setup-server.sh      ② EC2 기본 세팅 (Node, MySQL 데이터·임시파일·로그→/data, Nginx, PM2)
@@ -67,8 +68,11 @@ ProjectQ/
 | GET | `/api/auth/me` | 현재 로그인 사용자 `{ id, email, name, role }` (401 이면 비로그인) |
 | GET | `/api/attributes` | 현재 입력받는 항목 + 투자 포인트 `{ stats, details, statPoints }` |
 | GET | `/api/characters/me` | 내 캐릭터 (없으면 `character: null`) |
-| POST | `/api/characters` | 캐릭터 등록 (계정당 1개, 이미 있으면 409) |
-| PUT | `/api/characters/me` | 내 캐릭터 수정 |
+| POST | `/api/characters` | 캐릭터 등록 `{ name, hp, stats, profileName?, details }` → 대표 프로필 함께 생성 (계정당 1개) |
+| PUT | `/api/characters/me` | 기본정보 + 스탯 수정 `{ name, hp, stats }` |
+| POST | `/api/characters/me/profiles` | 프로필 추가 `{ name, details }` |
+| PUT/DELETE | `/api/characters/me/profiles/:id` | 프로필 수정 / 삭제 (대표는 삭제 불가) |
+| PUT | `/api/characters/me/profiles/:id/main` | 대표 프로필 지정 |
 | GET/PUT | `/api/admin/settings` | (관리자) 초기 투자 포인트 `{ statPoints }` 조회/변경 |
 | GET | `/api/admin/attributes` | (관리자) 전체 항목, 비활성 포함 |
 | POST | `/api/admin/attributes` | (관리자) `{ category: stat/detail, code, label, valueType, options, isRequired, sortOrder }` 항목 추가 |
