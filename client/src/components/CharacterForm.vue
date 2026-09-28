@@ -1,6 +1,8 @@
 <script setup>
-// 캐릭터 입력 폼 (기본정보 / 스탯 / 세부정보). 회원가입·마이페이지에서 함께 사용
-// 스탯/세부정보 입력칸은 관리자 페이지에서 정의한 항목(definitions)대로 자동 생성
+// 캐릭터 입력 폼 (기본정보 / 캐릭터 스탯 / 프로필). 회원가입·마이페이지에서 함께 사용
+// 캐릭터 스탯/프로필 입력칸은 관리자 페이지에서 정의한 항목(definitions)대로 자동 생성
+import AttributeInput from './AttributeInput.vue';
+
 defineProps({
   definitions: { type: Object, required: true },
 });
@@ -15,26 +17,14 @@ const form = defineModel({ type: Object, required: true });
   </fieldset>
 
   <fieldset class="fieldset">
-    <legend>스탯</legend>
-    <p v-if="!definitions.stats.length" class="muted">등록된 스탯 항목이 없습니다.</p>
-    <label v-for="def in definitions.stats" :key="def.code">
-      <span>{{ def.label }}<span v-if="def.isRequired" class="req">*</span></span>
-      <input v-model="form.stats[def.code]" type="number" step="1" :required="def.isRequired" />
-    </label>
+    <legend>캐릭터 스탯</legend>
+    <p v-if="!definitions.stats.length" class="muted">등록된 캐릭터 스탯 항목이 없습니다.</p>
+    <AttributeInput v-for="def in definitions.stats" :key="def.code" v-model="form.stats[def.code]" :def="def" />
   </fieldset>
 
   <fieldset class="fieldset">
-    <legend>세부정보</legend>
-    <p v-if="!definitions.details.length" class="muted">등록된 세부정보 항목이 없습니다.</p>
-    <label v-for="def in definitions.details" :key="def.code">
-      <span>{{ def.label }}<span v-if="def.isRequired" class="req">*</span></span>
-      <input
-        v-model="form.details[def.code]"
-        :type="def.valueType === 'number' ? 'number' : 'text'"
-        :step="def.valueType === 'number' ? 'any' : undefined"
-        :required="def.isRequired"
-        maxlength="1000"
-      />
-    </label>
+    <legend>프로필</legend>
+    <p v-if="!definitions.details.length" class="muted">등록된 프로필 양식이 없습니다.</p>
+    <AttributeInput v-for="def in definitions.details" :key="def.code" v-model="form.details[def.code]" :def="def" />
   </fieldset>
 </template>

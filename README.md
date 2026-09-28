@@ -4,8 +4,9 @@ Vue 3 + Node.js/Express + MySQL 로 만든 SPA 로그인 샘플입니다.
 
 - 세션 기반 로그인 (HttpOnly 쿠키, 세션은 MySQL 에 저장 → 재시작해도 로그인 유지)
 - 회원가입 / 로그인 / 로그아웃 / 샘플 게시판
-- **계정당 캐릭터 1개** — 가입할 때 함께 등록, 로그인하면 마이페이지에서 내 캐릭터(기본정보/스탯/세부정보) 표시·수정
-- **관리자/일반 권한** (지금은 가입하면 모두 관리자) — 관리자는 `/admin` 에서 수집할 스탯/세부정보 항목 관리
+- **계정당 캐릭터 1개** — 가입할 때 함께 등록, 로그인하면 마이페이지에서 내 캐릭터(기본정보/캐릭터 스탯/프로필) 표시·수정
+- **관리자/일반 권한** (지금은 가입하면 모두 관리자) — 관리자는 `/admin` 에서 캐릭터 스탯·프로필 양식 항목을 추가/수정/삭제
+- 항목 형식: 숫자, 짧은 텍스트, 긴 텍스트, 링크, 이미지(업로드), 드롭다운
 - EC2(m6id Instance Store) 배포 스크립트와 **`deploy.js` 한 번으로 전체 업데이트**
 
 ## 폴더 구조
@@ -18,7 +19,7 @@ ProjectQ/
 │     ├─ auth.js           로그인 상태(user) 관리
 │     ├─ router.js         라우트 + 로그인/관리자 가드
 │     ├─ character.js      캐릭터 폼 헬퍼
-│     ├─ components/       CharacterForm(입력), CharacterCard(표시)
+│     ├─ components/       CharacterForm/CharacterCard, AttributeInput/AttributeValue(형식별 입력·표시)
 │     └─ views/            Home, Login, Signup, MyPage, Admin
 ├─ server/                 Express API
 │  ├─ src/
@@ -27,11 +28,12 @@ ProjectQ/
 │  │  ├─ routes/auth.js    /api/auth/signup, login, logout, me
 │  │  ├─ routes/characters.js  /api/attributes, /api/characters
 │  │  ├─ routes/admin.js   /api/admin/attributes (관리자)
+│  │  ├─ routes/uploads.js /api/uploads (이미지 업로드/제공)
 │  │  └─ routes/posts.js   /api/posts (샘플)
 │  ├─ scripts/migrate.js   DB 마이그레이션
 │  └─ scripts/seed.js      샘플 계정 생성
 ├─ db/                    MySQL 스키마 (구조 설명: db/README.md)
-│  └─ migrations/          001_init.sql, 002_characters.sql …
+│  └─ migrations/          001_init.sql, 002_characters.sql, 003_attribute_types.sql …
 ├─ deploy/
 │  ├─ mount-instance-store.sh  ① NVMe Instance Store → /data 마운트
 │  ├─ setup-server.sh      ② EC2 기본 세팅 (Node, MySQL 데이터·임시파일·로그→/data, Nginx, PM2)
@@ -54,8 +56,10 @@ ProjectQ/
 | POST | `/api/characters` | 캐릭터 등록 (계정당 1개, 이미 있으면 409) |
 | PUT | `/api/characters/me` | 내 캐릭터 수정 |
 | GET | `/api/admin/attributes` | (관리자) 전체 항목, 비활성 포함 |
-| POST | `/api/admin/attributes` | (관리자) `{ category: stat/detail, code, label, valueType, isRequired, sortOrder }` 항목 추가 |
-| PATCH | `/api/admin/attributes/:id` | (관리자) `{ label, isRequired, sortOrder, isActive }` 수정 |
+| POST | `/api/admin/attributes` | (관리자) `{ category: stat/detail, code, label, valueType, options, isRequired, sortOrder }` 항목 추가 |
+| PATCH | `/api/admin/attributes/:id` | (관리자) `{ label, valueType, options, isRequired, sortOrder, isActive }` 수정 |
+| DELETE | `/api/admin/attributes/:id` | (관리자) 항목 + 저장된 값 삭제 |
+| POST | `/api/uploads` | 이미지 업로드 (multipart `file`, png/jpg/gif/webp, 5MB) → `{ url }` |
 | GET | `/api/posts` | 게시글 목록 |
 | POST | `/api/posts` | `{ title, body }` (로그인 필요) |
 | GET | `/api/health` | 헬스체크 |

@@ -1,51 +1,104 @@
 <script setup>
 import { ref, reactive, onMounted } from 'vue';
 import { api } from '../api';
+import { VALUE_TYPES } from '../character';
 
 const CATEGORIES = [
-  { key: 'stats', category: 'stat', title: '스탯 항목', hint: '스탯 값은 정수로 저장됩니다.' },
-  { key: 'details', category: 'detail', title: '세부정보 항목', hint: '값 형식: 숫자 또는 텍스트' },
+  { key: 'stats', category: 'stat', title: '캐릭터 스탯', defaultType: 'number' },
+  { key: 'details', category: 'detail', title: '프로필 양식', defaultType: 'text' },
 ];
 
 const lists = ref({ stats: [], details: [] });
+const drafts = reactive({});   // id → 수정 중인 값
 const error = ref('');
 const message = ref('');
-const newItem = reactive({
-  stats: { code: '', label: '', valueType: 'number', isRequired: false, sortOrder: 0 },
-  details: { code: '', label: '', valueType: 'text', isRequired: false, sortOrder: 0 },
-});
+
+function emptyNew(type) {
+  return { code: '', label: '', valueType: type, optionsText: '', isRequired: false, sortOrder: 0 };
+}
+const newItem = reactive({ stats: emptyNew('number'), details: emptyNew('text') });
+
+function toDraft(item) {
+  return {
+    label: item.label,
+    valueType: item.valueType,
+    optionsText: (item.options || []).join('\n'),
+    isRequired: item.isRequired,
+    sortOrder: item.sortOrder,
+    isActive: item.isActive,
+  };
+}
+
+function isDirty(item) {
+  const d = drafts[item.id];
+  return d && JSON.stringify(d) !== JSON.stringify(toDraft(item));
+}
 
 async function load() {
   lists.value = await api('/admin/attributes');
+  for (const item of [...lists.value.stats, ...lists.value.details]) drafts[item.id] = toDraft(item);
 }
 
 function flash(text) {
   message.value = text;
-  setTimeout(() => { if (message.value === text) message.value = ''; }, 2000);
+  setTimeout(() => { if (message.value === text) message.value = ''; }, 2500);
 }
 
-async function add(key, category) {
+// fn 이 문자열을 반환하면 그 문구를, 아니면 doneText 를 표시
+async function run(fn, doneText) {
   error.value = '';
   try {
-    await api('/admin/attributes', { method: 'POST', body: { category, ...newItem[key] } });
-    Object.assign(newItem[key], { code: '', label: '', isRequired: false, sortOrder: 0 });
+    const text = await fn();
     await load();
-    flash('추가했습니다.');
+    flash(typeof text === 'string' ? text : doneText);
   } catch (e) {
     error.value = e.message;
   }
 }
 
-async function update(item, changes) {
-  error.value = '';
-  try {
-    await api(`/admin/attributes/${item.id}`, { method: 'PATCH', body: changes });
-    await load();
-    flash('저장했습니다.');
-  } catch (e) {
-    error.value = e.message;
-    await load();
+function add(c) {
+  const item = newItem[c.key];
+  return run(async () => {
+    await api('/admin/attributes', {
+      method: 'POST',
+      body: {
+        category: c.category,
+        code: item.code,
+        label: item.label,
+        valueType: item.valueType,
+        options: item.optionsText,
+        isRequired: item.isRequired,
+        sortOrder: item.sortOrder,
+      },
+    });
+    Object.assign(item, emptyNew(c.defaultType));
+  }, `'${item.label}' 추가했습니다.`);
+}
+
+function save(item) {
+  const d = drafts[item.id];
+  if (d.valueType !== item.valueType
+      && !confirm(`형식을 바꾸면 이미 입력된 값이 새 형식에 맞지 않을 수 있습니다.\n(맞지 않는 값은 다음에 캐릭터를 수정할 때 다시 입력해야 합니다)\n\n변경할까요?`)) {
+    return;
   }
+  const body = {
+    label: d.label,
+    isRequired: d.isRequired,
+    sortOrder: Number(d.sortOrder),
+    isActive: d.isActive,
+    valueType: d.valueType,
+  };
+  if (d.valueType === 'select') body.options = d.optionsText;
+  return run(() => api(`/admin/attributes/${item.id}`, { method: 'PATCH', body }), `'${d.label}' 저장했습니다.`);
+}
+
+function remove(item) {
+  if (!confirm(`'${item.label}' 항목을 삭제할까요?\n모든 캐릭터에 입력된 이 항목의 값도 함께 삭제되며 되돌릴 수 없습니다.\n(값을 남겨두려면 삭제 대신 '사용'을 끄세요)`)) return;
+  return run(async () => {
+    const { deletedValues } = await api(`/admin/attributes/${item.id}`, { method: 'DELETE' });
+    delete drafts[item.id];
+    return `'${item.label}' 삭제했습니다. (저장된 값 ${deletedValues}개 함께 삭제)`;
+  });
 }
 
 onMounted(() => load().catch((e) => { error.value = e.message; }));
@@ -55,8 +108,8 @@ onMounted(() => load().catch((e) => { error.value = e.message; }));
   <section class="card">
     <h1>캐릭터 항목 관리</h1>
     <p class="muted">
-      캐릭터 스탯/세부정보로 어떤 값을 받을지 정합니다. 여기서 추가한 항목이 회원가입·마이페이지 입력칸에 바로 나타납니다.
-      항목을 끄면(비활성) 입력/표시에서 숨겨지고, 이미 저장된 값은 DB 에 그대로 남습니다.
+      캐릭터 스탯과 프로필 양식으로 어떤 값을 받을지 정합니다. 여기서 추가한 항목이 회원가입·마이페이지 입력칸에 바로 나타납니다.
+      '사용'을 끄면 입력/표시에서 숨겨지고 저장된 값은 남아 있으며, '삭제'하면 저장된 값까지 모두 지워집니다.
     </p>
     <p v-if="error" class="error">{{ error }}</p>
     <p v-if="message" class="ok">{{ message }}</p>
@@ -64,37 +117,61 @@ onMounted(() => load().catch((e) => { error.value = e.message; }));
 
   <section v-for="c in CATEGORIES" :key="c.key" class="card">
     <h2>{{ c.title }}</h2>
-    <p class="muted">{{ c.hint }}</p>
 
     <div class="table-wrap">
       <table class="table">
         <thead>
-          <tr><th>코드</th><th>표시 이름</th><th>형식</th><th>필수</th><th>순서</th><th>사용</th></tr>
+          <tr><th>코드</th><th>표시 이름</th><th>형식</th><th>필수</th><th>순서</th><th>사용</th><th></th></tr>
         </thead>
         <tbody>
-          <tr v-if="!lists[c.key].length"><td colspan="6" class="muted">항목이 없습니다.</td></tr>
-          <tr v-for="item in lists[c.key]" :key="item.id" :class="{ inactive: !item.isActive }">
-            <td><code>{{ item.code }}</code></td>
-            <td><input :value="item.label" maxlength="100" @change="update(item, { label: $event.target.value })" /></td>
-            <td>{{ item.valueType === 'number' ? '숫자' : '텍스트' }}</td>
-            <td><input type="checkbox" :checked="item.isRequired" @change="update(item, { isRequired: $event.target.checked })" /></td>
-            <td><input class="narrow" type="number" step="1" :value="item.sortOrder" @change="update(item, { sortOrder: Number($event.target.value) })" /></td>
-            <td><input type="checkbox" :checked="item.isActive" @change="update(item, { isActive: $event.target.checked })" /></td>
-          </tr>
+          <tr v-if="!lists[c.key].length"><td colspan="7" class="muted">항목이 없습니다.</td></tr>
+          <template v-for="item in lists[c.key]" :key="item.id">
+            <tr v-if="drafts[item.id]" :class="{ inactive: !drafts[item.id].isActive, dirty: isDirty(item) }">
+              <td><code>{{ item.code }}</code></td>
+              <td><input v-model="drafts[item.id].label" maxlength="100" /></td>
+              <td>
+                <select v-model="drafts[item.id].valueType">
+                  <option v-for="t in VALUE_TYPES" :key="t.value" :value="t.value">{{ t.label }}</option>
+                </select>
+              </td>
+              <td><input v-model="drafts[item.id].isRequired" type="checkbox" /></td>
+              <td><input v-model.number="drafts[item.id].sortOrder" class="narrow" type="number" step="1" /></td>
+              <td><input v-model="drafts[item.id].isActive" type="checkbox" /></td>
+              <td class="row-actions">
+                <button type="button" :disabled="!isDirty(item)" @click="save(item)">저장</button>
+                <button type="button" class="danger" @click="remove(item)">삭제</button>
+              </td>
+            </tr>
+            <tr v-if="drafts[item.id]?.valueType === 'select'" class="options-row">
+              <td></td>
+              <td colspan="6">
+                <label class="options-label">
+                  드롭다운 선택지 (한 줄에 하나씩)
+                  <textarea v-model="drafts[item.id].optionsText" rows="3" placeholder="예)&#10;전사&#10;마법사&#10;궁수" />
+                </label>
+              </td>
+            </tr>
+          </template>
         </tbody>
       </table>
     </div>
 
-    <form class="add-row" @submit.prevent="add(c.key, c.category)">
-      <input v-model="newItem[c.key].code" placeholder="코드 (예: str, birth_place)" required pattern="[a-z][a-z0-9_]{0,49}" title="영문 소문자로 시작, 영문 소문자/숫자/_" />
-      <input v-model="newItem[c.key].label" placeholder="표시 이름 (예: 힘)" required maxlength="100" />
-      <select v-if="c.category === 'detail'" v-model="newItem[c.key].valueType">
-        <option value="text">텍스트</option>
-        <option value="number">숫자</option>
-      </select>
-      <input v-model.number="newItem[c.key].sortOrder" class="narrow" type="number" step="1" title="정렬 순서" />
-      <label class="inline"><input v-model="newItem[c.key].isRequired" type="checkbox" /> 필수</label>
-      <button type="submit">추가</button>
+    <form class="add-form" @submit.prevent="add(c)">
+      <h3>새 항목 추가</h3>
+      <div class="add-row">
+        <input v-model="newItem[c.key].code" placeholder="코드 (예: str, class)" required pattern="[a-z][a-z0-9_]{0,49}" title="영문 소문자로 시작, 영문 소문자/숫자/_" />
+        <input v-model="newItem[c.key].label" placeholder="표시 이름 (예: 힘, 직업)" required maxlength="100" />
+        <select v-model="newItem[c.key].valueType" title="형식">
+          <option v-for="t in VALUE_TYPES" :key="t.value" :value="t.value">{{ t.label }}</option>
+        </select>
+        <input v-model.number="newItem[c.key].sortOrder" class="narrow" type="number" step="1" title="정렬 순서" />
+        <label class="inline"><input v-model="newItem[c.key].isRequired" type="checkbox" /> 필수</label>
+        <button type="submit">추가</button>
+      </div>
+      <label v-if="newItem[c.key].valueType === 'select'" class="options-label">
+        드롭다운 선택지 (한 줄에 하나씩)
+        <textarea v-model="newItem[c.key].optionsText" rows="3" required placeholder="예)&#10;전사&#10;마법사&#10;궁수" />
+      </label>
     </form>
   </section>
 </template>

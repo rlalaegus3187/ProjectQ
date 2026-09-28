@@ -14,6 +14,7 @@
 ├─ mysql-tmp/                MySQL 임시파일 (큰 정렬, 임시 테이블)
 ├─ config/projectq.env       앱 설정 (DB 비밀번호, 세션 키)
 ├─ www/projectq/             프론트 빌드 결과물
+├─ uploads/                  캐릭터 이미지 업로드 파일
 ├─ logs/                     API 로그, logs/mysql/error.log (MySQL 에러 로그)
 ├─ phpmyadmin/               phpMyAdmin (setup-phpmyadmin.sh 로 설치 시)
 └─ deploy.js                 ③ 불러오기/업데이트 스크립트

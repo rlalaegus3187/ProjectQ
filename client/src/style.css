@@ -48,3 +48,25 @@ input.narrow { width: 72px; }
 .add-row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-top: 12px; }
 .add-row input:not(.narrow):not([type=checkbox]) { flex: 1 1 160px; }
 .inline { display: flex; align-items: center; gap: 4px; font-size: 14px; }
+/* 항목 입력칸 (형식별) */
+.field { display: flex; flex-direction: column; gap: 4px; font-size: 14px; }
+.field.wide, .fieldset .wide { grid-column: 1 / -1; }
+.field textarea { resize: vertical; }
+.image-field { display: flex; flex-direction: column; gap: 6px; }
+.image-actions { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+.image-actions input[type=file] { border: 0; padding: 0; }
+.thumb { max-width: 240px; max-height: 240px; border-radius: 8px; border: 1px solid #e5e7eb; object-fit: contain; display: block; }
+.long-text { white-space: pre-wrap; }
+.kv dd a { word-break: break-all; }
+/* 관리자 표 */
+button.danger { background: #fee2e2; color: #b91c1c; }
+.row-actions { display: flex; gap: 6px; }
+.row-actions button { padding: 6px 10px; font-size: 13px; }
+.table select { padding: 6px; }
+.table tr.dirty td { background: #fffbeb; }
+.table tr.options-row td { border-bottom: 1px solid #f0f0f0; padding-top: 0; }
+.options-label { display: flex; flex-direction: column; gap: 4px; font-size: 13px; color: #374151; white-space: normal; }
+.options-label textarea { font-size: 14px; }
+.add-form { margin-top: 16px; padding-top: 12px; border-top: 1px dashed #e5e7eb; display: flex; flex-direction: column; gap: 8px; }
+.add-form h3 { margin: 0; }
+.form .field > label { display: block; }

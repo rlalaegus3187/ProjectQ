@@ -1,14 +1,30 @@
-// 캐릭터(기본정보/스탯/세부정보)와 수집 항목 정의(attribute_definitions) 처리
+// 캐릭터(기본정보 / 캐릭터 스탯 / 프로필)와 수집 항목 정의(attribute_definitions) 처리
 const pool = require('./db');
 
 const MAX_INT = 2147483647;
-const MAX_TEXT = 1000;
+
+// 항목 형식 (캐릭터 스탯 / 프로필 양식 공통)
+const VALUE_TYPES = ['number', 'text', 'long_text', 'link', 'image', 'select'];
+const MAX_LENGTH = { text: 500, long_text: 10000, link: 2000 };
+// 이미지 값은 이 서버에 업로드한 파일 경로만 허용 (routes/uploads.js)
+const UPLOAD_URL_RE = /^\/api\/uploads\/[a-f0-9]{32}\.(png|jpg|gif|webp)$/;
 
 class HttpError extends Error {
   constructor(status, message) {
     super(message);
     this.status = status;
     this.expose = true;
+  }
+}
+
+function parseOptions(value) {
+  if (value === null || value === undefined) return null;
+  if (Array.isArray(value)) return value;
+  try {
+    const parsed = JSON.parse(value);
+    return Array.isArray(parsed) ? parsed : null;
+  } catch {
+    return null;
   }
 }
 
@@ -19,6 +35,7 @@ function toDefinition(row) {
     code: row.code,
     label: row.label,
     valueType: row.value_type,
+    options: parseOptions(row.options),
     isRequired: !!row.is_required,
     sortOrder: row.sort_order,
     isActive: !!row.is_active,
@@ -27,7 +44,7 @@ function toDefinition(row) {
 
 async function getDefinitions(conn = pool, { activeOnly = true } = {}) {
   const [rows] = await conn.query(
-    `SELECT id, category, code, label, value_type, is_required, sort_order, is_active
+    `SELECT id, category, code, label, value_type, options, is_required, sort_order, is_active
        FROM attribute_definitions
       ${activeOnly ? 'WHERE is_active = 1' : ''}
       ORDER BY category, sort_order, id`,
@@ -58,17 +75,35 @@ function validateValues(raw, defs) {
       if (def.isRequired) throw new HttpError(400, `${def.label}: 필수 항목입니다.`);
       return { def, value: null };
     }
-    if (def.category === 'stat') {
-      const n = Number(text);
-      if (!Number.isInteger(n) || Math.abs(n) > MAX_INT) throw new HttpError(400, `${def.label}: 정수로 입력해주세요.`);
-      return { def, value: n };
-    }
-    if (def.valueType === 'number' && !Number.isFinite(Number(text))) {
-      throw new HttpError(400, `${def.label}: 숫자로 입력해주세요.`);
-    }
-    if (text.length > MAX_TEXT) throw new HttpError(400, `${def.label}: ${MAX_TEXT}자 이내로 입력해주세요.`);
-    return { def, value: text };
+    return { def, value: validateValue(def, text) };
   });
+}
+
+// 형식별 값 검증 → 저장할 문자열
+function validateValue(def, text) {
+  const fail = (message) => { throw new HttpError(400, `${def.label}: ${message}`); };
+  const max = MAX_LENGTH[def.valueType];
+  if (max && text.length > max) fail(`${max}자 이내로 입력해주세요.`);
+
+  switch (def.valueType) {
+    case 'number':
+      if (!Number.isFinite(Number(text))) fail('숫자로 입력해주세요.');
+      return String(Number(text));
+    case 'link': {
+      let url;
+      try { url = new URL(text); } catch { fail('올바른 링크(http:// 또는 https://)를 입력해주세요.'); }
+      if (!['http:', 'https:'].includes(url.protocol)) fail('http:// 또는 https:// 링크만 입력할 수 있습니다.');
+      return text;
+    }
+    case 'image':
+      if (!UPLOAD_URL_RE.test(text)) fail('이미지를 다시 업로드해주세요.');
+      return text;
+    case 'select':
+      if (!(def.options || []).includes(text)) fail('목록에 있는 값을 선택해주세요.');
+      return text;
+    default: // text, long_text
+      return text;
+  }
 }
 
 // 캐릭터 입력 전체 검증: { name, hp, stats: {code: value}, details: {code: value} }
@@ -177,6 +212,7 @@ async function withTransaction(fn) {
 }
 
 module.exports = {
+  VALUE_TYPES,
   HttpError,
   getDefinitions,
   groupDefinitions,

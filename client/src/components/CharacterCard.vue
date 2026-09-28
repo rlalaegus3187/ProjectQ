@@ -1,10 +1,10 @@
 <script setup>
-// 캐릭터 정보 표시 (기본정보 / 스탯 / 세부정보)
+// 캐릭터 정보 표시 (기본정보 / 캐릭터 스탯 / 프로필)
+import AttributeValue from './AttributeValue.vue';
+
 defineProps({
   character: { type: Object, required: true },
 });
-
-const show = (value) => (value === null || value === '' ? '-' : value);
 </script>
 
 <template>
@@ -18,21 +18,21 @@ const show = (value) => (value === null || value === '' ? '-' : value);
     </section>
 
     <section>
-      <h3>스탯</h3>
-      <p v-if="!character.stats.length" class="muted">등록된 스탯 항목이 없습니다.</p>
+      <h3>캐릭터 스탯</h3>
+      <p v-if="!character.stats.length" class="muted">등록된 캐릭터 스탯 항목이 없습니다.</p>
       <dl v-else class="kv">
         <template v-for="stat in character.stats" :key="stat.code">
-          <dt>{{ stat.label }}</dt><dd>{{ show(stat.value) }}</dd>
+          <dt>{{ stat.label }}</dt><dd><AttributeValue :attr="stat" /></dd>
         </template>
       </dl>
     </section>
 
     <section>
-      <h3>세부정보</h3>
-      <p v-if="!character.details.length" class="muted">등록된 세부정보 항목이 없습니다.</p>
+      <h3>프로필</h3>
+      <p v-if="!character.details.length" class="muted">등록된 프로필 양식이 없습니다.</p>
       <dl v-else class="kv">
         <template v-for="detail in character.details" :key="detail.code">
-          <dt>{{ detail.label }}</dt><dd>{{ show(detail.value) }}</dd>
+          <dt>{{ detail.label }}</dt><dd><AttributeValue :attr="detail" /></dd>
         </template>
       </dl>
     </section>

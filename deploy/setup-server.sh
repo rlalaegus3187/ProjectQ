@@ -249,7 +249,7 @@ server {
         proxy_set_header X-Forwarded-Proto \$scheme;
     }
 
-    client_max_body_size 1m;
+    client_max_body_size 10m;   # 이미지 업로드(최대 5MB) 여유
     gzip on;
     gzip_types text/css application/javascript application/json image/svg+xml;
 }

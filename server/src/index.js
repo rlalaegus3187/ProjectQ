@@ -35,6 +35,7 @@ app.get('/api/health', async (req, res) => {
 });
 app.use('/api/auth', require('./routes/auth'));
 app.use('/api/posts', require('./routes/posts'));
+app.use('/api/uploads', require('./routes/uploads'));
 app.use('/api', require('./routes/characters'));
 app.use('/api/admin', require('./routes/admin'));
 
@@ -44,6 +45,10 @@ app.use((err, req, res, next) => {
   // 검증 오류(HttpError), 잘못된 JSON 등 클라이언트에 보여줘도 되는 오류
   if (err.expose && err.status >= 400 && err.status < 500) {
     return res.status(err.status).json({ message: err.message });
+  }
+  if (err.name === 'MulterError') {
+    const message = err.code === 'LIMIT_FILE_SIZE' ? '파일은 5MB 이하만 올릴 수 있습니다.' : '업로드 요청이 올바르지 않습니다.';
+    return res.status(400).json({ message });
   }
   console.error(err);
   res.status(500).json({ message: '서버 오류가 발생했습니다.' });
