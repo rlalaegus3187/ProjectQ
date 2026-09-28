@@ -1,9 +1,10 @@
 // 멤버란: 전체 캐릭터 목록 / 캐릭터 상세 (보기 전용, 로그인 없이 공개)
 // 계정 정보(이메일 등)와 인벤토리는 공개하지 않음
+// 멤버·관리자의 캐릭터만 보임 (신청자는 관리 → 신청자 관리에서)
 // 로그인한 회원만 보게 하려면: router.use(require('../middleware/requireAuth'));
 const express = require('express');
 const pool = require('../db');
-const { HttpError, getCharacter } = require('../characters');
+const { HttpError, getCharacter, MEMBER_ROLES } = require('../characters');
 
 const router = express.Router();
 const PAGE_SIZE = 24;
@@ -13,10 +14,13 @@ const PAGE_SIZE = 24;
 router.get('/', async (req, res) => {
   const page = Math.max(1, Number.parseInt(req.query.page, 10) || 1);
   const q = String(req.query.q ?? '').trim();
-  const where = q ? 'WHERE c.name LIKE ?' : '';
-  const params = q ? [`%${q}%`] : [];
+  const where = `WHERE u.role IN (?)${q ? ' AND c.name LIKE ?' : ''}`;
+  const params = q ? [MEMBER_ROLES, `%${q}%`] : [MEMBER_ROLES];
 
-  const [[{ total }]] = await pool.query(`SELECT COUNT(*) AS total FROM characters c ${where}`, params);
+  const [[{ total }]] = await pool.query(
+    `SELECT COUNT(*) AS total FROM characters c JOIN users u ON u.id = c.user_id ${where}`,
+    params,
+  );
   const [rows] = await pool.query(
     `SELECT c.id, c.name, c.created_at,
             (SELECT d.value
@@ -26,6 +30,7 @@ router.get('/', async (req, res) => {
               ORDER BY ad.sort_order, ad.id LIMIT 1) AS thumbnail,
             (SELECT COUNT(*) FROM character_profiles cp WHERE cp.character_id = c.id) AS profile_count
        FROM characters c
+       JOIN users u ON u.id = c.user_id
        LEFT JOIN character_profiles p ON p.character_id = c.id AND p.is_main = 1
        ${where}
       ORDER BY c.id DESC
@@ -51,8 +56,9 @@ router.get('/', async (req, res) => {
 router.get('/:id', async (req, res) => {
   if (!/^\d+$/.test(req.params.id)) throw new HttpError(404, '캐릭터를 찾을 수 없습니다.');
   const character = await getCharacter({ characterId: req.params.id });
-  if (!character) throw new HttpError(404, '캐릭터를 찾을 수 없습니다.');
-  delete character.money;   // 소지금은 공개하지 않음
+  if (!character || !MEMBER_ROLES.includes(character.ownerRole)) throw new HttpError(404, '캐릭터를 찾을 수 없습니다.');
+  // 소지금·신청 정보는 공개하지 않음
+  for (const key of ['money', 'applicationStatus', 'submittedAt', 'locked']) delete character[key];
   res.json({ character });
 });
 

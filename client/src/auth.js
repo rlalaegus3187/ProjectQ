@@ -33,6 +33,13 @@ export async function signup(payload) {
 
 export const isAdmin = () => auth.user?.role === 'admin';
 
+// 권한: admin 관리자 / member 멤버 / applicant 신청자 (가입 기본값)
+export const ROLE_LABELS = { admin: '관리자', member: '멤버', applicant: '신청자' };
+export const roleLabel = (role) => ROLE_LABELS[role] ?? role;
+
+// 신청서 상태 (신청자)
+export const APPLICATION_LABELS = { draft: '작성중', submitted: '작성완료' };
+
 export async function logout() {
   await api('/auth/logout', { method: 'POST' });
   auth.user = null;

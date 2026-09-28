@@ -1,7 +1,7 @@
 <script setup>
-import { ref, onMounted } from 'vue';
+import { ref, computed, onMounted } from 'vue';
 import { api } from '../api';
-import { auth } from '../auth';
+import { auth, roleLabel, APPLICATION_LABELS } from '../auth';
 import { fetchAttributes, toCharacterForm } from '../character';
 import CharacterCard from '../components/CharacterCard.vue';
 import CharacterForm from '../components/CharacterForm.vue';
@@ -16,7 +16,8 @@ const error = ref('');
 const saving = ref(false);
 
 async function load() {
-  const [me, defs] = await Promise.all([api('/characters/me'), fetchAttributes()]);
+  const [me, defs, account] = await Promise.all([api('/characters/me'), fetchAttributes(), api('/auth/me')]);
+  auth.user = account.user;   // 권한이 바뀌었을 수 있으므로(신청자 → 멤버) 최신으로
   character.value = me.character;
   definitions.value = defs;
   // 캐릭터가 없으면(기존 계정 등) 바로 등록 폼 표시
@@ -46,6 +47,21 @@ async function save() {
   }
 }
 
+// 신청자: 작성완료 제출 / 작성중으로 되돌리기
+const isApplicant = computed(() => auth.user?.role === 'applicant');
+async function setApplication(status) {
+  if (status === 'submitted' && !confirm('신청서를 작성완료로 제출할까요?\n제출하면 작성중으로 되돌리기 전까지 수정할 수 없습니다.')) return;
+  error.value = '';
+  saving.value = true;
+  try {
+    character.value = (await api('/characters/me/application', { method: 'PUT', body: { status } })).character;
+  } catch (e) {
+    error.value = e.message;
+  } finally {
+    saving.value = false;
+  }
+}
+
 onMounted(() => load().catch((e) => { error.value = e.message; loaded.value = true; }));
 </script>
 
@@ -56,8 +72,39 @@ onMounted(() => load().catch((e) => { error.value = e.message; loaded.value = tr
       <dt>이름</dt><dd>{{ auth.user.name }}</dd>
       <dt>이메일</dt><dd>{{ auth.user.email }}</dd>
       <dt>권한</dt>
-      <dd><span class="badge" :class="auth.user.role">{{ auth.user.role === 'admin' ? '관리자' : '일반' }}</span></dd>
+      <dd><span class="badge" :class="auth.user.role">{{ roleLabel(auth.user.role) }}</span></dd>
     </dl>
+  </section>
+
+  <!-- 신청자: 신청 상태 -->
+  <section v-if="isApplicant && loaded" class="card application-panel">
+    <div class="card-head">
+      <h2>캐릭터 신청</h2>
+      <span v-if="character" class="badge" :class="character.applicationStatus">
+        {{ APPLICATION_LABELS[character.applicationStatus] }}
+      </span>
+    </div>
+    <template v-if="!character">
+      <p class="muted">아래에서 캐릭터를 작성한 뒤 작성완료로 제출해주세요.</p>
+    </template>
+    <template v-else-if="character.applicationStatus === 'draft'">
+      <p class="muted">
+        신청서를 작성 중입니다. 신청자는 프로필을 1개만 등록할 수 있습니다.
+        다 작성했으면 <strong>작성완료</strong>로 제출해주세요. 관리자가 확인 후 멤버로 전환합니다.
+      </p>
+      <div class="actions">
+        <button type="button" :disabled="saving || !!form" @click="setApplication('submitted')">작성완료로 제출</button>
+      </div>
+    </template>
+    <template v-else>
+      <p class="muted">
+        신청서를 제출했습니다. 관리자가 검토 중입니다. 멤버로 전환되면 알림으로 알려드립니다.
+        제출한 신청서는 수정할 수 없습니다 — 고치려면 작성중으로 되돌려주세요.
+      </p>
+      <div class="actions">
+        <button type="button" class="secondary" :disabled="saving" @click="setApplication('draft')">작성중으로 되돌리기</button>
+      </div>
+    </template>
   </section>
 
   <section class="card">
@@ -66,7 +113,7 @@ onMounted(() => load().catch((e) => { error.value = e.message; loaded.value = tr
       <div v-if="character && !form" class="actions">
         <span class="money-badge">소지금 <strong>{{ formatMoney(character.money) }}</strong></span>
         <RouterLink to="/inventory" class="button secondary">인벤토리</RouterLink>
-        <button class="secondary" @click="startEdit">수정하기</button>
+        <button v-if="!character.locked" class="secondary" @click="startEdit">수정하기</button>
       </div>
     </div>
 
@@ -89,5 +136,5 @@ onMounted(() => load().catch((e) => { error.value = e.message; loaded.value = tr
   </section>
 
   <ProfileSection v-if="character && definitions" :character="character" :definitions="definitions"
-    @updated="(c) => { character = c; }" />
+    :readonly="character.locked" @updated="(c) => { character = c; }" />
 </template>

@@ -128,7 +128,35 @@ function validateValue(def, text) {
 }
 
 const MAX_PROFILES = 10;
+const APPLICANT_MAX_PROFILES = 1;   // 신청자는 프로필 1개만
 const DEFAULT_PROFILE_NAME = '기본 프로필';
+
+// 권한 (users.role): 관리자 / 멤버 / 신청자
+const ROLES = ['admin', 'member', 'applicant'];
+const MEMBER_ROLES = ['admin', 'member'];   // 멤버란에 보이는 권한
+const maxProfilesFor = (role) => (role === 'applicant' ? APPLICANT_MAX_PROFILES : MAX_PROFILES);
+// 신청자가 신청서를 '작성완료'로 제출하면 수정 잠금 (작성중으로 되돌리면 다시 수정 가능)
+const isLocked = (role, status) => role === 'applicant' && status === 'submitted';
+
+async function getOwnerInfo(conn, characterId, { lock = false } = {}) {
+  const [rows] = await conn.execute(
+    `SELECT c.id, c.user_id, c.application_status, u.role
+       FROM characters c JOIN users u ON u.id = c.user_id
+      WHERE c.id = ?${lock ? ' FOR UPDATE' : ''}`,
+    [characterId],
+  );
+  if (!rows[0]) throw new HttpError(404, '캐릭터를 찾을 수 없습니다.');
+  return rows[0];
+}
+
+// 신청서가 잠겨 있으면(신청자 + 작성완료) 수정 불가
+async function assertEditable(conn, characterId) {
+  const info = await getOwnerInfo(conn, characterId, { lock: true });
+  if (isLocked(info.role, info.application_status)) {
+    throw new HttpError(409, '작성완료로 제출한 신청서는 수정할 수 없습니다. 작성중으로 되돌린 뒤 수정해주세요.');
+  }
+  return info;
+}
 
 // 캐릭터 입력 검증 (기본정보 + 스탯): { name, hp, stats: {code: value} }
 // statPoints: 투자 포인트 총량 (숫자형 스탯 합계 상한). null 이면 검사 안 함
@@ -209,7 +237,13 @@ async function createProfile(conn, characterId, profile, { isMain = false } = {}
     'SELECT COUNT(*) AS count, COALESCE(MAX(sort_order), 0) AS maxOrder FROM character_profiles WHERE character_id = ? FOR UPDATE',
     [characterId],
   );
-  if (Number(count) >= MAX_PROFILES) throw new HttpError(400, `프로필은 최대 ${MAX_PROFILES}개까지 만들 수 있습니다.`);
+  const { role } = await getOwnerInfo(conn, characterId);
+  const max = maxProfilesFor(role);
+  if (Number(count) >= max) {
+    throw new HttpError(400, role === 'applicant'
+      ? '신청자는 프로필을 1개만 등록할 수 있습니다.'
+      : `프로필은 최대 ${max}개까지 만들 수 있습니다.`);
+  }
   const [result] = await conn.execute(
     'INSERT INTO character_profiles (character_id, name, music_video_id, is_main, sort_order) VALUES (?, ?, ?, ?, ?)',
     [characterId, profile.name, profile.musicVideoId ?? null, isMain || Number(count) === 0 ? 1 : 0, Number(maxOrder) + 1],
@@ -260,7 +294,9 @@ async function getCharacterByUserId(userId, conn = pool) {
 // { userId } 또는 { characterId } 로 조회 (멤버란은 characterId)
 async function getCharacter({ userId, characterId }, conn = pool) {
   const [rows] = await conn.execute(
-    `SELECT id, name, hp, money, created_at, updated_at FROM characters WHERE ${userId !== undefined ? 'user_id' : 'id'} = ?`,
+    `SELECT c.id, c.name, c.hp, c.money, c.application_status, c.submitted_at, c.created_at, c.updated_at, u.role
+       FROM characters c JOIN users u ON u.id = c.user_id
+      WHERE c.${userId !== undefined ? 'user_id' : 'id'} = ?`,
     [Number(userId !== undefined ? userId : characterId)],
   );
   const character = rows[0];
@@ -299,7 +335,12 @@ async function getCharacter({ userId, characterId }, conn = pool) {
         id: p.id, name: p.name, isMain: !!p.is_main, musicVideoId: p.music_video_id, details: details.map(withValue(values)), updatedAt: p.updated_at,
       };
     }),
-    maxProfiles: MAX_PROFILES,
+    maxProfiles: maxProfilesFor(character.role),
+    ownerRole: character.role,
+    // 신청 상태 (신청자만 의미 있음): draft 작성중 / submitted 작성완료, locked = 수정 잠금
+    applicationStatus: character.application_status,
+    submittedAt: character.submitted_at,
+    locked: isLocked(character.role, character.application_status),
     createdAt: character.created_at,
     updatedAt: character.updated_at,
   };
@@ -333,6 +374,9 @@ module.exports = {
   validateCharacterInput,
   validateProfileInput,
   DEFAULT_PROFILE_NAME,
+  ROLES,
+  MEMBER_ROLES,
+  assertEditable,
   createCharacter,
   updateCharacter,
   createProfile,

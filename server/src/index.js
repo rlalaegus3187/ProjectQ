@@ -45,6 +45,7 @@ app.use('/api/members', require('./routes/members'));
 app.use('/api/shop', require('./routes/shop'));
 app.use('/api/settings', require('./routes/settings'));
 app.use('/api/admin', require('./routes/adminShop'));
+app.use('/api/admin', require('./routes/adminApplicants'));
 
 app.use('/api', (req, res) => res.status(404).json({ message: 'Not Found' }));
 

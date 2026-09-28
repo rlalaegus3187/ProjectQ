@@ -38,6 +38,10 @@ h3 { font-size: 15px; margin: 0 0 8px; color: #374151; }
 .kv dd { margin: 0; }
 .badge { display: inline-block; padding: 2px 8px; border-radius: 999px; font-size: 12px; background: #e5e7eb; }
 .badge.admin { background: #fef3c7; color: #92400e; }
+.badge.member { background: #dcfce7; color: #166534; }
+.badge.applicant { background: #e0e7ff; color: #3730a3; }
+.badge.draft { background: #f3f4f6; color: #4b5563; }
+.badge.submitted { background: #dbeafe; color: #1d4ed8; }
 .table-wrap { overflow-x: auto; }
 .table { width: 100%; border-collapse: collapse; font-size: 14px; }
 .table th, .table td { text-align: left; padding: 6px 8px; border-bottom: 1px solid #f0f0f0; white-space: nowrap; }
@@ -243,3 +247,13 @@ a.music-btn { text-decoration: none; }
 .profile-music { font-size: 14px; margin: 0 0 8px; color: #374151; }
 input.invalid { border-color: #dc2626; }
 @media (max-width: 480px) { .music-volume { width: 56px; } }
+
+/* 신청자 관리 */
+.application-panel { border-color: #c7d2fe; }
+.bulk-bar { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; padding: 8px 12px; margin-bottom: 12px; background: #f8fafc; border: 1px solid #e5e7eb; border-radius: 8px; }
+.bulk-bar .count { margin-right: auto; font-size: 14px; }
+.applicant-thumb { width: 40px; height: 40px; object-fit: cover; border-radius: 6px; background: #f3f4f6; display: block; }
+.table tr.checked td { background: #f5f8ff; }
+.table td.check, .table th.check { width: 32px; }
+.link-button { background: none; border: 0; padding: 0; color: #2563eb; cursor: pointer; font: inherit; text-decoration: underline; }
+.modal .char-sections + .card { margin-top: 16px; }

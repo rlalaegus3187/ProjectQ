@@ -13,7 +13,9 @@ Vue 3 + Node.js/Express + MySQL 로 만든 SPA 로그인 샘플입니다.
 - **계정당 캐릭터 1개** — 가입할 때 함께 등록, 마이페이지에서 기본정보·캐릭터 스탯 표시·수정
 - **멤버란** (`/members`): 전체 캐릭터 목록(대표 프로필 이미지·검색) + 캐릭터 상세(기본정보·스탯·프로필, 보기 전용, 로그인 없이 공개)
 - **캐릭터 프로필 여러 개** (최대 10) — 프로필 양식 값만 프로필마다 따로, 대표 프로필 지정 (스탯·인벤토리는 캐릭터에 하나)
-- **관리자/일반 권한** (지금은 가입하면 모두 관리자) — 관리자는 `/admin` 에서 캐릭터 스탯·프로필 양식 항목을 추가/수정/삭제
+- **권한 3단계: 관리자 / 멤버 / 신청자** — 가입하면 신청자(프로필 1개, 멤버란에 안 보임). 신청자는 마이페이지에서 신청서를 `작성중 ↔ 작성완료` 로 바꾸고(작성완료면 수정 잠금),
+  관리자는 `관리 → 신청자 관리`에서 신청 프로필을 보고 **체크해서 한꺼번에 멤버로 전환**(신청 프로필이 대표 프로필, 멤버란 공개, 알림) 또는 **한꺼번에 삭제**
+- 관리자는 `/admin` 에서 캐릭터 스탯·프로필 양식 항목을 추가/수정/삭제
 - 항목 형식: 숫자, 짧은 텍스트, 긴 텍스트(마크다운 편집기), 링크, 이미지(업로드), 드롭다운
 - **스탯 투자 포인트**: 관리자가 초기 투자 포인트를 정하고, 캐릭터는 숫자형 스탯에 포인트를 나눠 투자 (합계 ≤ 전체 포인트)
 - EC2(m6id Instance Store) 배포 스크립트와 **`deploy.js` 한 번으로 전체 업데이트**
@@ -47,6 +49,7 @@ ProjectQ/
 │  │  ├─ money.js          ★ 소지금 공용 함수 (getMoney / changeMoney / getMoneyLogs)
 │  │  ├─ routes/shop.js        /api/shop (상점 목록·구매)
 │  │  ├─ routes/adminShop.js   /api/admin/shop (상점 관리)
+│  │  ├─ routes/adminApplicants.js  /api/admin/applicants (신청자 관리)
 │  │  ├─ routes/auth.js    /api/auth/signup, login, logout, me
 │  │  ├─ routes/characters.js  /api/attributes, /api/characters
 │  │  ├─ routes/admin.js   /api/admin/attributes (관리자)
@@ -83,6 +86,11 @@ ProjectQ/
 | POST | `/api/characters/me/profiles` | 프로필 추가 `{ name, music?(유튜브 링크), details }` |
 | PUT/DELETE | `/api/characters/me/profiles/:id` | 프로필 수정 `{ name, details }` (대표는 name 없음) / 삭제 (대표는 삭제 불가) |
 | PUT | `/api/characters/me/profiles/:id/main` | 대표 프로필 지정 |
+| PUT | `/api/characters/me/application` | (신청자) 신청 상태 `{ status: draft(작성중) / submitted(작성완료) }` — 작성완료면 캐릭터·프로필 수정 불가(409), 관리자에게 알림 |
+| GET | `/api/admin/applicants?status=&q=` | (관리자) 신청자 캐릭터 목록 + 상태별 개수 |
+| GET | `/api/admin/applicants/:id` | (관리자) 신청자 캐릭터·프로필 보기 |
+| POST | `/api/admin/applicants/accept` | (관리자) `{ characterIds: [...] }` 한꺼번에 멤버로 전환 (신청 프로필 → 대표 프로필, 알림) |
+| POST | `/api/admin/applicants/delete` | (관리자) `{ characterIds: [...] }` 한꺼번에 캐릭터+프로필 삭제 (계정은 남음, 신청자만 처리) |
 | GET/PUT | `/api/admin/settings` | (관리자) `{ statPoints, siteMusic(유튜브 링크, 빈 값=끔) }` 조회/변경 (보낸 값만) |
 | GET | `/api/admin/attributes` | (관리자) 전체 항목, 비활성 포함 |
 | POST | `/api/admin/attributes` | (관리자) `{ category: stat/detail, code, label, valueType, options, isRequired, sortOrder }` 항목 추가 |

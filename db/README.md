@@ -6,7 +6,8 @@ users                          characters (계정당 1개)
 id            PK          ┌──  id            PK
 email         UNIQUE      │    user_id       UNIQUE, FK → users.id
 name                      │    name          캐릭터 이름   ┐ 기본정보
-role          admin/user  │    hp            HP           ┘
+role          admin/member/ │    hp            HP           ┘
+              applicant   │    application_status  신청 상태(작성중/작성완료)
 password_hash (scrypt)    │
 created_at ...            │
                           │
@@ -69,7 +70,11 @@ sessions  (express-mysql-session 로그인 세션)
 - 형식을 바꿔도 저장된 값은 그대로 두며, 새 형식에 맞지 않는 값은 다음에 캐릭터를 저장할 때 다시 입력받음
 - 항목 삭제 시 모든 캐릭터의 해당 값도 함께 삭제 (값을 남기려면 삭제 대신 '사용' 끄기)
 - **투자 포인트**: `숫자` 형식의 캐릭터 스탯은 포인트를 나눠 주는 스탯 — 값은 0 이상의 정수, 사용 중인 항목 값의 합계 ≤ `settings.stat_initial_points` (관리자 페이지에서 설정)
-- 가입 시 권한은 서버 설정 `SIGNUP_ROLE` (기본 `admin` = 지금은 가입하면 모두 관리자)
+- 권한(`users.role`): `admin` 관리자 / `member` 멤버 / `applicant` 신청자. 가입 시 권한은 서버 설정 `SIGNUP_ROLE` (기본 `applicant`)
+  - 멤버란에는 `admin`, `member` 의 캐릭터만 보임. 신청자는 프로필 1개만
+  - `characters.application_status`: `draft` 작성중 / `submitted` 작성완료 (신청자만 의미, 작성완료면 수정 잠금), `submitted_at` 제출 시각
+  - 관리자가 멤버로 전환하면 `role = 'member'`, 신청 프로필이 대표 프로필. 삭제하면 캐릭터·프로필만 삭제(계정은 남음)
+  - 기존 `user`(일반) 계정은 011 마이그레이션에서 `member` 로 바뀜
 
 ## 마이그레이션 규칙
 - `migrations/` 안의 `.sql` 파일을 **파일명 순서대로** 실행합니다.

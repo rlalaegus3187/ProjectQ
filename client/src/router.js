@@ -26,6 +26,7 @@ const router = createRouter({
     { path: '/notifications', component: NotificationsView, meta: { requiresAuth: true } },
     { path: '/inventory', component: InventoryView, meta: { requiresAuth: true } },
     { path: '/admin', component: AdminView, meta: { requiresAuth: true, requiresAdmin: true } },
+    { path: '/admin/applicants', component: () => import('./views/AdminApplicantsView.vue'), meta: { requiresAuth: true, requiresAdmin: true } },
     { path: '/admin/items', component: () => import('./views/AdminItemsView.vue'), meta: { requiresAuth: true, requiresAdmin: true } },
     { path: '/admin/shop', component: () => import('./views/AdminShopView.vue'), meta: { requiresAuth: true, requiresAdmin: true } },
     { path: '/admin/settings', component: () => import('./views/AdminSettingsView.vue'), meta: { requiresAuth: true, requiresAdmin: true } },

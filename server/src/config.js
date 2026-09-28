@@ -19,8 +19,8 @@ module.exports = {
   },
   sessionSecret: required('SESSION_SECRET'),
   cookieSecure: process.env.COOKIE_SECURE === 'true',
-  // 회원가입 시 부여할 권한. 지금은 가입하면 모두 관리자 → 나중에 SIGNUP_ROLE=user 로 변경
-  signupRole: process.env.SIGNUP_ROLE === 'user' ? 'user' : 'admin',
+  // 회원가입 시 부여할 권한 (admin / member / applicant). 기본은 신청자
+  signupRole: ['admin', 'member', 'applicant'].includes(process.env.SIGNUP_ROLE) ? process.env.SIGNUP_ROLE : 'applicant',
   // 업로드 이미지 저장 위치 (운영: /data/uploads, 개발: server/uploads)
   uploadDir: process.env.UPLOAD_DIR
     || (process.env.NODE_ENV === 'production' ? '/data/uploads' : path.join(__dirname, '..', 'uploads')),
