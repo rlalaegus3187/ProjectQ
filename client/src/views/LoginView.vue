@@ -15,9 +15,9 @@ async function submit() {
   loading.value = true;
   try {
     await login(email.value, password.value);
-    // 로그인 전에 가려던 페이지로 이동 (내부 경로만 허용)
-    const redirect = String(route.query.redirect || '/');
-    router.push(redirect.startsWith('/') && !redirect.startsWith('//') ? redirect : '/');
+    // 로그인 전에 가려던 페이지로, 없으면 내 캐릭터(마이페이지)로 이동 (내부 경로만 허용)
+    const redirect = String(route.query.redirect || '/mypage');
+    router.push(redirect.startsWith('/') && !redirect.startsWith('//') ? redirect : '/mypage');
   } catch (e) {
     error.value = e.message;
   } finally {

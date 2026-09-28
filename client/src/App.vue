@@ -1,6 +1,6 @@
 <script setup>
 import { useRouter } from 'vue-router';
-import { auth, logout } from './auth';
+import { auth, isAdmin, logout } from './auth';
 
 const router = useRouter();
 
@@ -15,6 +15,7 @@ async function onLogout() {
     <RouterLink to="/" class="brand">ProjectQ</RouterLink>
     <nav>
       <template v-if="auth.user">
+        <RouterLink v-if="isAdmin()" to="/admin">항목 관리</RouterLink>
         <RouterLink to="/mypage">{{ auth.user.name }}님</RouterLink>
         <button class="link" @click="onLogout">로그아웃</button>
       </template>

@@ -25,10 +25,13 @@ export async function login(email, password) {
   auth.user = user;
 }
 
-export async function signup(name, email, password) {
-  const { user } = await api('/auth/signup', { method: 'POST', body: { name, email, password } });
+// 회원가입 + 캐릭터 등록을 한 번에: { name, email, password, character: { name, hp, stats, details } }
+export async function signup(payload) {
+  const { user } = await api('/auth/signup', { method: 'POST', body: payload });
   auth.user = user;
 }
+
+export const isAdmin = () => auth.user?.role === 'admin';
 
 export async function logout() {
   await api('/auth/logout', { method: 'POST' });

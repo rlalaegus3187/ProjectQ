@@ -3,6 +3,8 @@ const rateLimit = require('express-rate-limit');
 const pool = require('../db');
 const { hashPassword, verifyPassword } = require('../password');
 const requireAuth = require('../middleware/requireAuth');
+const config = require('../config');
+const { getDefinitions, validateCharacterInput, createCharacter, withTransaction } = require('../characters');
 
 const router = express.Router();
 
@@ -17,8 +19,10 @@ const authLimiter = rateLimit({
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
+const USER_COLUMNS = 'id, email, name, role, created_at';
+
 function toPublicUser(row) {
-  return { id: row.id, email: row.email, name: row.name, createdAt: row.created_at };
+  return { id: row.id, email: row.email, name: row.name, role: row.role, createdAt: row.created_at };
 }
 
 // 세션 고정(session fixation) 공격 방지를 위해 로그인 시 세션 ID 를 새로 발급
@@ -41,19 +45,28 @@ router.post('/signup', authLimiter, async (req, res) => {
   if (!name || name.length > 50) return res.status(400).json({ message: '이름은 1~50자로 입력해주세요.' });
   if (password.length < 8) return res.status(400).json({ message: '비밀번호는 8자 이상이어야 합니다.' });
 
+  // 가입과 동시에 캐릭터 1개 등록 (계정·캐릭터를 한 트랜잭션으로 저장)
+  const character = validateCharacterInput(req.body?.character, await getDefinitions());
+  const passwordHash = await hashPassword(password);
+
+  let userId;
   try {
-    const passwordHash = await hashPassword(password);
-    const [result] = await pool.execute(
-      'INSERT INTO users (email, name, password_hash) VALUES (?, ?, ?)',
-      [email, name, passwordHash],
-    );
-    await startSession(req, result.insertId);
-    const [rows] = await pool.execute('SELECT id, email, name, created_at FROM users WHERE id = ?', [result.insertId]);
-    res.status(201).json({ user: toPublicUser(rows[0]) });
+    userId = await withTransaction(async (conn) => {
+      const [result] = await conn.execute(
+        'INSERT INTO users (email, name, role, password_hash) VALUES (?, ?, ?, ?)',
+        [email, name, config.signupRole, passwordHash],
+      );
+      await createCharacter(conn, result.insertId, character);
+      return result.insertId;
+    });
   } catch (err) {
     if (err.code === 'ER_DUP_ENTRY') return res.status(409).json({ message: '이미 가입된 이메일입니다.' });
     throw err;
   }
+
+  await startSession(req, userId);
+  const [rows] = await pool.execute(`SELECT ${USER_COLUMNS} FROM users WHERE id = ?`, [userId]);
+  res.status(201).json({ user: toPublicUser(rows[0]) });
 });
 
 router.post('/login', authLimiter, async (req, res) => {
@@ -61,7 +74,7 @@ router.post('/login', authLimiter, async (req, res) => {
   const password = String(req.body?.password || '');
 
   const [rows] = await pool.execute(
-    'SELECT id, email, name, password_hash, created_at FROM users WHERE email = ?',
+    `SELECT ${USER_COLUMNS}, password_hash FROM users WHERE email = ?`,
     [email],
   );
   const user = rows[0];
@@ -84,7 +97,7 @@ router.post('/logout', (req, res, next) => {
 });
 
 router.get('/me', requireAuth, async (req, res) => {
-  const [rows] = await pool.execute('SELECT id, email, name, created_at FROM users WHERE id = ?', [req.session.userId]);
+  const [rows] = await pool.execute(`SELECT ${USER_COLUMNS} FROM users WHERE id = ?`, [req.session.userId]);
   if (!rows[0]) {
     req.session.destroy(() => {});
     return res.status(401).json({ message: '로그인이 필요합니다.' });

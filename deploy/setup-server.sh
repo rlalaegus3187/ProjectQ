@@ -120,6 +120,7 @@ collation-server     = utf8mb4_unicode_ci
 
 [client]
 socket = $MYSQL_SOCKET
+default-character-set = utf8mb4
 
 !includedir /etc/my.cnf.d
 CNF

@@ -19,4 +19,6 @@ module.exports = {
   },
   sessionSecret: required('SESSION_SECRET'),
   cookieSecure: process.env.COOKIE_SECURE === 'true',
+  // 회원가입 시 부여할 권한. 지금은 가입하면 모두 관리자 → 나중에 SIGNUP_ROLE=user 로 변경
+  signupRole: process.env.SIGNUP_ROLE === 'user' ? 'user' : 'admin',
 };

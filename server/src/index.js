@@ -35,10 +35,16 @@ app.get('/api/health', async (req, res) => {
 });
 app.use('/api/auth', require('./routes/auth'));
 app.use('/api/posts', require('./routes/posts'));
+app.use('/api', require('./routes/characters'));
+app.use('/api/admin', require('./routes/admin'));
 
 app.use('/api', (req, res) => res.status(404).json({ message: 'Not Found' }));
 
 app.use((err, req, res, next) => {
+  // 검증 오류(HttpError), 잘못된 JSON 등 클라이언트에 보여줘도 되는 오류
+  if (err.expose && err.status >= 400 && err.status < 500) {
+    return res.status(err.status).json({ message: err.message });
+  }
   console.error(err);
   res.status(500).json({ message: '서버 오류가 발생했습니다.' });
 });

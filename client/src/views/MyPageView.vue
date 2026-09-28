@@ -1,15 +1,84 @@
 <script setup>
+import { ref, onMounted } from 'vue';
+import { api } from '../api';
 import { auth } from '../auth';
+import { fetchAttributes, toCharacterForm } from '../character';
+import CharacterCard from '../components/CharacterCard.vue';
+import CharacterForm from '../components/CharacterForm.vue';
+
+const character = ref(null);
+const definitions = ref(null);
+const form = ref(null);       // null 이면 보기 모드, 값이 있으면 입력(생성/수정) 모드
+const loaded = ref(false);
+const error = ref('');
+const saving = ref(false);
+
+async function load() {
+  const [me, defs] = await Promise.all([api('/characters/me'), fetchAttributes()]);
+  character.value = me.character;
+  definitions.value = defs;
+  // 캐릭터가 없으면(기존 계정 등) 바로 등록 폼 표시
+  form.value = me.character ? null : toCharacterForm(defs);
+  loaded.value = true;
+}
+
+function startEdit() {
+  error.value = '';
+  form.value = toCharacterForm(definitions.value, character.value);
+}
+
+async function save() {
+  error.value = '';
+  saving.value = true;
+  try {
+    const { character: saved } = character.value
+      ? await api('/characters/me', { method: 'PUT', body: form.value })
+      : await api('/characters', { method: 'POST', body: form.value });
+    character.value = saved;
+    form.value = null;
+  } catch (e) {
+    error.value = e.message;
+  } finally {
+    saving.value = false;
+  }
+}
+
+onMounted(() => load().catch((e) => { error.value = e.message; loaded.value = true; }));
 </script>
 
 <template>
   <section class="card">
     <h1>마이페이지</h1>
-    <p>로그인한 사용자만 볼 수 있는 페이지입니다.</p>
-    <ul>
-      <li>이름: {{ auth.user.name }}</li>
-      <li>이메일: {{ auth.user.email }}</li>
-      <li>가입일: {{ new Date(auth.user.createdAt).toLocaleDateString() }}</li>
-    </ul>
+    <dl class="kv">
+      <dt>이름</dt><dd>{{ auth.user.name }}</dd>
+      <dt>이메일</dt><dd>{{ auth.user.email }}</dd>
+      <dt>권한</dt>
+      <dd><span class="badge" :class="auth.user.role">{{ auth.user.role === 'admin' ? '관리자' : '일반' }}</span></dd>
+    </dl>
+  </section>
+
+  <section class="card">
+    <div class="card-head">
+      <h2>내 캐릭터</h2>
+      <button v-if="character && !form" class="secondary" @click="startEdit">수정</button>
+    </div>
+
+    <p v-if="!loaded" class="muted">불러오는 중…</p>
+
+    <form v-else-if="form" class="form" @submit.prevent="save">
+      <p v-if="!character" class="muted">아직 캐릭터가 없습니다. 캐릭터를 등록해주세요. (계정당 1개)</p>
+      <CharacterForm v-model="form" :definitions="definitions" />
+      <p v-if="error" class="error">{{ error }}</p>
+      <div class="actions">
+        <button type="submit" :disabled="saving">{{ saving ? '저장 중…' : character ? '저장' : '캐릭터 등록' }}</button>
+        <button v-if="character" type="button" class="secondary" @click="form = null">취소</button>
+      </div>
+    </form>
+
+    <template v-else-if="character">
+      <CharacterCard :character="character" />
+    </template>
+
+    <p v-if="error && !form" class="error">{{ error }}</p>
   </section>
 </template>
