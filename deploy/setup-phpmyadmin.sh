@@ -12,6 +12,7 @@
 #
 # 접속 IP 제한(권장): PMA_ALLOW_IPS="1.2.3.4 5.6.7.8" bash setup-phpmyadmin.sh
 set -euo pipefail
+trap 'echo "❌ 설치 실패 (줄 $LINENO): $BASH_COMMAND" >&2' ERR
 
 DATA="${DATA:-/data}"
 PMA_DIR="$DATA/phpmyadmin"
@@ -99,7 +100,8 @@ sudo dnf install -y php-fpm php-mysqlnd php-mbstring php-xml
 sudo dnf install -y --setopt=strict=0 php-gd php-intl php-zip php-sodium || true
 sudo systemctl enable php-fpm
 sudo systemctl restart php-fpm
-php -v | head -1
+# (php-fpm 만 설치하면 php CLI 가 없을 수 있으므로 php-fpm 으로 버전 확인)
+sudo php-fpm -v | head -1 || true
 
 step "2. phpMyAdmin 다운로드 → $PMA_DIR"
 if [[ -f "$PMA_DIR/index.php" && "${PMA_UPGRADE:-}" != "1" ]]; then
