@@ -5,15 +5,18 @@
 #   사용: bash setup-server.sh
 #
 # 모든 앱 데이터는 /data (Instance Store) 에 저장합니다.
-#   /data/mysql                 MySQL 데이터 디렉터리
+#   /data/mysql                 MySQL 데이터 (테이블, 인덱스, redo/undo, binlog)
+#   /data/mysql-tmp             MySQL 임시파일
 #   /data/config/projectq.env   앱 설정(DB 비밀번호, 세션 키)
 #   /data/www/projectq          Vue 빌드 결과물 (Nginx 가 서빙)
-#   /data/logs                  API 로그 (PM2)
+#   /data/logs                  API 로그 (PM2), logs/mysql/error.log (MySQL 에러 로그)
 #   /data/ProjectQ              코드 (③ deploy.js 가 git clone)
 set -euo pipefail
 
 DATA="${DATA:-/data}"
 MYSQL_DIR="$DATA/mysql"
+MYSQL_TMP="$DATA/mysql-tmp"
+MYSQL_LOG_DIR="$DATA/logs/mysql"
 ENV_FILE="$DATA/config/projectq.env"
 WEB_ROOT="$DATA/www/projectq"
 DB_NAME="projectq"
@@ -42,28 +45,53 @@ sudo mkdir -p "$DATA/config" "$DATA/www" "$DATA/logs"
 sudo chown "$USER:$USER" "$DATA/config" "$DATA/www" "$DATA/logs"
 chmod 700 "$DATA/config"
 
-step "3. MySQL 데이터 디렉터리 → $MYSQL_DIR"
-# AppArmor 가 /data/mysql 접근을 허용하도록 별칭 등록
+step "3. MySQL 저장 위치 → $DATA (데이터·임시파일·에러로그)"
+# 데이터(테이블/인덱스/redo·undo/binlog): $MYSQL_DIR
+# 임시파일(큰 정렬, 임시 테이블):        $MYSQL_TMP
+# 에러 로그:                             $MYSQL_LOG_DIR/error.log
+sudo mkdir -p "$MYSQL_DIR" "$MYSQL_TMP" "$MYSQL_LOG_DIR"
+sudo chown mysql:mysql "$MYSQL_DIR" "$MYSQL_TMP" "$MYSQL_LOG_DIR"
+sudo chmod 750 "$MYSQL_DIR" "$MYSQL_TMP" "$MYSQL_LOG_DIR"
+
+# AppArmor 가 /data 아래 경로 접근을 허용하도록 등록
 if ! grep -q "$MYSQL_DIR" /etc/apparmor.d/tunables/alias 2>/dev/null; then
   echo "alias /var/lib/mysql/ -> $MYSQL_DIR/," | sudo tee -a /etc/apparmor.d/tunables/alias >/dev/null
-  sudo systemctl reload apparmor 2>/dev/null || sudo systemctl restart apparmor 2>/dev/null || true
 fi
+if [[ -f /etc/apparmor.d/usr.sbin.mysqld ]]; then
+  sudo mkdir -p /etc/apparmor.d/local
+  sudo tee /etc/apparmor.d/local/usr.sbin.mysqld >/dev/null <<AA
+# ProjectQ: MySQL 임시파일/에러로그를 /data 에 저장
+$MYSQL_TMP/ r,
+$MYSQL_TMP/** rwk,
+$MYSQL_LOG_DIR/ r,
+$MYSQL_LOG_DIR/** rw,
+AA
+  grep -q 'local/usr.sbin.mysqld' /etc/apparmor.d/usr.sbin.mysqld \
+    || echo "⚠ AppArmor 프로필에 local include 가 없습니다. /etc/apparmor.d/usr.sbin.mysqld 확인 필요"
+fi
+sudo systemctl reload apparmor 2>/dev/null || sudo systemctl restart apparmor 2>/dev/null || true
+
 sudo tee /etc/mysql/mysql.conf.d/zz-projectq.cnf >/dev/null <<CNF
 [mysqld]
-datadir = $MYSQL_DIR
+datadir   = $MYSQL_DIR
+tmpdir    = $MYSQL_TMP
+log_error = $MYSQL_LOG_DIR/error.log
 CNF
+
 if [[ ! -d "$MYSQL_DIR/mysql" ]]; then
   echo "$MYSQL_DIR 가 비어 있어 새로 초기화합니다."
   sudo systemctl stop mysql || true
-  sudo mkdir -p "$MYSQL_DIR"
-  sudo chown mysql:mysql "$MYSQL_DIR"
-  sudo chmod 750 "$MYSQL_DIR"
-  # root@localhost 는 비밀번호 없이 생성되지만 sudo mysql(소켓) 로만 접속 가능 — 외부 포트는 닫혀 있음
   sudo mysqld --initialize-insecure --user=mysql --datadir="$MYSQL_DIR"
+  sudo systemctl start mysql
+  # --initialize-insecure 는 root 를 비밀번호 없이 만들므로, Ubuntu 기본과 같이 `sudo mysql` 로만 접속되게 변경
+  # (새로 초기화한 데이터 디렉터리에는 auth_socket 플러그인이 없어서 먼저 설치)
+  sudo mysql -e "SELECT 1 FROM information_schema.plugins WHERE plugin_name='auth_socket'" | grep -q 1 \
+    || sudo mysql -e "INSTALL PLUGIN auth_socket SONAME 'auth_socket.so';"
+  sudo mysql -e "ALTER USER 'root'@'localhost' IDENTIFIED WITH auth_socket;"
 fi
 sudo systemctl enable mysql
 sudo systemctl restart mysql
-sudo mysql -N -e "SELECT CONCAT('MySQL ', VERSION(), ' datadir=', @@datadir)"
+sudo mysql -N -e "SELECT CONCAT('MySQL ', VERSION(), ' / datadir=', @@datadir, ' / tmpdir=', @@tmpdir, ' / log_error=', @@log_error)"
 
 step "4. DB/계정 + $ENV_FILE"
 if [[ -f "$ENV_FILE" ]]; then

@@ -10,10 +10,11 @@
 
 /data  (m6id NVMe Instance Store, 약 118GB)  ← 모든 코드와 데이터
 ├─ ProjectQ/                 코드 (git clone)
-├─ mysql/                    MySQL 데이터
+├─ mysql/                    MySQL 데이터 (테이블, 인덱스, redo/undo, binlog)
+├─ mysql-tmp/                MySQL 임시파일 (큰 정렬, 임시 테이블)
 ├─ config/projectq.env       앱 설정 (DB 비밀번호, 세션 키)
 ├─ www/projectq/             프론트 빌드 결과물
-├─ logs/                     API 로그
+├─ logs/                     API 로그, logs/mysql/error.log (MySQL 에러 로그)
 └─ deploy.js                 ③ 불러오기/업데이트 스크립트
 ```
 
@@ -71,7 +72,7 @@ bash setup-server.sh
 |---|---|
 | 1 | git, Nginx, MySQL 8, Node.js 22, PM2 설치 |
 | 2 | `/data/config`, `/data/www`, `/data/logs` 생성 |
-| 3 | MySQL 데이터 디렉터리를 **`/data/mysql`** 로 지정 (AppArmor 허용 포함), 비어 있으면 초기화 |
+| 3 | MySQL 데이터 **`/data/mysql`**, 임시파일 `/data/mysql-tmp`, 에러 로그 `/data/logs/mysql` 로 지정 (AppArmor 허용 포함). 비어 있으면 초기화하고 root 는 `sudo mysql` 로만 접속 가능하게 설정 |
 | 4 | `projectq` DB/계정 생성 (비밀번호 랜덤) → **`/data/config/projectq.env`** 작성 |
 | 5 | Nginx 설정 (`root /data/www/projectq`, `/api` → 3000 프록시) |
 | 6 | PM2 부팅 자동 시작, MySQL·Nginx·PM2 가 `/data` 마운트 **이후에** 시작되도록 순서 지정 |
@@ -146,5 +147,5 @@ sudo mysql projectq                     # DB 접속
 | 접속 안 됨 | 보안 그룹 80 포트, `sudo systemctl status nginx` |
 | 502 Bad Gateway | `pm2 logs projectq-api` (DB 접속 정보, `.env`) |
 | 500/404 (첫 화면) | `/data/www/projectq` 존재 여부 → `node /data/deploy.js` |
-| MySQL 안 뜸 | `df -h /data` 로 마운트 확인, `sudo journalctl -u mysql` |
+| MySQL 안 뜸 | `df -h /data` 로 마운트 확인, `sudo tail /data/logs/mysql/error.log`, `sudo journalctl -u mysql` |
 | 로그인 후 바로 풀림 | http 인데 `COOKIE_SECURE=true` 인지 확인 |

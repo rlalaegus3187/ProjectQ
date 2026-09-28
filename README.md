@@ -26,7 +26,7 @@ ProjectQ/
 ├─ db/migrations/          MySQL 스키마 (001_init.sql …)
 ├─ deploy/
 │  ├─ mount-instance-store.sh  ① NVMe Instance Store → /data 마운트
-│  ├─ setup-server.sh      ② EC2 기본 세팅 (Node, MySQL→/data/mysql, Nginx, PM2)
+│  ├─ setup-server.sh      ② EC2 기본 세팅 (Node, MySQL 데이터·임시파일·로그→/data, Nginx, PM2)
 │  ├─ deploy.js            ③ git clone/pull → 설치 → 마이그레이션 → 빌드 → 재시작
 │  └─ ecosystem.config.cjs PM2 설정
 └─ docs/EC2_SETUP.md       배포 가이드
