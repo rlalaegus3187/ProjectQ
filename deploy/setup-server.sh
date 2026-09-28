@@ -214,6 +214,7 @@ http {
     include /etc/nginx/conf.d/*.conf;
 }
 NGINX
+sudo mkdir -p /etc/nginx/projectq.d
 sudo tee /etc/nginx/conf.d/projectq.conf >/dev/null <<NGINX
 server {
     listen 80 default_server;
@@ -221,6 +222,9 @@ server {
 
     root $WEB_ROOT;
     index index.html;
+
+    # 추가 기능(phpMyAdmin 등)은 setup-phpmyadmin.sh 가 이 폴더에 설정을 넣음
+    include /etc/nginx/projectq.d/*.conf;
 
     # 빌드 파일(해시 포함 파일명)은 오래 캐시
     location /assets/ {

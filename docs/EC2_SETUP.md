@@ -15,6 +15,8 @@
 ├─ config/projectq.env       앱 설정 (DB 비밀번호, 세션 키)
 ├─ www/projectq/             프론트 빌드 결과물
 ├─ logs/                     API 로그, logs/mysql/error.log (MySQL 에러 로그)
+├─ phpmyadmin/               phpMyAdmin (setup-phpmyadmin.sh 로 설치 시)
+├─ auth/phpmyadmin.htpasswd  phpMyAdmin 웹 관리자 계정
 └─ deploy.js                 ③ 불러오기/업데이트 스크립트
 ```
 
@@ -149,6 +151,45 @@ mysql> ALTER USER 'admin'@'127.0.0.1' IDENTIFIED BY '새비밀번호';
 ```
 
 **관리자 계정을 다시 만들기** (아이디 변경 등): `rm /data/config/.db-admin-user` 후 `bash setup-server.sh` 재실행
+
+## phpMyAdmin (웹에서 DB 보기) — `http://<서버IP>/phpmyadmin/`
+
+② 이후 한 번 실행합니다.
+```bash
+curl -fsSLO $RAW/setup-phpmyadmin.sh
+bash setup-phpmyadmin.sh
+```
+- 처음에 **웹 관리자 아이디/비밀번호**를 물어봅니다 (기본 아이디 `pmaadmin`).
+- PHP(php-fpm) 설치 → phpMyAdmin 최신 버전을 공식 사이트에서 받아 체크섬 확인 후 `/data/phpmyadmin` 에 설치 → Nginx `/phpmyadmin` 연결
+
+**로그인은 2단계입니다.**
+1. 브라우저 로그인 창 → **웹 관리자 계정** (위에서 설정한 것)
+2. phpMyAdmin 로그인 화면 → **MySQL 계정** (② 에서 만든 DB 관리자 계정, 예: `admin`). `root` 로그인은 막혀 있습니다.
+
+**웹 관리자 계정 관리**
+```bash
+bash setup-phpmyadmin.sh user 새아이디      # 추가 또는 비밀번호 변경 (비밀번호는 입력창에서)
+bash setup-phpmyadmin.sh deluser 아이디     # 삭제
+bash setup-phpmyadmin.sh users              # 목록
+```
+
+**phpMyAdmin 로그인용 MySQL 계정을 새로 만들기**
+```bash
+sudo mysql
+mysql> CREATE USER '새아이디'@'localhost' IDENTIFIED BY '비밀번호';
+mysql> GRANT ALL PRIVILEGES ON *.* TO '새아이디'@'localhost' WITH GRANT OPTION;   -- 전체 권한
+-- 또는 projectq DB 만: GRANT ALL PRIVILEGES ON projectq.* TO '새아이디'@'localhost';
+```
+(phpMyAdmin 은 소켓으로 접속하므로 `'아이디'@'localhost'` 계정이 필요합니다)
+
+> ⚠ 도메인/HTTPS 없이 `http://IP` 로 접속하면 비밀번호가 암호화되지 않은 채 전송됩니다.
+> **내 IP 에서만 열리도록 제한**하는 것을 권장합니다 (공유기 공인 IP 확인: https://checkip.amazonaws.com):
+> ```bash
+> PMA_ALLOW_IPS="내공인IP" bash setup-phpmyadmin.sh     # 여러 개면 공백으로 구분
+> ```
+> HTTPS 를 적용하면 phpMyAdmin 도 자동으로 HTTPS 로 접속됩니다.
+
+phpMyAdmin 새 버전으로 교체: `PMA_UPGRADE=1 bash setup-phpmyadmin.sh`
 
 ## DB 백업 (권장)
 ```bash
