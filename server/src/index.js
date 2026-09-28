@@ -34,7 +34,8 @@ app.get('/api/health', async (req, res) => {
   res.json({ ok: true });
 });
 app.use('/api/auth', require('./routes/auth'));
-app.use('/api/posts', require('./routes/posts'));
+app.use('/api/boards', require('./routes/boards'));
+app.use('/api/notifications', require('./routes/notifications'));
 app.use('/api/uploads', require('./routes/uploads'));
 app.use('/api', require('./routes/characters'));
 app.use('/api/admin', require('./routes/admin'));

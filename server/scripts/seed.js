@@ -1,5 +1,5 @@
 // 테스트용 샘플 계정(관리자) + 캐릭터 + 게시글을 만듭니다. (이미 있으면 건너뜀)
-//   계정: demo@projectq.local / demo1234
+//   계정: demo@projectq.local / demo1234  (+ 샘플 공지 1개)
 const pool = require('../src/db');
 const { hashPassword } = require('../src/password');
 const { getDefinitions, validateCharacterInput, createCharacter, withTransaction } = require('../src/characters');
@@ -25,8 +25,8 @@ async function main() {
     );
     await createCharacter(conn, result.insertId, character);
     await conn.execute(
-      'INSERT INTO posts (user_id, title, body) VALUES (?, ?, ?)',
-      [result.insertId, '첫 번째 글', 'ProjectQ 샘플 게시글입니다.'],
+      "INSERT INTO posts (board, user_id, title, body) VALUES ('notice', ?, ?, ?)",
+      [result.insertId, 'ProjectQ 에 오신 것을 환영합니다', '## 첫 번째 공지\n\nProjectQ 샘플 **공지**입니다.'],
     );
   });
   console.log('[seed] 샘플 계정 생성: demo@projectq.local / demo1234 (관리자, 캐릭터 포함)');

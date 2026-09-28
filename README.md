@@ -3,7 +3,9 @@
 Vue 3 + Node.js/Express + MySQL 로 만든 SPA 로그인 샘플입니다.
 
 - 세션 기반 로그인 (HttpOnly 쿠키, 세션은 MySQL 에 저장 → 재시작해도 로그인 유지)
-- 회원가입 / 로그인 / 로그아웃 / 샘플 게시판
+- 회원가입 / 로그인 / 로그아웃
+- **게시판**: 공지 · 세계관 · 캐릭터 가이드 (관리자 작성, 마크다운 등록툴 + 이미지), **Q&A** (회원 질문·비밀글, 관리자 답변·메인 글)
+- **알림**: 내 Q&A 질문에 답변이 달리면 상단 `알림` 에 표시
 - **계정당 캐릭터 1개** — 가입할 때 함께 등록, 로그인하면 마이페이지에서 내 캐릭터(기본정보/캐릭터 스탯/프로필) 표시·수정
 - **관리자/일반 권한** (지금은 가입하면 모두 관리자) — 관리자는 `/admin` 에서 캐릭터 스탯·프로필 양식 항목을 추가/수정/삭제
 - 항목 형식: 숫자, 짧은 텍스트, 긴 텍스트, 링크, 이미지(업로드), 드롭다운
@@ -21,7 +23,7 @@ ProjectQ/
 │     ├─ router.js         라우트 + 로그인/관리자 가드
 │     ├─ character.js      캐릭터 폼 헬퍼
 │     ├─ components/       CharacterForm/CharacterCard, AttributeInput/AttributeValue(형식별 입력·표시)
-│     └─ views/            Home, Login, Signup, MyPage, Admin
+│     └─ views/            Home, Login, Signup, MyPage, Admin(항목/게시글), Board*/Post*, Notifications
 ├─ server/                 Express API
 │  ├─ src/
 │  │  ├─ index.js          앱 진입점 (세션, 라우트)
@@ -30,11 +32,12 @@ ProjectQ/
 │  │  ├─ routes/characters.js  /api/attributes, /api/characters
 │  │  ├─ routes/admin.js   /api/admin/attributes (관리자)
 │  │  ├─ routes/uploads.js /api/uploads (이미지 업로드/제공)
-│  │  └─ routes/posts.js   /api/posts (샘플)
+│  │  ├─ routes/boards.js  /api/boards (공지/세계관/캐릭터 가이드/Q&A)
+│  │  └─ routes/notifications.js  /api/notifications
 │  ├─ scripts/migrate.js   DB 마이그레이션
 │  └─ scripts/seed.js      샘플 계정 생성
 ├─ db/                    MySQL 스키마 (구조 설명: db/README.md)
-│  └─ migrations/          001_init.sql … 004_stat_points.sql
+│  └─ migrations/          001_init.sql … 005_boards.sql
 ├─ deploy/
 │  ├─ mount-instance-store.sh  ① NVMe Instance Store → /data 마운트
 │  ├─ setup-server.sh      ② EC2 기본 세팅 (Node, MySQL 데이터·임시파일·로그→/data, Nginx, PM2)
@@ -62,8 +65,14 @@ ProjectQ/
 | PATCH | `/api/admin/attributes/:id` | (관리자) `{ label, valueType, options, isRequired, sortOrder, isActive }` 수정 |
 | DELETE | `/api/admin/attributes/:id` | (관리자) 항목 + 저장된 값 삭제 |
 | POST | `/api/uploads` | 이미지 업로드 (multipart `file`, png/jpg/gif/webp, 5MB) → `{ url }` |
-| GET | `/api/posts` | 게시글 목록 |
-| POST | `/api/posts` | `{ title, body }` (로그인 필요) |
+| GET | `/api/boards/:board/posts?page=` | 목록 (board: notice/world/guide/qna). Q&A 는 `pinned`(메인 글) 포함, 비밀글은 가려짐 |
+| GET | `/api/boards/:board/posts/:id` | 글 보기 (+ Q&A 답변) |
+| POST/PUT/DELETE | `/api/boards/:board/posts[/:id]` | `{ title, body, isHidden }` — 공지/세계관/가이드는 관리자, Q&A 는 작성자(또는 관리자) |
+| PUT | `/api/boards/qna/posts/:id/pin` | (관리자) `{ isPinned }` 메인 글 지정/해제 |
+| POST | `/api/boards/qna/posts/:id/replies` | (관리자) 답변 → 질문자에게 알림 |
+| PUT/DELETE | `/api/boards/qna/replies/:id` | (관리자) 답변 수정/삭제 |
+| GET | `/api/notifications` | 내 알림 50개 + `unreadCount` |
+| POST | `/api/notifications/:id/read`, `/read-all` | 읽음 처리 |
 | GET | `/api/health` | 헬스체크 |
 
 ## 로컬 개발

@@ -31,7 +31,10 @@ value          TEXT                value          TEXT
 PK(character_id, definition_id)    PK(character_id, definition_id)
 
 settings  (전역 설정 키-값)  stat_initial_points = 초기 투자 포인트
-posts     (샘플 게시판)  user_id FK → users.id
+posts          게시글  board: notice(공지)/world(세계관)/guide(캐릭터 가이드)/qna(Q&A)/free(이전 샘플)
+               is_hidden(Q&A 비밀글), is_pinned(Q&A 메인 글), user_id FK → users.id
+post_replies   Q&A 답변 (관리자)  post_id FK → posts.id (글 삭제 시 함께 삭제)
+notifications  계정별 알림  user_id, type(qna_reply), post_id, message, is_read
 sessions  (express-mysql-session 로그인 세션)
 ```
 
