@@ -60,7 +60,7 @@ onMounted(() => load().catch((e) => { error.value = e.message; loaded.value = tr
   <section class="card">
     <div class="card-head">
       <h2>내 캐릭터</h2>
-      <button v-if="character && !form" class="secondary" @click="startEdit">수정</button>
+      <button v-if="character && !form" class="secondary" @click="startEdit">수정하기</button>
     </div>
 
     <p v-if="!loaded" class="muted">불러오는 중…</p>

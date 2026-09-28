@@ -2,7 +2,9 @@
 const express = require('express');
 const pool = require('../db');
 const requireAdmin = require('../middleware/requireAdmin');
-const { VALUE_TYPES, HttpError, getDefinitions, groupDefinitions, withTransaction } = require('../characters');
+const {
+  VALUE_TYPES, HttpError, getDefinitions, groupDefinitions, withTransaction, getStatPoints, setStatPoints,
+} = require('../characters');
 
 const router = express.Router();
 router.use(requireAdmin);
@@ -38,6 +40,18 @@ function parseOptions(value) {
   if (unique.some((s) => s.length > 100)) throw new HttpError(400, '선택지는 각각 100자 이내로 입력해주세요.');
   return unique;
 }
+
+// 전역 설정: 초기 투자 포인트
+router.get('/settings', async (req, res) => {
+  res.json({ statPoints: await getStatPoints() });
+});
+
+router.put('/settings', async (req, res) => {
+  const n = Number(req.body?.statPoints);
+  if (!Number.isInteger(n) || n < 0 || n > 1000000) throw new HttpError(400, '투자 포인트는 0 ~ 1,000,000 사이의 정수로 입력해주세요.');
+  await setStatPoints(n);
+  res.json({ statPoints: n });
+});
 
 // 전체 항목 (비활성 포함)
 router.get('/attributes', async (req, res) => {

@@ -30,6 +30,7 @@ definition_id  FK → attribute_…    definition_id  FK → attribute_…
 value          TEXT                value          TEXT
 PK(character_id, definition_id)    PK(character_id, definition_id)
 
+settings  (전역 설정 키-값)  stat_initial_points = 초기 투자 포인트
 posts     (샘플 게시판)  user_id FK → users.id
 sessions  (express-mysql-session 로그인 세션)
 ```
@@ -46,6 +47,7 @@ sessions  (express-mysql-session 로그인 세션)
   이미지는 업로드한 파일 경로(`/api/uploads/<랜덤>.png`) — 파일은 `/data/uploads` 에 저장
 - 형식을 바꿔도 저장된 값은 그대로 두며, 새 형식에 맞지 않는 값은 다음에 캐릭터를 저장할 때 다시 입력받음
 - 항목 삭제 시 모든 캐릭터의 해당 값도 함께 삭제 (값을 남기려면 삭제 대신 '사용' 끄기)
+- **투자 포인트**: `숫자` 형식의 캐릭터 스탯은 포인트를 나눠 주는 스탯 — 값은 0 이상의 정수, 사용 중인 항목 값의 합계 ≤ `settings.stat_initial_points` (관리자 페이지에서 설정)
 - 가입 시 권한은 서버 설정 `SIGNUP_ROLE` (기본 `admin` = 지금은 가입하면 모두 관리자)
 
 ## 마이그레이션 규칙

@@ -19,6 +19,10 @@ defineProps({
 
     <section>
       <h3>캐릭터 스탯</h3>
+      <div v-if="character.statPoints" class="points-bar" :class="{ over: character.statPoints.used > character.statPoints.total }">
+        투자 포인트 <strong>{{ character.statPoints.used }}</strong> / {{ character.statPoints.total }}
+        <span>· 남은 포인트 <strong>{{ character.statPoints.total - character.statPoints.used }}</strong></span>
+      </div>
       <p v-if="!character.stats.length" class="muted">등록된 캐릭터 스탯 항목이 없습니다.</p>
       <dl v-else class="kv">
         <template v-for="stat in character.stats" :key="stat.code">

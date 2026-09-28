@@ -17,6 +17,29 @@ class HttpError extends Error {
   }
 }
 
+// 숫자형 캐릭터 스탯 = 투자 포인트를 분배하는 스탯 (0 이상의 정수, 합계 ≤ 투자 포인트)
+const isPointStat = (def) => def.category === 'stat' && def.valueType === 'number';
+const STAT_POINTS_KEY = 'stat_initial_points';
+
+async function getStatPoints(conn = pool) {
+  const [rows] = await conn.execute('SELECT value FROM settings WHERE name = ?', [STAT_POINTS_KEY]);
+  const n = Number(rows[0]?.value);
+  return Number.isInteger(n) && n >= 0 ? n : 0;
+}
+
+async function setStatPoints(value, conn = pool) {
+  await conn.execute(
+    'INSERT INTO settings (name, value) VALUES (?, ?) ON DUPLICATE KEY UPDATE value = VALUES(value)',
+    [STAT_POINTS_KEY, String(value)],
+  );
+}
+
+// 사용한 포인트 = 숫자형 스탯 값의 합 (validateValues 결과 또는 { def, value } 목록)
+function usedStatPoints(values) {
+  return values.filter(({ def, value }) => isPointStat(def) && value !== null)
+    .reduce((sum, { value }) => sum + Number(value), 0);
+}
+
 function parseOptions(value) {
   if (value === null || value === undefined) return null;
   if (Array.isArray(value)) return value;
@@ -86,9 +109,12 @@ function validateValue(def, text) {
   if (max && text.length > max) fail(`${max}자 이내로 입력해주세요.`);
 
   switch (def.valueType) {
-    case 'number':
-      if (!Number.isFinite(Number(text))) fail('숫자로 입력해주세요.');
-      return String(Number(text));
+    case 'number': {
+      const n = Number(text);
+      if (!Number.isFinite(n)) fail('숫자로 입력해주세요.');
+      if (isPointStat(def) && (!Number.isInteger(n) || n < 0 || n > MAX_INT)) fail('0 이상의 정수로 입력해주세요.');
+      return String(n);
+    }
     case 'link': {
       let url;
       try { url = new URL(text); } catch { fail('올바른 링크(http:// 또는 https://)를 입력해주세요.'); }
@@ -107,7 +133,8 @@ function validateValue(def, text) {
 }
 
 // 캐릭터 입력 전체 검증: { name, hp, stats: {code: value}, details: {code: value} }
-function validateCharacterInput(input, defs) {
+// statPoints: 투자 포인트 총량 (숫자형 스탯 합계 상한). null 이면 검사 안 함
+function validateCharacterInput(input, defs, statPoints = null) {
   const name = String(input?.name ?? '').trim();
   if (!name || name.length > 50) throw new HttpError(400, '캐릭터 이름은 1~50자로 입력해주세요.');
 
@@ -118,10 +145,15 @@ function validateCharacterInput(input, defs) {
   }
 
   const { stats, details } = groupDefinitions(defs);
+  const statValues = validateValues(input?.stats, stats);
+  const used = usedStatPoints(statValues);
+  if (statPoints !== null && used > statPoints) {
+    throw new HttpError(400, `스탯에 투자한 포인트(${used})가 전체 포인트(${statPoints})보다 많습니다.`);
+  }
   return {
     name,
     hp,
-    stats: validateValues(input?.stats, stats),
+    stats: statValues,
     details: validateValues(input?.details, details),
   };
 }
@@ -171,12 +203,13 @@ async function getCharacterByUserId(userId, conn = pool) {
   const character = rows[0];
   if (!character) return null;
 
-  const defs = await getDefinitions(conn);
+  const [defs, totalPoints] = await Promise.all([getDefinitions(conn), getStatPoints(conn)]);
   const [statRows] = await conn.execute('SELECT definition_id, value FROM character_stats WHERE character_id = ?', [character.id]);
   const [detailRows] = await conn.execute('SELECT definition_id, value FROM character_details WHERE character_id = ?', [character.id]);
   const statValues = new Map(statRows.map((r) => [r.definition_id, r.value]));
   const detailValues = new Map(detailRows.map((r) => [r.definition_id, r.value]));
   const { stats, details } = groupDefinitions(defs);
+  const usedPoints = usedStatPoints(stats.map((def) => ({ def, value: statValues.get(def.id) ?? null })));
   const withValue = (valueMap) => (def) => ({
     code: def.code,
     label: def.label,
@@ -190,6 +223,7 @@ async function getCharacterByUserId(userId, conn = pool) {
     hp: character.hp,
     stats: stats.map(withValue(statValues)),
     details: details.map(withValue(detailValues)),
+    statPoints: { total: totalPoints, used: usedPoints },
     createdAt: character.created_at,
     updatedAt: character.updated_at,
   };
@@ -213,6 +247,9 @@ async function withTransaction(fn) {
 
 module.exports = {
   VALUE_TYPES,
+  isPointStat,
+  getStatPoints,
+  setStatPoints,
   HttpError,
   getDefinitions,
   groupDefinitions,

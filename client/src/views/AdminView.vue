@@ -9,6 +9,8 @@ const CATEGORIES = [
 ];
 
 const lists = ref({ stats: [], details: [] });
+const statPoints = ref(0);        // 저장된 초기 투자 포인트
+const statPointsDraft = ref(0);   // 입력 중인 값
 const drafts = reactive({});   // id → 수정 중인 값
 const error = ref('');
 const message = ref('');
@@ -35,7 +37,10 @@ function isDirty(item) {
 }
 
 async function load() {
-  lists.value = await api('/admin/attributes');
+  const [attrs, settings] = await Promise.all([api('/admin/attributes'), api('/admin/settings')]);
+  lists.value = attrs;
+  statPoints.value = settings.statPoints;
+  statPointsDraft.value = settings.statPoints;
   for (const item of [...lists.value.stats, ...lists.value.details]) drafts[item.id] = toDraft(item);
 }
 
@@ -92,6 +97,13 @@ function save(item) {
   return run(() => api(`/admin/attributes/${item.id}`, { method: 'PATCH', body }), `'${d.label}' 저장했습니다.`);
 }
 
+function saveStatPoints() {
+  return run(
+    () => api('/admin/settings', { method: 'PUT', body: { statPoints: statPointsDraft.value } }),
+    `초기 투자 포인트를 ${statPointsDraft.value}(으)로 저장했습니다.`,
+  );
+}
+
 function remove(item) {
   if (!confirm(`'${item.label}' 항목을 삭제할까요?\n모든 캐릭터에 입력된 이 항목의 값도 함께 삭제되며 되돌릴 수 없습니다.\n(값을 남겨두려면 삭제 대신 '사용'을 끄세요)`)) return;
   return run(async () => {
@@ -117,6 +129,17 @@ onMounted(() => load().catch((e) => { error.value = e.message; }));
 
   <section v-for="c in CATEGORIES" :key="c.key" class="card">
     <h2>{{ c.title }}</h2>
+    <form v-if="c.category === 'stat'" class="points-setting" @submit.prevent="saveStatPoints">
+      <label>
+        초기 투자 포인트
+        <input v-model.number="statPointsDraft" class="narrow" type="number" min="0" max="1000000" step="1" required />
+      </label>
+      <button type="submit" :disabled="statPointsDraft === statPoints">저장</button>
+      <p class="muted">
+        캐릭터마다 이 포인트를 <strong>숫자</strong> 형식의 스탯에 나눠 투자합니다. 투자한 합계는 이 값을 넘을 수 없습니다.
+        (값을 줄이면, 이미 더 많이 투자한 캐릭터는 다음에 수정할 때 줄여야 저장됩니다)
+      </p>
+    </form>
 
     <div class="table-wrap">
       <table class="table">

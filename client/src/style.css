@@ -70,3 +70,13 @@ button.danger { background: #fee2e2; color: #b91c1c; }
 .add-form { margin-top: 16px; padding-top: 12px; border-top: 1px dashed #e5e7eb; display: flex; flex-direction: column; gap: 8px; }
 .add-form h3 { margin: 0; }
 .form .field > label { display: block; }
+/* 투자 포인트 */
+.points-bar { grid-column: 1 / -1; font-size: 14px; padding: 8px 12px; border-radius: 6px; background: #eff6ff; color: #1e3a8a; }
+.points-bar.over { background: #fee2e2; color: #b91c1c; }
+.char-sections .points-bar { margin-bottom: 8px; }
+.stepper { display: flex; gap: 6px; align-items: stretch; }
+.stepper input { flex: 1; min-width: 0; text-align: center; }
+.stepper button { padding: 6px 12px; font-size: 16px; line-height: 1; }
+.points-setting { display: flex; flex-wrap: wrap; gap: 8px 12px; align-items: center; margin: 4px 0 12px; padding: 12px; border: 1px solid #e5e7eb; border-radius: 8px; background: #f9fafb; }
+.points-setting label { display: flex; align-items: center; gap: 8px; font-size: 14px; font-weight: 600; }
+.points-setting .muted { flex-basis: 100%; margin: 0; }

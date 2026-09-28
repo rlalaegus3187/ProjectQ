@@ -4,7 +4,7 @@ const pool = require('../db');
 const { hashPassword, verifyPassword } = require('../password');
 const requireAuth = require('../middleware/requireAuth');
 const config = require('../config');
-const { getDefinitions, validateCharacterInput, createCharacter, withTransaction } = require('../characters');
+const { getDefinitions, getStatPoints, validateCharacterInput, createCharacter, withTransaction } = require('../characters');
 
 const router = express.Router();
 
@@ -46,7 +46,7 @@ router.post('/signup', authLimiter, async (req, res) => {
   if (password.length < 8) return res.status(400).json({ message: '비밀번호는 8자 이상이어야 합니다.' });
 
   // 가입과 동시에 캐릭터 1개 등록 (계정·캐릭터를 한 트랜잭션으로 저장)
-  const character = validateCharacterInput(req.body?.character, await getDefinitions());
+  const character = validateCharacterInput(req.body?.character, await getDefinitions(), await getStatPoints());
   const passwordHash = await hashPassword(password);
 
   let userId;

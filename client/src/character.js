@@ -11,6 +11,9 @@ export const VALUE_TYPES = [
 ];
 export const typeLabel = (type) => VALUE_TYPES.find((t) => t.value === type)?.label ?? type;
 
+// 숫자형 캐릭터 스탯 = 투자 포인트를 나눠 주는 스탯 (서버 isPointStat 과 동일 규칙)
+export const isPointStat = (def) => def.category === 'stat' && def.valueType === 'number';
+
 // 현재 활성화된 항목 { stats: [], details: [] }
 export async function fetchAttributes() {
   return api('/attributes');
@@ -28,7 +31,10 @@ export async function uploadImage(file) {
 export function toCharacterForm(definitions, character = null) {
   const valuesOf = (list) => Object.fromEntries((list || []).map((a) => [a.code, a.value ?? '']));
   const current = { stats: valuesOf(character?.stats), details: valuesOf(character?.details) };
-  const fill = (defs, values) => Object.fromEntries(defs.map((d) => [d.code, values[d.code] ?? '']));
+  // 투자 포인트 스탯은 빈칸 대신 0 에서 시작
+  const fill = (defs, values) => Object.fromEntries(
+    defs.map((d) => [d.code, values[d.code] || (isPointStat(d) ? 0 : '')]),
+  );
   return {
     name: character?.name ?? '',
     hp: character?.hp ?? '',
