@@ -9,7 +9,7 @@
 //   await notify({ userId: post.user_id, type: 'qna_reply', postId: post.id, message: '답변이 달렸습니다.' });
 //
 //   // 여러 명 / 관리자 전체에게
-//   await notifyUsers([1, 2, 3], { type: 'event', message: '이벤트가 시작되었습니다.', link: '/notice/12' });
+//   await notifyUsers([1, 2, 3], { type: 'event', message: '이벤트가 시작되었습니다.', link: '/notice' });
 //   await notifyAdmins({ type: 'qna_new', message: '새 질문이 올라왔습니다.', postId: 7 }, { exceptUserId: 5 });
 //
 //   // 트랜잭션 안에서는 마지막 인자로 커넥션을 넘기면 같이 커밋/롤백됨

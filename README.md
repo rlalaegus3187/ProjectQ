@@ -93,7 +93,7 @@ await notify({ userId, message: '캐릭터 승인이 완료되었습니다.', li
 await notify({ userId: post.user_id, type: 'qna_reply', postId: post.id, message: '답변이 달렸습니다.' });
 
 // 여러 명 / 관리자 전체 (exceptUserId: 제외할 회원)
-await notifyUsers([1, 2, 3], { type: 'event', message: '이벤트 시작!', link: '/notice/12' });
+await notifyUsers([1, 2, 3], { type: 'event', message: '이벤트 시작!', link: '/notice' });
 await notifyAdmins({ type: 'qna_new', message: '새 질문이 올라왔습니다.', postId }, { exceptUserId: req.session.userId });
 
 // 트랜잭션 안에서는 커넥션을 마지막 인자로 → 작업이 실패하면 알림도 함께 취소
