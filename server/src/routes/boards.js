@@ -3,6 +3,7 @@ const express = require('express');
 const pool = require('../db');
 const loadViewer = require('../middleware/loadViewer');
 const { HttpError, withTransaction } = require('../characters');
+const { notify } = require('../notify');
 
 const router = express.Router();
 router.use(loadViewer);
@@ -212,10 +213,12 @@ router.post('/qna/posts/:id/replies', async (req, res) => {
     );
     if (post.user_id !== req.viewer.id) {
       const title = post.title.length > 40 ? `${post.title.slice(0, 40)}…` : post.title;
-      await conn.execute(
-        "INSERT INTO notifications (user_id, type, post_id, message) VALUES (?, 'qna_reply', ?, ?)",
-        [post.user_id, post.id, `Q&A 질문 '${title}'에 답변이 달렸습니다.`],
-      );
+      await notify({
+        userId: post.user_id,
+        type: 'qna_reply',
+        postId: post.id,
+        message: `Q&A 질문 '${title}'에 답변이 달렸습니다.`,
+      }, conn);
     }
     return result.insertId;
   });

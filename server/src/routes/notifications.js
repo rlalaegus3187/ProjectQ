@@ -18,7 +18,7 @@ async function unreadCount(userId) {
 // 최근 알림 50개 + 안 읽은 개수
 router.get('/', async (req, res) => {
   const [rows] = await pool.query(
-    `SELECT n.id, n.type, n.message, n.is_read, n.created_at, n.post_id, p.board
+    `SELECT n.id, n.type, n.message, n.is_read, n.created_at, n.post_id, n.link, p.board
        FROM notifications n LEFT JOIN posts p ON p.id = n.post_id
       WHERE n.user_id = ? ORDER BY n.id DESC LIMIT 50`,
     [req.session.userId],
@@ -30,7 +30,8 @@ router.get('/', async (req, res) => {
       message: r.message,
       isRead: !!r.is_read,
       createdAt: r.created_at,
-      link: r.post_id && r.board ? `/${r.board}/${r.post_id}` : null,
+      // 지정한 link 우선, 없으면 관련 게시글 주소
+      link: r.link || (r.post_id && r.board ? `/${r.board}/${r.post_id}` : null),
     })),
     unreadCount: await unreadCount(req.session.userId),
   });

@@ -28,6 +28,7 @@ ProjectQ/
 │  ├─ src/
 │  │  ├─ index.js          앱 진입점 (세션, 라우트)
 │  │  ├─ characters.js     캐릭터/항목 정의 검증·저장 로직
+│  │  ├─ notify.js         ★ 알림 보내기 공용 함수 (notify / notifyUsers / notifyAdmins)
 │  │  ├─ routes/auth.js    /api/auth/signup, login, logout, me
 │  │  ├─ routes/characters.js  /api/attributes, /api/characters
 │  │  ├─ routes/admin.js   /api/admin/attributes (관리자)
@@ -37,7 +38,7 @@ ProjectQ/
 │  ├─ scripts/migrate.js   DB 마이그레이션
 │  └─ scripts/seed.js      샘플 계정 생성
 ├─ db/                    MySQL 스키마 (구조 설명: db/README.md)
-│  └─ migrations/          001_init.sql … 005_boards.sql
+│  └─ migrations/          001_init.sql … 006_notification_link.sql
 ├─ deploy/
 │  ├─ mount-instance-store.sh  ① NVMe Instance Store → /data 마운트
 │  ├─ setup-server.sh      ② EC2 기본 세팅 (Node, MySQL 데이터·임시파일·로그→/data, Nginx, PM2)
@@ -74,6 +75,35 @@ ProjectQ/
 | GET | `/api/notifications` | 내 알림 50개 + `unreadCount` |
 | POST | `/api/notifications/:id/read`, `/read-all` | 읽음 처리 |
 | GET | `/api/health` | 헬스체크 |
+
+## 알림 보내기 (서버 공용 함수)
+
+`server/src/notify.js` — 어느 라우트/스크립트에서든 불러서 `notifications` 테이블에 알림을 추가합니다.
+
+```js
+const { notify, notifyUsers, notifyAdmins } = require('../notify');   // routes/ 기준 경로
+
+// 한 명에게 (link: 눌렀을 때 이동할 사이트 내부 주소)
+await notify({ userId, message: '캐릭터 승인이 완료되었습니다.', link: '/mypage' });
+
+// 게시글 관련 (link 생략 시 글 주소로 이동, 글이 삭제되면 알림도 삭제)
+await notify({ userId: post.user_id, type: 'qna_reply', postId: post.id, message: '답변이 달렸습니다.' });
+
+// 여러 명 / 관리자 전체 (exceptUserId: 제외할 회원)
+await notifyUsers([1, 2, 3], { type: 'event', message: '이벤트 시작!', link: '/notice/12' });
+await notifyAdmins({ type: 'qna_new', message: '새 질문이 올라왔습니다.', postId }, { exceptUserId: req.session.userId });
+
+// 트랜잭션 안에서는 커넥션을 마지막 인자로 → 작업이 실패하면 알림도 함께 취소
+await withTransaction(async (conn) => { /* ... */ await notify({ userId, message }, conn); });
+```
+
+| 옵션 | 설명 |
+|---|---|
+| `userId` | 받는 회원 id (notify 필수) |
+| `message` | 알림 문구 (필수, 255자 초과분은 잘림) |
+| `type` | 종류 (영문 소문자/숫자/_ 30자, 기본 `general`) |
+| `postId` | 관련 게시글 id (선택) |
+| `link` | 이동할 주소, `/` 로 시작하는 사이트 내부 주소만 (선택) |
 
 ## 로컬 개발
 
