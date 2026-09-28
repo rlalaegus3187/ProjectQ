@@ -50,9 +50,9 @@ router.post('/signup', authLimiter, async (req, res) => {
   // 가입과 동시에 캐릭터 1개 등록 (계정·캐릭터를 한 트랜잭션으로 저장)
   const defs = await getDefinitions();
   const character = validateCharacterInput(req.body?.character, defs, await getStatPoints());
-  // 첫 프로필(대표): { profileName, details }
+  // 대표 프로필: { details } (이름은 쓰지 않음 — 캐릭터 이름으로 표시)
   const profile = validateProfileInput(
-    { name: req.body?.character?.profileName, details: req.body?.character?.details },
+    { details: req.body?.character?.details },
     defs,
     { defaultName: DEFAULT_PROFILE_NAME },
   );

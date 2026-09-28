@@ -26,13 +26,12 @@ const fill = (defs, values) => Object.fromEntries(
 );
 
 // 캐릭터 폼 (기본정보 + 스탯 [+ 첫 프로필]). character 가 있으면 기존 값으로 채움
-// 새 캐릭터(회원가입/캐릭터 만들기)일 때는 첫 프로필(profileName, details)도 함께 입력
+// 새 캐릭터(회원가입/캐릭터 만들기)일 때는 대표 프로필 값(details)도 함께 입력
 export function toCharacterForm(definitions, character = null) {
   return {
     name: character?.name ?? '',
     hp: character?.hp ?? '',
     stats: fill(definitions.stats, valuesOf(character?.stats)),
-    profileName: '',
     details: fill(definitions.details, {}),
   };
 }

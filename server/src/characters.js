@@ -156,10 +156,12 @@ function validateCharacterInput(input, defs, statPoints = null) {
   return { name, hp, stats: statValues };
 }
 
-// 프로필 입력 검증: { name, details: {code: value} } — name 이 비면 기본 이름
-function validateProfileInput(input, defs, { defaultName = null } = {}) {
+// 프로필 입력 검증: { name, details: {code: value} }
+// 대표 프로필은 이름 없이 캐릭터 이름으로 표시 → requireName: false 면 이름을 비워도 됨 (비면 defaultName)
+function validateProfileInput(input, defs, { defaultName = null, requireName = true } = {}) {
   const name = String(input?.name ?? '').trim() || defaultName || '';
-  if (!name || name.length > 50) throw new HttpError(400, '프로필 이름은 1~50자로 입력해주세요.');
+  if (name.length > 50) throw new HttpError(400, '프로필 이름은 50자 이내로 입력해주세요.');
+  if (requireName && !name) throw new HttpError(400, '프로필 이름을 입력해주세요.');
   const { details } = groupDefinitions(defs);
   return { name, details: validateValues(input?.details, details) };
 }
@@ -229,9 +231,13 @@ async function findProfile(conn, characterId, profileId) {
   return rows[0];
 }
 
+// 대표 프로필은 이름을 쓰지 않으므로(캐릭터 이름으로 표시) 이름은 그대로 두고 값만 수정
 async function updateProfile(conn, characterId, profileId, profile) {
   const row = await findProfile(conn, characterId, profileId);
-  await conn.execute('UPDATE character_profiles SET name = ? WHERE id = ?', [profile.name, row.id]);
+  if (!row.is_main) {
+    if (!profile.name) throw new HttpError(400, '프로필 이름을 입력해주세요.');
+    await conn.execute('UPDATE character_profiles SET name = ? WHERE id = ?', [profile.name, row.id]);
+  }
   await saveValues(conn, 'character_details', 'profile_id', row.id, profile.details);
 }
 

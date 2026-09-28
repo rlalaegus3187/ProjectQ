@@ -56,7 +56,6 @@ watch(() => route.fullPath, load, { immediate: true });
               <span v-else class="member-initial">{{ m.name.slice(0, 1) }}</span>
             </span>
             <strong class="member-name">{{ m.name }}</strong>
-            <span class="muted member-sub">{{ m.profileName }}<template v-if="m.profileCount > 1"> 외 {{ m.profileCount - 1 }}</template></span>
           </RouterLink>
         </li>
       </ul>

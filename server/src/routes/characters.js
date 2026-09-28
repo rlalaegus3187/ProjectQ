@@ -40,11 +40,12 @@ const sendMine = async (req, res, status = 200) => {
 // 내 캐릭터 (없으면 character: null) — profiles 포함 (대표 프로필이 맨 앞)
 router.get('/characters/me', requireAuth, (req, res) => sendMine(req, res));
 
-// 캐릭터 생성 (계정당 1개 — 이미 있으면 409): { name, hp, stats, profileName?, details } → 대표 프로필 1개 함께 생성
+// 캐릭터 생성 (계정당 1개 — 이미 있으면 409): { name, hp, stats, details } → 대표 프로필 1개 함께 생성
 router.post('/characters', requireAuth, async (req, res) => {
   const defs = await getDefinitions();
   const data = validateCharacterInput(req.body, defs, await getStatPoints());
-  const profile = validateProfileInput({ name: req.body?.profileName, details: req.body?.details }, defs, { defaultName: DEFAULT_PROFILE_NAME });
+  // 대표 프로필 (이름은 쓰지 않음 — 캐릭터 이름으로 표시)
+  const profile = validateProfileInput({ details: req.body?.details }, defs, { defaultName: DEFAULT_PROFILE_NAME });
   await withTransaction((conn) => createCharacter(conn, req.session.userId, data, profile));
   await sendMine(req, res, 201);
 });
@@ -66,10 +67,10 @@ router.post('/characters/me/profiles', requireAuth, async (req, res) => {
   await sendMine(req, res, 201);
 });
 
-// 수정: { name, details }
+// 수정: { name, details }  (대표 프로필은 name 없이 details 만)
 router.put('/characters/me/profiles/:profileId', requireAuth, async (req, res) => {
   const characterId = await myCharacterId(req);
-  const profile = validateProfileInput(req.body, await getDefinitions());
+  const profile = validateProfileInput(req.body, await getDefinitions(), { requireName: false });
   await withTransaction((conn) => updateProfile(conn, characterId, req.params.profileId, profile));
   await sendMine(req, res);
 });

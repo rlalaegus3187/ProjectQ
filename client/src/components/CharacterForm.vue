@@ -1,6 +1,6 @@
 <script setup>
-// 캐릭터 입력 폼 (기본정보 / 캐릭터 스탯 [/ 첫 프로필])
-//   withProfile: 새 캐릭터(회원가입·캐릭터 만들기)일 때 첫 프로필도 함께 입력. 수정 때는 false (프로필은 따로 수정)
+// 캐릭터 입력 폼 (기본정보 / 캐릭터 스탯 [/ 대표 프로필 값])
+//   withProfile: 새 캐릭터(회원가입·캐릭터 만들기)일 때 대표 프로필 값도 함께 입력. 수정 때는 false (프로필은 따로 수정)
 // 캐릭터 스탯/프로필 입력칸은 관리자 페이지에서 정의한 항목(definitions)대로 자동 생성
 // 숫자형 캐릭터 스탯은 투자 포인트(definitions.statPoints)를 나눠 주는 방식
 import { computed } from 'vue';
@@ -45,6 +45,5 @@ const remaining = computed(() => totalPoints.value - usedPoints.value);
     </template>
   </fieldset>
 
-  <ProfileFields v-if="withProfile" v-model:name="form.profileName" v-model:details="form.details" :definitions="definitions"
-    legend="첫 프로필 (대표)" :name-required="false" name-placeholder="비워두면 '기본 프로필'" />
+  <ProfileFields v-if="withProfile" v-model:details="form.details" :definitions="definitions" legend="프로필" :show-name="false" />
 </template>

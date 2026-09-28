@@ -70,10 +70,10 @@ ProjectQ/
 | GET | `/api/auth/me` | 현재 로그인 사용자 `{ id, email, name, role }` (401 이면 비로그인) |
 | GET | `/api/attributes` | 현재 입력받는 항목 + 투자 포인트 `{ stats, details, statPoints }` |
 | GET | `/api/characters/me` | 내 캐릭터 (없으면 `character: null`) |
-| POST | `/api/characters` | 캐릭터 등록 `{ name, hp, stats, profileName?, details }` → 대표 프로필 함께 생성 (계정당 1개) |
+| POST | `/api/characters` | 캐릭터 등록 `{ name, hp, stats, details }` → 대표 프로필(캐릭터 이름으로 표시) 함께 생성 (계정당 1개) |
 | PUT | `/api/characters/me` | 기본정보 + 스탯 수정 `{ name, hp, stats }` |
 | POST | `/api/characters/me/profiles` | 프로필 추가 `{ name, details }` |
-| PUT/DELETE | `/api/characters/me/profiles/:id` | 프로필 수정 / 삭제 (대표는 삭제 불가) |
+| PUT/DELETE | `/api/characters/me/profiles/:id` | 프로필 수정 `{ name, details }` (대표는 name 없음) / 삭제 (대표는 삭제 불가) |
 | PUT | `/api/characters/me/profiles/:id/main` | 대표 프로필 지정 |
 | GET/PUT | `/api/admin/settings` | (관리자) 초기 투자 포인트 `{ statPoints }` 조회/변경 |
 | GET | `/api/admin/attributes` | (관리자) 전체 항목, 비활성 포함 |

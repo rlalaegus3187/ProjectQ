@@ -22,6 +22,9 @@ const busy = ref(false);
 
 const profiles = computed(() => props.character.profiles);
 const selected = computed(() => profiles.value.find((p) => p.id === selectedId.value) ?? profiles.value[0]);
+// 대표 프로필은 이름 대신 캐릭터 이름으로 표시
+const tabLabel = (p) => (p.isMain ? props.character.name : p.name);
+const editingMain = computed(() => editingId.value !== null && profiles.value.find((p) => p.id === editingId.value)?.isMain);
 const canAdd = computed(() => profiles.value.length < (props.character.maxProfiles ?? 10));
 
 // 목록이 바뀌어 선택한 프로필이 없어지면 대표 프로필로
@@ -76,7 +79,7 @@ async function save() {
 const makeMain = () => run(() => api(`/characters/me/profiles/${selected.value.id}/main`, { method: 'PUT' }));
 
 async function remove() {
-  if (!confirm(`'${selected.value.name}' 프로필을 삭제할까요? 되돌릴 수 없습니다.`)) return;
+  if (!confirm(`'${tabLabel(selected.value)}' 프로필을 삭제할까요? 되돌릴 수 없습니다.`)) return;
   await run(() => api(`/characters/me/profiles/${selected.value.id}`, { method: 'DELETE' }));
 }
 </script>
@@ -91,14 +94,14 @@ async function remove() {
     <div class="tabs profile-tabs" role="tablist">
       <button v-for="p in profiles" :key="p.id" type="button" role="tab" :aria-selected="p.id === selected?.id"
         :class="{ active: form ? editingId === p.id : p.id === selected?.id }" @click="select(p.id)">
-        <span v-if="p.isMain" class="badge pin">대표</span> {{ p.name }}
+        <span v-if="p.isMain" class="badge pin">대표</span> {{ tabLabel(p) }}
       </button>
       <button v-if="form && editingId === null" type="button" class="active" role="tab" aria-selected="true">새 프로필</button>
     </div>
 
     <form v-if="form" class="form" @submit.prevent="save">
       <ProfileFields v-model:name="form.name" v-model:details="form.details" :definitions="definitions"
-        :legend="editingId === null ? '새 프로필' : '프로필 수정'" />
+        :legend="editingId === null ? '새 프로필' : editingMain ? `대표 프로필 수정 (${character.name})` : '프로필 수정'" :show-name="!editingMain" />
       <p v-if="error" class="error">{{ error }}</p>
       <div class="actions">
         <button type="submit" :disabled="busy">{{ busy ? '저장 중…' : editingId === null ? '프로필 추가' : '저장' }}</button>

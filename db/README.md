@@ -26,7 +26,7 @@ is_active     0 이면 숨김 (저장된 값은 보존)
 character_stats (캐릭터당 1세트)      character_profiles (캐릭터당 여러 개, 최대 10)
 ─────────────────────              ─────────────────────
 character_id   FK → characters     id, character_id FK → characters
-definition_id  FK → attribute_…    name (프로필 이름), is_main (대표 1개), sort_order
+definition_id  FK → attribute_…    name (추가 프로필 이름 — 대표는 캐릭터 이름으로 표시), is_main (대표 1개), sort_order
 value          TEXT
 PK(character_id, definition_id)    character_details (프로필 양식 값, 프로필마다)
                                    ─────────────────────
