@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# m6id 계열 인스턴스의 로컬 NVMe(Instance Store)를 /data 에 마운트합니다.
+# ① m6id 계열 인스턴스의 로컬 NVMe(Instance Store)를 /data 에 마운트합니다. (Amazon Linux 2023 / Ubuntu 공용)
 #
 #   sudo bash deploy/mount-instance-store.sh            # 지금 마운트
 #   sudo bash deploy/mount-instance-store.sh --install  # 마운트 + 부팅 시 자동 마운트 등록
@@ -10,7 +10,8 @@
 set -euo pipefail
 
 MOUNT_POINT="${MOUNT_POINT:-/data}"
-OWNER="${OWNER:-ubuntu}"
+# /data 소유자: sudo 로 실행한 사용자 (Amazon Linux 는 ec2-user)
+OWNER="${OWNER:-${SUDO_USER:-ec2-user}}"
 SERVICE_NAME="projectq-data-mount"
 
 if [[ $EUID -ne 0 ]]; then
@@ -29,8 +30,14 @@ if mountpoint -q "$MOUNT_POINT"; then
   echo "[mount] $MOUNT_POINT 는 이미 마운트되어 있습니다: $(findmnt -no SOURCE "$MOUNT_POINT")"
 else
   if ! blkid "$DEVICE" >/dev/null 2>&1; then
-    echo "[mount] $DEVICE 에 파일시스템이 없어 ext4 로 포맷합니다."
-    mkfs.ext4 -F -L projectq-data "$DEVICE"
+    # Amazon Linux 기본 파일시스템인 xfs 사용 (mkfs.xfs 가 없으면 ext4)
+    if command -v mkfs.xfs >/dev/null; then
+      echo "[mount] $DEVICE 에 파일시스템이 없어 xfs 로 포맷합니다."
+      mkfs.xfs -f -L pqdata "$DEVICE"
+    else
+      echo "[mount] $DEVICE 에 파일시스템이 없어 ext4 로 포맷합니다."
+      mkfs.ext4 -F -L pqdata "$DEVICE"
+    fi
   fi
   mkdir -p "$MOUNT_POINT"
   mount -o defaults,noatime "$DEVICE" "$MOUNT_POINT"

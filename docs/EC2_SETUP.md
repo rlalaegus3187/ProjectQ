@@ -1,4 +1,4 @@
-# EC2(m6id.large) 배포 가이드
+# EC2(m6id.large, Amazon Linux 2023) 배포 가이드
 
 순서: **① Instance Store 마운트 → ② EC2 기본 세팅 → ③ git 에서 불러와 배포**
 
@@ -6,7 +6,7 @@
 브라우저 ──80/443──▶ Nginx
                       ├─ /        → /data/www/projectq   (Vue 빌드 결과물)
                       └─ /api/*   → 127.0.0.1:3000       (Express, PM2)
-                                        └─ MySQL 8 (datadir=/data/mysql)
+                                        └─ MySQL 8.4 (datadir=/data/mysql)
 
 /data  (m6id NVMe Instance Store, 약 118GB)  ← 모든 코드와 데이터
 ├─ ProjectQ/                 코드 (git clone)
@@ -23,15 +23,19 @@
 > - DB 는 주기적으로 백업(`mysqldump` → S3 등)해 두는 걸 강력히 권장합니다.
 > - 비워졌을 때 복구 방법은 맨 아래 참고.
 
-AWS 콘솔에서: AMI **Ubuntu 24.04**, 타입 **m6id.large**, 보안 그룹 인바운드 `22`(내 IP만) / `80` / `443`. (3000, 3306 은 열지 않음)
+AWS 콘솔에서: AMI **Amazon Linux 2023**, 타입 **m6id.large**, 보안 그룹 인바운드 `22`(내 IP만) / `80` / `443`. (3000, 3306 은 열지 않음)
 
 ```bash
-ssh -i my-key.pem ubuntu@<EC2-IP>
-
-# 아래 명령들에서 공통으로 사용 (main 에 머지 후에는 BRANCH=main)
-BRANCH=claude/spa-login-service-q4af80
-RAW=https://raw.githubusercontent.com/rlalaegus3187/ProjectQ/$BRANCH/deploy
+ssh -i my-key.pem ec2-user@<EC2-IP>
 ```
+
+### ★ 먼저 변수 2개 설정 (SSH 로 새로 접속할 때마다 다시 실행)
+```bash
+BRANCH=claude/spa-login-service-q4af80      # main 에 머지한 뒤에는 BRANCH=main
+RAW=https://raw.githubusercontent.com/rlalaegus3187/ProjectQ/$BRANCH/deploy
+echo $RAW    # 주소가 출력되는지 확인 (빈 줄이면 위 두 줄을 다시 실행)
+```
+> `curl: (3) URL using bad/illegal format or missing URL` 에러가 나면 이 변수가 비어 있는 것입니다.
 
 ---
 
@@ -43,7 +47,7 @@ curl -fsSLO $RAW/mount-instance-store.sh
 sudo bash mount-instance-store.sh --install
 ```
 - 모델명이 `Amazon EC2 NVMe Instance Storage` 인 디스크만 찾아서(EBS 루트 디스크는 건드리지 않음)
-- 파일시스템이 없으면 ext4 로 포맷 → `/data` 에 마운트 → 소유자 `ubuntu`
+- 파일시스템이 없으면 xfs 로 포맷 → `/data` 에 마운트 → 소유자 `ec2-user`
 - `--install`: 부팅 때마다 같은 작업을 하는 systemd 서비스(`projectq-data-mount`) 등록
 
 ### 직접 하는 방법 (스크립트가 하는 일과 같음)
@@ -52,10 +56,10 @@ lsblk -o NAME,SIZE,MODEL,MOUNTPOINT
 # nvme0n1  8G      Amazon Elastic Block Store          ← 루트(EBS). 건드리지 않음
 # nvme1n1  110.6G  Amazon EC2 NVMe Instance Storage    ← 이게 대상
 
-sudo mkfs.ext4 -F -L projectq-data /dev/nvme1n1   # 포맷 (처음 한 번)
+sudo mkfs.xfs -f -L pqdata /dev/nvme1n1   # 포맷 (처음 한 번)
 sudo mkdir -p /data
 sudo mount -o defaults,noatime /dev/nvme1n1 /data
-sudo chown ubuntu:ubuntu /data
+sudo chown ec2-user:ec2-user /data
 df -h /data
 ```
 > `/etc/fstab` 에 등록하지 않는 이유: stop/start 후엔 디스크가 새것(UUID 변경, 파일시스템 없음)이라 fstab 방식은 부팅이 멈출 수 있습니다. 그래서 `--install` 의 부팅 서비스가 "없으면 포맷 → 마운트" 를 대신합니다.
@@ -70,12 +74,13 @@ bash setup-server.sh
 
 | 단계 | 내용 |
 |---|---|
-| 1 | git, Nginx, MySQL 8, Node.js 22, PM2 설치 |
+| 1 | git, Nginx, **MySQL 8.4** (MySQL 공식 저장소), **Node.js 22** (NodeSource), PM2 설치 |
 | 2 | `/data/config`, `/data/www`, `/data/logs` 생성 |
-| 3 | MySQL 데이터 **`/data/mysql`**, 임시파일 `/data/mysql-tmp`, 에러 로그 `/data/logs/mysql` 로 지정 (AppArmor 허용 포함). 비어 있으면 초기화하고 root 는 `sudo mysql` 로만 접속 가능하게 설정 |
+| 3 | MySQL 데이터 **`/data/mysql`**, 임시파일 `/data/mysql-tmp`, 에러 로그 `/data/logs/mysql` 로 지정 (`/etc/my.cnf`). 비어 있으면 초기화하고 root 는 `sudo mysql` 로만 접속 가능하게 설정 |
 | 4 | `projectq` DB/계정 생성 (비밀번호 랜덤) → **`/data/config/projectq.env`** 작성 |
-| 5 | Nginx 설정 (`root /data/www/projectq`, `/api` → 3000 프록시) |
-| 6 | PM2 부팅 자동 시작, MySQL·Nginx·PM2 가 `/data` 마운트 **이후에** 시작되도록 순서 지정 |
+| 5 | Nginx 설정 (`/etc/nginx/conf.d/projectq.conf`: `root /data/www/projectq`, `/api` → 3000 프록시) |
+| 6 | SELinux 가 Enforcing 이면 필요한 허용/라벨 설정 (AL2023 기본은 Permissive 라 보통 건너뜀) |
+| 7 | PM2 부팅 자동 시작, MySQL·Nginx·PM2 가 `/data` 마운트 **이후에** 시작되도록 순서 지정 |
 
 ## ③ git 에서 불러와 배포 (`deploy.js`)
 
@@ -101,7 +106,7 @@ node /data/deploy.js --branch=$BRANCH --seed
 ```bash
 node /data/deploy.js
 ```
-로컬 PC 에서 한 줄로: `ssh -i my-key.pem ubuntu@<EC2-IP> 'node /data/deploy.js'`
+로컬 PC 에서 한 줄로: `ssh -i my-key.pem ec2-user@<EC2-IP> 'node /data/deploy.js'`
 
 옵션: `--branch=main`(브랜치 변경), `--force`(서버에서 직접 수정한 파일 무시), `--skip-pull`, `--skip-client`
 
@@ -109,9 +114,9 @@ node /data/deploy.js
 
 ## HTTPS (도메인 연결 후)
 ```bash
-sudo sed -i 's/server_name _;/server_name example.com;/' /etc/nginx/sites-available/projectq
+sudo sed -i 's/server_name _;/server_name example.com;/' /etc/nginx/conf.d/projectq.conf
 sudo nginx -t && sudo systemctl reload nginx
-sudo apt-get install -y certbot python3-certbot-nginx
+sudo dnf install -y certbot python3-certbot-nginx
 sudo certbot --nginx -d example.com
 sed -i 's/^COOKIE_SECURE=false/COOKIE_SECURE=true/' /data/config/projectq.env
 node /data/deploy.js --skip-client
@@ -120,7 +125,7 @@ node /data/deploy.js --skip-client
 ## DB 백업 (권장)
 ```bash
 sudo mysqldump --single-transaction projectq | gzip > /data/backup-$(date +%F).sql.gz
-# /data 는 stop/start 시 지워지므로, 백업 파일은 S3 등 외부로 옮겨두세요:
+# /data 는 stop/start 시 지워지므로, 백업 파일은 S3 등 외부로 옮겨두세요 (AL2023 에는 aws CLI 기본 설치):
 # aws s3 cp /data/backup-$(date +%F).sql.gz s3://<버킷>/projectq/
 ```
 
@@ -136,16 +141,18 @@ curl -fsSL $RAW/deploy.js -o /data/deploy.js && node /data/deploy.js --branch=$B
 
 ## 자주 쓰는 명령
 ```bash
-pm2 status                              # API 상태
-pm2 logs projectq-api                   # API 로그 (/data/logs 에도 저장)
+pm2 status                                # API 상태
+pm2 logs projectq-api                     # API 로그 (/data/logs 에도 저장)
 sudo tail -f /var/log/nginx/error.log
-sudo mysql projectq                     # DB 접속
+sudo tail -f /data/logs/mysql/error.log   # MySQL 에러 로그
+sudo mysql projectq                       # DB 접속
 ```
 
 | 증상 | 확인 |
 |---|---|
+| `curl: (3) ... missing URL` | `$RAW` 변수가 비어 있음 → 맨 위 "변수 2개 설정" 다시 실행 |
 | 접속 안 됨 | 보안 그룹 80 포트, `sudo systemctl status nginx` |
 | 502 Bad Gateway | `pm2 logs projectq-api` (DB 접속 정보, `.env`) |
 | 500/404 (첫 화면) | `/data/www/projectq` 존재 여부 → `node /data/deploy.js` |
-| MySQL 안 뜸 | `df -h /data` 로 마운트 확인, `sudo tail /data/logs/mysql/error.log`, `sudo journalctl -u mysql` |
+| MySQL 안 뜸 | `df -h /data` 로 마운트 확인, `sudo tail /data/logs/mysql/error.log`, `sudo journalctl -u mysqld` |
 | 로그인 후 바로 풀림 | http 인데 `COOKIE_SECURE=true` 인지 확인 |

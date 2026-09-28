@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
-# ② EC2(Ubuntu 24.04) 기본 세팅 — repo 없이 단독 실행 가능, 여러 번 실행해도 안전(idempotent)
+# ② EC2(Amazon Linux 2023) 기본 세팅 — repo 없이 단독 실행 가능, 여러 번 실행해도 안전(idempotent)
 #
 #   전제: ① mount-instance-store.sh 로 /data 가 마운트되어 있어야 함
-#   사용: bash setup-server.sh
+#   사용: bash setup-server.sh        (ec2-user 로 실행, 내부에서 필요한 곳만 sudo)
 #
 # 모든 앱 데이터는 /data (Instance Store) 에 저장합니다.
 #   /data/mysql                 MySQL 데이터 (테이블, 인덱스, redo/undo, binlog)
@@ -22,20 +22,41 @@ WEB_ROOT="$DATA/www/projectq"
 DB_NAME="projectq"
 DB_USER="projectq"
 MOUNT_SERVICE="projectq-data-mount.service"
+# 소켓은 패키지 기본 위치 유지 (mysql 클라이언트 기본값과 동일)
+MYSQL_SOCKET="/var/lib/mysql/mysql.sock"
 
 step() { echo; echo "== $* =="; }
 
+if ! grep -q 'Amazon Linux' /etc/os-release 2>/dev/null; then
+  echo "이 스크립트는 Amazon Linux 2023 용입니다." >&2
+  exit 1
+fi
 if ! mountpoint -q "$DATA"; then
   echo "$DATA 가 마운트되어 있지 않습니다. 먼저 ① mount-instance-store.sh 를 실행하세요." >&2
   exit 1
 fi
 
-step "1. 패키지 설치 (git, nginx, mysql, node 22, pm2)"
-sudo apt-get update
-sudo apt-get install -y git nginx mysql-server ca-certificates curl openssl
+step "1. 패키지 설치 (git, nginx, MySQL 8.4, Node.js 22, PM2)"
+sudo dnf install -y git nginx openssl
+
+# MySQL 공식 저장소 (Amazon Linux 2023 은 RHEL9/el9 계열 패키지 사용)
+# 공식 release RPM 으로 등록하고, 실패하면 저장소 설정 파일을 직접 작성
+if ! rpm -q mysql84-community-release >/dev/null 2>&1 && [[ ! -f /etc/yum.repos.d/mysql84-community.repo ]]; then
+  sudo dnf install -y https://dev.mysql.com/get/mysql84-community-release-el9-1.noarch.rpm \
+  || sudo tee /etc/yum.repos.d/mysql84-community.repo >/dev/null <<'REPO'
+[mysql84-community]
+name=MySQL 8.4 LTS Community Server
+baseurl=https://repo.mysql.com/yum/mysql-8.4-community/el/9/$basearch/
+enabled=1
+gpgcheck=1
+gpgkey=https://repo.mysql.com/RPM-GPG-KEY-mysql-2023
+REPO
+fi
+sudo dnf install -y mysql-community-server
+
 if ! command -v node >/dev/null || [[ "$(node -v)" != v22* ]]; then
-  curl -fsSL https://deb.nodesource.com/setup_22.x | sudo -E bash -
-  sudo apt-get install -y nodejs
+  curl -fsSL https://rpm.nodesource.com/setup_22.x | sudo bash -
+  sudo dnf install -y nodejs
 fi
 command -v pm2 >/dev/null || sudo npm install -g pm2
 echo "node $(node -v) / npm $(npm -v) / pm2 $(pm2 -v)"
@@ -44,53 +65,45 @@ step "2. /data 디렉터리 준비"
 sudo mkdir -p "$DATA/config" "$DATA/www" "$DATA/logs"
 sudo chown "$USER:$USER" "$DATA/config" "$DATA/www" "$DATA/logs"
 chmod 700 "$DATA/config"
+chmod 755 "$DATA/www" "$DATA/logs"
 
 step "3. MySQL 저장 위치 → $DATA (데이터·임시파일·에러로그)"
-# 데이터(테이블/인덱스/redo·undo/binlog): $MYSQL_DIR
-# 임시파일(큰 정렬, 임시 테이블):        $MYSQL_TMP
-# 에러 로그:                             $MYSQL_LOG_DIR/error.log
 sudo mkdir -p "$MYSQL_DIR" "$MYSQL_TMP" "$MYSQL_LOG_DIR"
 sudo chown mysql:mysql "$MYSQL_DIR" "$MYSQL_TMP" "$MYSQL_LOG_DIR"
 sudo chmod 750 "$MYSQL_DIR" "$MYSQL_TMP" "$MYSQL_LOG_DIR"
 
-# AppArmor 가 /data 아래 경로 접근을 허용하도록 등록
-if ! grep -q "$MYSQL_DIR" /etc/apparmor.d/tunables/alias 2>/dev/null; then
-  echo "alias /var/lib/mysql/ -> $MYSQL_DIR/," | sudo tee -a /etc/apparmor.d/tunables/alias >/dev/null
-fi
-if [[ -f /etc/apparmor.d/usr.sbin.mysqld ]]; then
-  sudo mkdir -p /etc/apparmor.d/local
-  sudo tee /etc/apparmor.d/local/usr.sbin.mysqld >/dev/null <<AA
-# ProjectQ: MySQL 임시파일/에러로그를 /data 에 저장
-$MYSQL_TMP/ r,
-$MYSQL_TMP/** rwk,
-$MYSQL_LOG_DIR/ r,
-$MYSQL_LOG_DIR/** rw,
-AA
-  grep -q 'local/usr.sbin.mysqld' /etc/apparmor.d/usr.sbin.mysqld \
-    || echo "⚠ AppArmor 프로필에 local include 가 없습니다. /etc/apparmor.d/usr.sbin.mysqld 확인 필요"
-fi
-sudo systemctl reload apparmor 2>/dev/null || sudo systemctl restart apparmor 2>/dev/null || true
-
-sudo tee /etc/mysql/mysql.conf.d/zz-projectq.cnf >/dev/null <<CNF
+# /etc/my.cnf 를 통째로 관리 (원본은 한 번만 백업)
+[[ -f /etc/my.cnf.orig ]] || sudo cp /etc/my.cnf /etc/my.cnf.orig
+sudo mkdir -p /etc/my.cnf.d
+sudo tee /etc/my.cnf >/dev/null <<CNF
+# ProjectQ: setup-server.sh 가 관리하는 파일 (원본: /etc/my.cnf.orig)
 [mysqld]
 datadir   = $MYSQL_DIR
 tmpdir    = $MYSQL_TMP
-log_error = $MYSQL_LOG_DIR/error.log
+log-error = $MYSQL_LOG_DIR/error.log
+socket    = $MYSQL_SOCKET
+pid-file  = /var/run/mysqld/mysqld.pid
+character-set-server = utf8mb4
+collation-server     = utf8mb4_unicode_ci
+
+[client]
+socket = $MYSQL_SOCKET
+
+!includedir /etc/my.cnf.d
 CNF
 
 if [[ ! -d "$MYSQL_DIR/mysql" ]]; then
   echo "$MYSQL_DIR 가 비어 있어 새로 초기화합니다."
-  sudo systemctl stop mysql || true
+  sudo systemctl stop mysqld 2>/dev/null || true
   sudo mysqld --initialize-insecure --user=mysql --datadir="$MYSQL_DIR"
-  sudo systemctl start mysql
-  # --initialize-insecure 는 root 를 비밀번호 없이 만들므로, Ubuntu 기본과 같이 `sudo mysql` 로만 접속되게 변경
-  # (새로 초기화한 데이터 디렉터리에는 auth_socket 플러그인이 없어서 먼저 설치)
+  sudo systemctl start mysqld
+  # --initialize-insecure 는 root 를 비밀번호 없이 만들므로, `sudo mysql` 로만 접속되게 변경
   sudo mysql -e "SELECT 1 FROM information_schema.plugins WHERE plugin_name='auth_socket'" | grep -q 1 \
     || sudo mysql -e "INSTALL PLUGIN auth_socket SONAME 'auth_socket.so';"
   sudo mysql -e "ALTER USER 'root'@'localhost' IDENTIFIED WITH auth_socket;"
 fi
-sudo systemctl enable mysql
-sudo systemctl restart mysql
+sudo systemctl enable mysqld
+sudo systemctl restart mysqld
 sudo mysql -N -e "SELECT CONCAT('MySQL ', VERSION(), ' / datadir=', @@datadir, ' / tmpdir=', @@tmpdir, ' / log_error=', @@log_error)"
 
 step "4. DB/계정 + $ENV_FILE"
@@ -126,9 +139,35 @@ ENV
 fi
 
 step "5. Nginx"
-sudo tee /etc/nginx/sites-available/projectq >/dev/null <<NGINX
+# Amazon Linux 기본 nginx.conf 에는 80 포트 기본 server 블록이 있어서, 깔끔한 설정으로 교체 (원본 백업)
+[[ -f /etc/nginx/nginx.conf.orig ]] || sudo cp /etc/nginx/nginx.conf /etc/nginx/nginx.conf.orig
+sudo tee /etc/nginx/nginx.conf >/dev/null <<'NGINX'
+# ProjectQ: setup-server.sh 가 관리하는 파일 (원본: /etc/nginx/nginx.conf.orig)
+user nginx;
+worker_processes auto;
+error_log /var/log/nginx/error.log notice;
+pid /run/nginx.pid;
+include /usr/share/nginx/modules/*.conf;
+
+events { worker_connections 1024; }
+
+http {
+    log_format main '$remote_addr - $remote_user [$time_local] "$request" '
+                    '$status $body_bytes_sent "$http_referer" "$http_user_agent"';
+    access_log /var/log/nginx/access.log main;
+    sendfile on;
+    tcp_nopush on;
+    keepalive_timeout 65;
+    types_hash_max_size 4096;
+    server_tokens off;
+    include /etc/nginx/mime.types;
+    default_type application/octet-stream;
+    include /etc/nginx/conf.d/*.conf;
+}
+NGINX
+sudo tee /etc/nginx/conf.d/projectq.conf >/dev/null <<NGINX
 server {
-    listen 80;
+    listen 80 default_server;
     server_name _;   # 도메인이 생기면 example.com 으로 변경 후 certbot 실행
 
     root $WEB_ROOT;
@@ -162,15 +201,29 @@ server {
     gzip_types text/css application/javascript application/json image/svg+xml;
 }
 NGINX
-sudo ln -sf /etc/nginx/sites-available/projectq /etc/nginx/sites-enabled/projectq
-sudo rm -f /etc/nginx/sites-enabled/default
 sudo nginx -t
 sudo systemctl enable nginx
-sudo systemctl reload nginx || sudo systemctl start nginx
+sudo systemctl restart nginx
 
-step "6. PM2 부팅 자동 시작 + /data 마운트 이후에 서비스가 뜨도록 순서 지정"
+step "6. SELinux (Enforcing 일 때만)"
+if command -v getenforce >/dev/null && [[ "$(getenforce)" == "Enforcing" ]]; then
+  # nginx → 3000 포트 프록시 허용, /data 경로에 알맞은 보안 라벨 지정
+  sudo dnf install -y policycoreutils-python-utils
+  sudo setsebool -P httpd_can_network_connect 1
+  sudo semanage fcontext -a -t httpd_sys_content_t "$DATA/www(/.*)?" 2>/dev/null || true
+  sudo semanage fcontext -a -t mysqld_db_t "$MYSQL_DIR(/.*)?" 2>/dev/null || true
+  sudo semanage fcontext -a -t mysqld_tmp_t "$MYSQL_TMP(/.*)?" 2>/dev/null || true
+  sudo semanage fcontext -a -t mysqld_log_t "$MYSQL_LOG_DIR(/.*)?" 2>/dev/null || true
+  sudo restorecon -R "$DATA/www" "$MYSQL_DIR" "$MYSQL_TMP" "$MYSQL_LOG_DIR"
+  sudo systemctl restart mysqld nginx
+  echo "SELinux 설정 완료"
+else
+  echo "SELinux 가 Enforcing 이 아니므로 건너뜁니다 ($(getenforce 2>/dev/null || echo 없음))"
+fi
+
+step "7. PM2 부팅 자동 시작 + /data 마운트 이후에 서비스가 뜨도록 순서 지정"
 sudo env PATH="$PATH" pm2 startup systemd -u "$USER" --hp "$HOME" >/dev/null
-for svc in mysql nginx "pm2-$USER"; do
+for svc in mysqld nginx "pm2-$USER"; do
   sudo mkdir -p "/etc/systemd/system/$svc.service.d"
   sudo tee "/etc/systemd/system/$svc.service.d/projectq-data.conf" >/dev/null <<UNIT
 [Unit]
@@ -184,4 +237,4 @@ systemctl is-enabled "$MOUNT_SERVICE" >/dev/null 2>&1 \
 
 echo
 echo "② 기본 세팅 완료. 다음 단계 ③ (git 에서 불러와 배포):"
-echo "  node deploy.js --branch=<브랜치> --seed"
+echo "  curl -fsSL \$RAW/deploy.js -o /data/deploy.js && node /data/deploy.js --branch=\$BRANCH --seed"

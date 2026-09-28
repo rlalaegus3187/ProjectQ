@@ -56,7 +56,7 @@ cd client && npm install && npm run dev   # http://localhost:5173 (/api 는 3000
 
 ## 배포
 
-[docs/EC2_SETUP.md](docs/EC2_SETUP.md) 참고. ① 마운트 → ② 기본 세팅 → ③ 불러오기 순서이며,
+[docs/EC2_SETUP.md](docs/EC2_SETUP.md) 참고 (Amazon Linux 2023 기준). ① 마운트 → ② 기본 세팅 → ③ 불러오기 순서이며,
 코드·DB·설정·로그 모두 `/data` (Instance Store) 에 저장됩니다. 세팅 후에는 아래 한 줄로 업데이트합니다.
 
 ```bash
