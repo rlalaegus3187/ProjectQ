@@ -7,13 +7,12 @@ import LoginView from './views/LoginView.vue';
 import SignupView from './views/SignupView.vue';
 import MyPageView from './views/MyPageView.vue';
 import AdminView from './views/AdminView.vue';
-import AdminPostsView from './views/AdminPostsView.vue';
 import BoardListView from './views/BoardListView.vue';
 import PostDetailView from './views/PostDetailView.vue';
 import PostEditView from './views/PostEditView.vue';
 import NotificationsView from './views/NotificationsView.vue';
 
-// /notice, /world, /guide, /qna 게시판
+// 게시판 (/qna)
 const BOARD = `:board(${Object.keys(BOARDS).join('|')})`;
 
 const router = createRouter({
@@ -25,7 +24,11 @@ const router = createRouter({
     { path: '/mypage', component: MyPageView, meta: { requiresAuth: true } },
     { path: '/notifications', component: NotificationsView, meta: { requiresAuth: true } },
     { path: '/admin', component: AdminView, meta: { requiresAuth: true, requiresAdmin: true } },
-    { path: '/admin/posts', component: AdminPostsView, meta: { requiresAuth: true, requiresAdmin: true } },
+    // 콘텐츠 페이지 (pages/ 폴더) — 들어갈 때만 불러옴
+    { path: '/notice', component: () => import('./pages/notice/NoticePage.vue') },
+    { path: '/world', component: () => import('./pages/world/WorldPage.vue') },
+    { path: '/system', component: () => import('./pages/system/SystemPage.vue') },
+    { path: '/guide', component: () => import('./pages/guide/GuidePage.vue') },
     { path: `/${BOARD}`, component: BoardListView },
     { path: `/${BOARD}/write`, component: PostEditView, meta: { requiresAuth: true, write: true } },
     { path: `/${BOARD}/:id(\\d+)`, component: PostDetailView },
@@ -42,7 +45,7 @@ router.beforeEach(async (to) => {
     return { path: '/login', query: { redirect: to.fullPath } };
   }
   if (to.meta.requiresAdmin && user.role !== 'admin') return '/mypage';
-  // 공지/세계관/캐릭터 가이드 글쓰기는 관리자만
+  // 관리자 전용 게시판의 글쓰기는 관리자만
   if (to.meta.write && BOARDS[to.params.board]?.adminOnly && user.role !== 'admin') return `/${to.params.board}`;
   if (to.meta.guestOnly && user) return '/mypage';
 });

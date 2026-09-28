@@ -151,3 +151,8 @@ a.button.small, .row-actions a.button { padding: 6px 10px; font-size: 13px; }
 .tabs a { padding: 8px 14px; color: #6b7280; }
 .tabs a.active { color: #2563eb; border-bottom: 2px solid #2563eb; font-weight: 600; }
 .title-cell { white-space: normal; }
+/* 콘텐츠 페이지 컨테이너 */
+.page-header { border-bottom: 1px solid #f0f0f0; margin-bottom: 16px; }
+.page-header h1 { margin: 0 0 4px; }
+.page-header .muted { margin: 0 0 12px; }
+.page-body { min-height: 120px; }

@@ -2,7 +2,6 @@
 import { ref, reactive, onMounted } from 'vue';
 import { api } from '../api';
 import { VALUE_TYPES } from '../character';
-import AdminNav from '../components/AdminNav.vue';
 
 const CATEGORIES = [
   { key: 'stats', category: 'stat', title: '캐릭터 스탯', defaultType: 'number' },
@@ -118,7 +117,6 @@ onMounted(() => load().catch((e) => { error.value = e.message; }));
 </script>
 
 <template>
-  <AdminNav />
   <section class="card">
     <h1>캐릭터 항목 관리</h1>
     <p class="muted">

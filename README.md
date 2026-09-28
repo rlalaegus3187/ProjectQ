@@ -4,7 +4,8 @@ Vue 3 + Node.js/Express + MySQL 로 만든 SPA 로그인 샘플입니다.
 
 - 세션 기반 로그인 (HttpOnly 쿠키, 세션은 MySQL 에 저장 → 재시작해도 로그인 유지)
 - 회원가입 / 로그인 / 로그아웃
-- **게시판**: 공지 · 세계관 · 캐릭터 가이드 (관리자 작성, 마크다운 등록툴 + 이미지), **Q&A** (회원 질문·비밀글, 관리자 답변·메인 글)
+- **콘텐츠 페이지**: 공지 · 세계관 · 시스템 · 캐릭터 가이드 — `client/src/pages/<이름>/` 폴더 + 빈 컨테이너 (내용은 직접 채움, `pages/README.md` 참고)
+- **Q&A 게시판**: 회원 질문·비밀글, 관리자 답변·메인 글 (마크다운 등록툴 + 이미지)
 - **알림**: 내 Q&A 질문에 답변이 달리면 상단 `알림` 에 표시
 - **계정당 캐릭터 1개** — 가입할 때 함께 등록, 로그인하면 마이페이지에서 내 캐릭터(기본정보/캐릭터 스탯/프로필) 표시·수정
 - **관리자/일반 권한** (지금은 가입하면 모두 관리자) — 관리자는 `/admin` 에서 캐릭터 스탯·프로필 양식 항목을 추가/수정/삭제
@@ -22,8 +23,10 @@ ProjectQ/
 │     ├─ auth.js           로그인 상태(user) 관리
 │     ├─ router.js         라우트 + 로그인/관리자 가드
 │     ├─ character.js      캐릭터 폼 헬퍼
-│     ├─ components/       CharacterForm/CharacterCard, AttributeInput/AttributeValue(형식별 입력·표시)
-│     └─ views/            Home, Login, Signup, MyPage, Admin(항목/게시글), Board*/Post*, Notifications
+│     ├─ menu.js           상단 메뉴 목록
+│     ├─ pages/            콘텐츠 페이지 (notice, world, system, guide) — 페이지마다 폴더
+│     ├─ components/       PageContainer(페이지 틀), CharacterForm/Card, AttributeInput/Value, PostEditor, MarkdownView
+│     └─ views/            Home, Login, Signup, MyPage, Admin, Board*/Post*(Q&A), Notifications
 ├─ server/                 Express API
 │  ├─ src/
 │  │  ├─ index.js          앱 진입점 (세션, 라우트)
@@ -33,7 +36,7 @@ ProjectQ/
 │  │  ├─ routes/characters.js  /api/attributes, /api/characters
 │  │  ├─ routes/admin.js   /api/admin/attributes (관리자)
 │  │  ├─ routes/uploads.js /api/uploads (이미지 업로드/제공)
-│  │  ├─ routes/boards.js  /api/boards (공지/세계관/캐릭터 가이드/Q&A)
+│  │  ├─ routes/boards.js  /api/boards (Q&A)
 │  │  └─ routes/notifications.js  /api/notifications
 │  ├─ scripts/migrate.js   DB 마이그레이션
 │  └─ scripts/seed.js      샘플 계정 생성
@@ -66,9 +69,9 @@ ProjectQ/
 | PATCH | `/api/admin/attributes/:id` | (관리자) `{ label, valueType, options, isRequired, sortOrder, isActive }` 수정 |
 | DELETE | `/api/admin/attributes/:id` | (관리자) 항목 + 저장된 값 삭제 |
 | POST | `/api/uploads` | 이미지 업로드 (multipart `file`, png/jpg/gif/webp, 5MB) → `{ url }` |
-| GET | `/api/boards/:board/posts?page=` | 목록 (board: notice/world/guide/qna). Q&A 는 `pinned`(메인 글) 포함, 비밀글은 가려짐 |
+| GET | `/api/boards/:board/posts?page=` | 목록 (board: qna). `pinned`(메인 글) 포함, 비밀글은 가려짐 |
 | GET | `/api/boards/:board/posts/:id` | 글 보기 (+ Q&A 답변) |
-| POST/PUT/DELETE | `/api/boards/:board/posts[/:id]` | `{ title, body, isHidden }` — 공지/세계관/가이드는 관리자, Q&A 는 작성자(또는 관리자) |
+| POST/PUT/DELETE | `/api/boards/:board/posts[/:id]` | `{ title, body, isHidden }` — 작성자(또는 관리자) |
 | PUT | `/api/boards/qna/posts/:id/pin` | (관리자) `{ isPinned }` 메인 글 지정/해제 |
 | POST | `/api/boards/qna/posts/:id/replies` | (관리자) 답변 → 질문자에게 알림 |
 | PUT/DELETE | `/api/boards/qna/replies/:id` | (관리자) 답변 수정/삭제 |

@@ -31,7 +31,8 @@ value          TEXT                value          TEXT
 PK(character_id, definition_id)    PK(character_id, definition_id)
 
 settings  (전역 설정 키-값)  stat_initial_points = 초기 투자 포인트
-posts          게시글  board: notice(공지)/world(세계관)/guide(캐릭터 가이드)/qna(Q&A)/free(이전 샘플)
+posts          게시글  board: qna(Q&A) — 화면에서 쓰는 게시판은 Q&A 뿐
+               (notice/world/guide/free 는 이전 버전 데이터용으로 남아 있음, 화면에 표시 안 함)
                is_hidden(Q&A 비밀글), is_pinned(Q&A 메인 글), user_id FK → users.id
 post_replies   Q&A 답변 (관리자)  post_id FK → posts.id (글 삭제 시 함께 삭제)
 notifications  계정별 알림  user_id, type, post_id, link(이동 주소), message, is_read

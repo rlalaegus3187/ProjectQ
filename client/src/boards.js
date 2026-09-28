@@ -1,12 +1,7 @@
-// 게시판 정보 (서버 routes/boards.js 와 같은 키)
+// 게시판 정보 (서버 routes/boards.js 와 같은 키) — 현재는 Q&A 만 게시판
 export const BOARDS = {
-  notice: { label: '공지', adminOnly: true },
-  world: { label: '세계관', adminOnly: true },
-  guide: { label: '캐릭터 가이드', adminOnly: true },
   qna: { label: 'Q&A', adminOnly: false },
 };
-export const BOARD_KEYS = Object.keys(BOARDS);
-export const ADMIN_BOARD_KEYS = BOARD_KEYS.filter((k) => BOARDS[k].adminOnly);
 
 export function formatDate(value) {
   const d = new Date(value);

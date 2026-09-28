@@ -1,7 +1,7 @@
 <script setup>
 import { useRouter } from 'vue-router';
 import { auth, isAdmin, logout } from './auth';
-import { BOARDS } from './boards';
+import { SITE_MENU } from './menu';
 import { notifications, refreshUnread } from './notifications';
 
 const router = useRouter();
@@ -18,7 +18,7 @@ async function onLogout() {
     <div class="nav-left">
       <RouterLink to="/" class="brand">ProjectQ</RouterLink>
       <nav class="board-links">
-        <RouterLink v-for="(b, key) in BOARDS" :key="key" :to="`/${key}`">{{ b.label }}</RouterLink>
+        <RouterLink v-for="m in SITE_MENU" :key="m.to" :to="m.to">{{ m.label }}</RouterLink>
       </nav>
     </div>
     <nav>

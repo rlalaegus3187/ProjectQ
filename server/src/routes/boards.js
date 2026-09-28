@@ -1,4 +1,6 @@
-// 게시판: 공지 / 세계관 / 캐릭터 가이드 (관리자 작성) + Q&A (회원 질문, 관리자 답변, 비밀글, 메인 글)
+// 게시판: Q&A (회원 질문, 관리자 답변, 비밀글, 메인 글)
+// (공지/세계관/시스템/캐릭터 가이드는 게시판이 아닌 프론트 페이지 — client/src/pages/)
+// 관리자만 쓰는 게시판이 필요하면 BOARDS 에 { label, adminOnly: true } 로 추가
 const express = require('express');
 const pool = require('../db');
 const loadViewer = require('../middleware/loadViewer');
@@ -9,9 +11,6 @@ const router = express.Router();
 router.use(loadViewer);
 
 const BOARDS = {
-  notice: { label: '공지', adminOnly: true },
-  world: { label: '세계관', adminOnly: true },
-  guide: { label: '캐릭터 가이드', adminOnly: true },
   qna: { label: 'Q&A', adminOnly: false },
 };
 const PAGE_SIZE = 20;
