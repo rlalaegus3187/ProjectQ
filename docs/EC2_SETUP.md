@@ -70,6 +70,9 @@ df -h /data
 curl -fsSLO $RAW/setup-server.sh
 bash setup-server.sh
 ```
+시작하자마자 **DB 로그인용 관리자 계정**의 아이디(기본 `admin`)와 비밀번호를 물어봅니다.
+비밀번호는 어디에도 저장되지 않으니 직접 기억해 두세요.
+
 하는 일 (다시 실행해도 안전):
 
 | 단계 | 내용 |
@@ -77,7 +80,7 @@ bash setup-server.sh
 | 1 | git, Nginx, **MySQL 8.4** (MySQL 공식 저장소), **Node.js 22** (NodeSource), PM2 설치 |
 | 2 | `/data/config`, `/data/www`, `/data/logs` 생성 |
 | 3 | MySQL 데이터 **`/data/mysql`**, 임시파일 `/data/mysql-tmp`, 에러 로그 `/data/logs/mysql` 로 지정 (`/etc/my.cnf`). 비어 있으면 초기화하고 root 는 `sudo mysql` 로만 접속 가능하게 설정 |
-| 4 | `projectq` DB/계정 생성 (비밀번호 랜덤) → **`/data/config/projectq.env`** 작성 |
+| 4 | `projectq` DB/앱 계정 생성 (비밀번호 랜덤) → **`/data/config/projectq.env`** 작성, 입력받은 **DB 관리자 계정** 생성 |
 | 5 | Nginx 설정 (`/etc/nginx/conf.d/projectq.conf`: `root /data/www/projectq`, `/api` → 3000 프록시) |
 | 6 | SELinux 가 Enforcing 이면 필요한 허용/라벨 설정 (AL2023 기본은 Permissive 라 보통 건너뜀) |
 | 7 | PM2 부팅 자동 시작, MySQL·Nginx·PM2 가 `/data` 마운트 **이후에** 시작되도록 순서 지정 |
@@ -122,6 +125,31 @@ sed -i 's/^COOKIE_SECURE=false/COOKIE_SECURE=true/' /data/config/projectq.env
 node /data/deploy.js --skip-client
 ```
 
+## DB 계정
+
+| 계정 | 비밀번호 | 용도 |
+|---|---|---|
+| `admin` (② 에서 입력한 아이디) | ② 에서 직접 입력 | **DB 로그인용** (터미널, DBeaver/Workbench) |
+| `projectq` | 자동 생성 → `/data/config/projectq.env` | Express 앱 전용 (`projectq` DB 만 권한) |
+| `root` | 없음 (auth_socket) | 서버 안에서 `sudo mysql` 로만 접속 |
+
+```bash
+mysql -u admin -p projectq          # 서버 안에서 관리자 계정으로 접속
+```
+
+**GUI 툴(DBeaver, MySQL Workbench)에서 접속**: 3306 포트는 열지 말고 SSH 터널을 사용합니다.
+- SSH: 호스트 `<EC2-IP>`, 사용자 `ec2-user`, 인증 = 키 파일(.pem)
+- MySQL: 호스트 `127.0.0.1`, 포트 `3306`, 사용자 `admin`, 비밀번호 = ② 에서 입력한 값
+
+**관리자 비밀번호 변경**
+```bash
+sudo mysql
+mysql> ALTER USER 'admin'@'localhost' IDENTIFIED BY '새비밀번호';
+mysql> ALTER USER 'admin'@'127.0.0.1' IDENTIFIED BY '새비밀번호';
+```
+
+**관리자 계정을 다시 만들기** (아이디 변경 등): `rm /data/config/.db-admin-user` 후 `bash setup-server.sh` 재실행
+
 ## DB 백업 (권장)
 ```bash
 sudo mysqldump --single-transaction projectq | gzip > /data/backup-$(date +%F).sql.gz
@@ -145,7 +173,7 @@ pm2 status                                # API 상태
 pm2 logs projectq-api                     # API 로그 (/data/logs 에도 저장)
 sudo tail -f /var/log/nginx/error.log
 sudo tail -f /data/logs/mysql/error.log   # MySQL 에러 로그
-sudo mysql projectq                       # DB 접속
+mysql -u admin -p projectq                # DB 접속 (관리자 계정)
 ```
 
 | 증상 | 확인 |

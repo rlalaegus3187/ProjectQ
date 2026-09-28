@@ -36,6 +36,38 @@ if ! mountpoint -q "$DATA"; then
   exit 1
 fi
 
+# DB 로그인용 관리자 계정 (DBeaver/Workbench 등에서 사용).
+# 설치가 오래 걸리므로 처음에 입력받음. 이미 만들었으면(표시 파일 존재) 건너뜀.
+# 비대화식 실행: DB_ADMIN_USER=admin DB_ADMIN_PASSWORD='...' bash setup-server.sh
+DB_ADMIN_MARKER="$DATA/config/.db-admin-user"
+DB_ADMIN_USER="${DB_ADMIN_USER:-}"
+DB_ADMIN_PASSWORD="${DB_ADMIN_PASSWORD:-}"
+if [[ -f "$DB_ADMIN_MARKER" ]]; then
+  echo "DB 관리자 계정이 이미 있습니다: $(cat "$DB_ADMIN_MARKER") (새로 만들려면 $DB_ADMIN_MARKER 삭제 후 재실행)"
+elif [[ -z "$DB_ADMIN_PASSWORD" ]]; then
+  echo "== DB 로그인용 관리자 계정 설정 =="
+  read -rp "  아이디 [admin]: " DB_ADMIN_USER
+  while true; do
+    read -rsp "  비밀번호 (8자 이상): " DB_ADMIN_PASSWORD; echo
+    read -rsp "  비밀번호 확인: " confirm; echo
+    [[ "$DB_ADMIN_PASSWORD" == "$confirm" ]] || { echo "  비밀번호가 일치하지 않습니다."; continue; }
+    [[ ${#DB_ADMIN_PASSWORD} -ge 8 ]] || { echo "  8자 이상 입력하세요."; continue; }
+    break
+  done
+fi
+DB_ADMIN_USER="${DB_ADMIN_USER:-admin}"
+if [[ ! "$DB_ADMIN_USER" =~ ^[A-Za-z0-9_]{1,32}$ ]]; then
+  echo "아이디는 영문/숫자/_ 로 32자 이내여야 합니다: $DB_ADMIN_USER" >&2
+  exit 1
+fi
+if [[ "$DB_ADMIN_USER" == "root" || "$DB_ADMIN_USER" == "$DB_USER" ]]; then
+  echo "아이디로 root, $DB_USER 는 쓸 수 없습니다." >&2
+  exit 1
+fi
+
+# SQL 문자열 리터럴용 이스케이프 (\ → \\, ' → '')
+sql_quote() { local s="${1//\\/\\\\}"; printf "'%s'" "${s//\'/\'\'}"; }
+
 step "1. 패키지 설치 (git, nginx, MySQL 8.4, Node.js 22, PM2)"
 sudo dnf install -y git nginx openssl
 
@@ -106,7 +138,7 @@ sudo systemctl enable mysqld
 sudo systemctl restart mysqld
 sudo mysql -N -e "SELECT CONCAT('MySQL ', VERSION(), ' / datadir=', @@datadir, ' / tmpdir=', @@tmpdir, ' / log_error=', @@log_error)"
 
-step "4. DB/계정 + $ENV_FILE"
+step "4. DB/앱 계정 + $ENV_FILE + DB 관리자 계정"
 if [[ -f "$ENV_FILE" ]]; then
   echo "$ENV_FILE 가 이미 있어 건너뜁니다."
 else
@@ -136,6 +168,22 @@ COOKIE_SECURE=false
 ENV
   )
   echo "$ENV_FILE 생성 완료 (DB 비밀번호/세션 키 자동 생성)"
+fi
+
+if [[ ! -f "$DB_ADMIN_MARKER" ]]; then
+  # 비밀번호가 ps 에 보이지 않도록 -e 대신 stdin 으로 전달
+  ADMIN_PW_SQL="$(sql_quote "$DB_ADMIN_PASSWORD")"
+  sudo mysql <<SQL
+CREATE USER IF NOT EXISTS '${DB_ADMIN_USER}'@'localhost' IDENTIFIED BY ${ADMIN_PW_SQL};
+CREATE USER IF NOT EXISTS '${DB_ADMIN_USER}'@'127.0.0.1' IDENTIFIED BY ${ADMIN_PW_SQL};
+ALTER USER '${DB_ADMIN_USER}'@'localhost' IDENTIFIED BY ${ADMIN_PW_SQL};
+ALTER USER '${DB_ADMIN_USER}'@'127.0.0.1' IDENTIFIED BY ${ADMIN_PW_SQL};
+GRANT ALL PRIVILEGES ON *.* TO '${DB_ADMIN_USER}'@'localhost' WITH GRANT OPTION;
+GRANT ALL PRIVILEGES ON *.* TO '${DB_ADMIN_USER}'@'127.0.0.1' WITH GRANT OPTION;
+SQL
+  echo "$DB_ADMIN_USER" > "$DB_ADMIN_MARKER"
+  unset DB_ADMIN_PASSWORD ADMIN_PW_SQL
+  echo "DB 관리자 계정 생성 완료: $DB_ADMIN_USER (접속: mysql -u $DB_ADMIN_USER -p)"
 fi
 
 step "5. Nginx"
