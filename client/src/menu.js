@@ -4,5 +4,6 @@ export const SITE_MENU = [
   { to: '/world', label: '세계관' },
   { to: '/system', label: '시스템' },
   { to: '/guide', label: '캐릭터 가이드' },
+  { to: '/members', label: '멤버' },
   { to: '/qna', label: 'Q&A' },
 ];

@@ -250,9 +250,14 @@ async function setMainProfile(conn, characterId, profileId) {
 // 활성 항목 기준으로 값을 붙여서 반환 (값이 없는 항목은 value: null)
 // profiles: 대표 프로필이 맨 앞, 나머지는 만든 순서
 async function getCharacterByUserId(userId, conn = pool) {
+  return getCharacter({ userId }, conn);
+}
+
+// { userId } 또는 { characterId } 로 조회 (멤버란은 characterId)
+async function getCharacter({ userId, characterId }, conn = pool) {
   const [rows] = await conn.execute(
-    'SELECT id, name, hp, created_at, updated_at FROM characters WHERE user_id = ?',
-    [userId],
+    `SELECT id, name, hp, created_at, updated_at FROM characters WHERE ${userId !== undefined ? 'user_id' : 'id'} = ?`,
+    [Number(userId !== undefined ? userId : characterId)],
   );
   const character = rows[0];
   if (!character) return null;
@@ -328,5 +333,6 @@ module.exports = {
   deleteProfile,
   setMainProfile,
   getCharacterByUserId,
+  getCharacter,
   withTransaction,
 };

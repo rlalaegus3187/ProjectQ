@@ -9,7 +9,8 @@ import ProfileFields from './ProfileFields.vue';
 
 const props = defineProps({
   character: { type: Object, required: true },
-  definitions: { type: Object, required: true },
+  definitions: { type: Object, default: null },   // readonly 면 필요 없음
+  readonly: { type: Boolean, default: false },     // 멤버란 등 보기 전용
 });
 const emit = defineEmits(['updated']);   // 서버가 돌려준 최신 캐릭터
 
@@ -83,8 +84,8 @@ async function remove() {
 <template>
   <section class="card">
     <div class="card-head">
-      <h2>프로필 <span class="muted">{{ profiles.length }} / {{ character.maxProfiles ?? 10 }}</span></h2>
-      <button v-if="!form && canAdd" type="button" class="secondary" @click="startAdd">+ 새 프로필</button>
+      <h2>프로필 <span v-if="!readonly" class="muted">{{ profiles.length }} / {{ character.maxProfiles ?? 10 }}</span></h2>
+      <button v-if="!readonly && !form && canAdd" type="button" class="secondary" @click="startAdd">+ 새 프로필</button>
     </div>
 
     <div class="tabs profile-tabs" role="tablist">
@@ -106,7 +107,7 @@ async function remove() {
     </form>
 
     <template v-else-if="selected">
-      <div class="actions profile-actions">
+      <div v-if="!readonly" class="actions profile-actions">
         <button type="button" class="secondary" @click="startEdit">프로필 수정</button>
         <button v-if="!selected.isMain" type="button" class="secondary" :disabled="busy" @click="makeMain">대표로 지정</button>
         <button v-if="!selected.isMain" type="button" class="danger" :disabled="busy" @click="remove">삭제</button>

@@ -27,6 +27,9 @@ const router = createRouter({
     { path: '/inventory', component: InventoryView, meta: { requiresAuth: true } },
     { path: '/admin', component: AdminView, meta: { requiresAuth: true, requiresAdmin: true } },
     { path: '/admin/items', component: () => import('./views/AdminItemsView.vue'), meta: { requiresAuth: true, requiresAdmin: true } },
+    // 멤버란 (전체 캐릭터) — 로그인 없이 공개. 회원만 보게 하려면 meta: { requiresAuth: true } 추가
+    { path: '/members', component: () => import('./views/MemberListView.vue') },
+    { path: '/members/:id(\\d+)', component: () => import('./views/MemberDetailView.vue') },
     // 콘텐츠 페이지 (pages/ 폴더) — 들어갈 때만 불러옴
     { path: '/notice', component: () => import('./pages/notice/NoticePage.vue') },
     { path: '/world', component: () => import('./pages/world/WorldPage.vue') },

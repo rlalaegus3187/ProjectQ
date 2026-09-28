@@ -9,6 +9,7 @@ Vue 3 + Node.js/Express + MySQL 로 만든 SPA 로그인 샘플입니다.
 - **알림**: 내 Q&A 질문에 답변이 달리면 상단 `알림` 에 표시
 - **아이템 / 인벤토리**: 관리자가 아이템 등록(이미지·효과·귀속·판매가능) 후 캐릭터에게 지급/회수, 회원은 `인벤토리` 에서 확인·버리기
 - **계정당 캐릭터 1개** — 가입할 때 함께 등록, 마이페이지에서 기본정보·캐릭터 스탯 표시·수정
+- **멤버란** (`/members`): 전체 캐릭터 목록(대표 프로필 이미지·검색) + 캐릭터 상세(기본정보·스탯·프로필, 보기 전용, 로그인 없이 공개)
 - **캐릭터 프로필 여러 개** (최대 10) — 프로필 양식 값만 프로필마다 따로, 대표 프로필 지정 (스탯·인벤토리는 캐릭터에 하나)
 - **관리자/일반 권한** (지금은 가입하면 모두 관리자) — 관리자는 `/admin` 에서 캐릭터 스탯·프로필 양식 항목을 추가/수정/삭제
 - 항목 형식: 숫자, 짧은 텍스트, 긴 텍스트(마크다운 편집기), 링크, 이미지(업로드), 드롭다운
@@ -39,6 +40,7 @@ ProjectQ/
 │  │  ├─ inventory.js      ★ 아이템/인벤토리 공용 함수 (giveItem / takeItem / getInventory)
 │  │  ├─ routes/adminItems.js  /api/admin/items, /api/admin/characters (관리자)
 │  │  ├─ routes/inventory.js   /api/inventory (내 인벤토리)
+│  │  ├─ routes/members.js     /api/members (멤버란, 공개)
 │  │  ├─ routes/auth.js    /api/auth/signup, login, logout, me
 │  │  ├─ routes/characters.js  /api/attributes, /api/characters
 │  │  ├─ routes/admin.js   /api/admin/attributes (관리자)
@@ -89,6 +91,8 @@ ProjectQ/
 | GET | `/api/admin/characters?q=` | (관리자) 캐릭터 검색 |
 | GET/POST | `/api/admin/characters/:id/inventory` | (관리자) 인벤토리 조회 / 지급 `{ itemId, quantity }` (알림 발송) |
 | DELETE | `/api/admin/characters/:id/inventory/:itemId?quantity=` | (관리자) 회수 |
+| GET | `/api/members?q=&page=` | 멤버란 목록 (캐릭터 이름 검색, 24개씩) |
+| GET | `/api/members/:id` | 캐릭터 상세 (기본정보·스탯·프로필, 계정 정보·인벤토리 제외) |
 | GET | `/api/inventory` | 내 캐릭터 인벤토리 |
 | POST | `/api/inventory/:itemId/discard` | `{ quantity }` 버리기 |
 | GET | `/api/notifications` | 내 알림 50개 + `unreadCount` |
