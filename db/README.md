@@ -51,5 +51,5 @@ sessions  (express-mysql-session 로그인 세션)
 ## 마이그레이션 규칙
 - `migrations/` 안의 `.sql` 파일을 **파일명 순서대로** 실행합니다.
 - 실행된 파일 이름은 `schema_migrations` 테이블에 기록되어 **한 번만** 실행됩니다.
-- 이미 적용된 파일은 수정하지 말고, 변경사항은 `003_add_xxx.sql` 처럼 새 파일로 추가하세요.
+- 이미 적용된 파일은 수정하지 말고, 변경사항은 `004_add_xxx.sql` 처럼 다음 번호의 새 파일로 추가하세요.
 - 실행: `cd server && npm run migrate` (배포 스크립트 `deploy/deploy.js` 가 자동으로 실행)
