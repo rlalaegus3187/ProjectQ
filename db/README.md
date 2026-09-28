@@ -6,8 +6,9 @@ users                          characters (계정당 1개)
 id            PK          ┌──  id            PK
 email         UNIQUE      │    user_id       UNIQUE, FK → users.id
 name                      │    name          캐릭터 이름   ┐ 기본정보
-role          admin/member/ │    hp            HP           ┘
-              applicant   │    application_status  신청 상태(작성중/작성완료)
+role          admin/      │    hp            HP           ┘
+              member/     │    application_status  신청 상태(작성중/작성완료)
+              applicant   │
 password_hash (scrypt)    │
 created_at ...            │
                           │
