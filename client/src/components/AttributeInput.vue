@@ -1,7 +1,8 @@
 <script setup>
 // 항목 하나의 입력칸 — 형식(valueType)에 따라 입력 방식이 달라짐
 import { ref } from 'vue';
-import { uploadImage } from '../character';
+import { uploadImage } from '../upload';
+import { MarkdownEditor } from '../markdown';
 
 const props = defineProps({
   def: { type: Object, required: true },
@@ -34,7 +35,9 @@ async function onFile(event) {
 
     <input v-if="def.valueType === 'number'" :id="inputId" v-model="value" type="number" step="any" :required="def.isRequired" />
 
-    <textarea v-else-if="def.valueType === 'long_text'" :id="inputId" v-model="value" rows="5" maxlength="10000" :required="def.isRequired" />
+    <!-- 긴 텍스트: 마크다운 편집기 (툴바 · 이미지 넣기 · 미리보기) -->
+    <MarkdownEditor v-else-if="def.valueType === 'long_text'" :id="inputId" v-model="value" :rows="6" :maxlength="10000"
+      placeholder="내용을 입력하세요. (마크다운 사용 가능)" />
 
     <input v-else-if="def.valueType === 'link'" :id="inputId" v-model="value" type="url" placeholder="https://" maxlength="2000" :required="def.isRequired" />
 

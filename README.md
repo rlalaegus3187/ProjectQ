@@ -9,7 +9,7 @@ Vue 3 + Node.js/Express + MySQL 로 만든 SPA 로그인 샘플입니다.
 - **알림**: 내 Q&A 질문에 답변이 달리면 상단 `알림` 에 표시
 - **계정당 캐릭터 1개** — 가입할 때 함께 등록, 로그인하면 마이페이지에서 내 캐릭터(기본정보/캐릭터 스탯/프로필) 표시·수정
 - **관리자/일반 권한** (지금은 가입하면 모두 관리자) — 관리자는 `/admin` 에서 캐릭터 스탯·프로필 양식 항목을 추가/수정/삭제
-- 항목 형식: 숫자, 짧은 텍스트, 긴 텍스트, 링크, 이미지(업로드), 드롭다운
+- 항목 형식: 숫자, 짧은 텍스트, 긴 텍스트(마크다운 편집기), 링크, 이미지(업로드), 드롭다운
 - **스탯 투자 포인트**: 관리자가 초기 투자 포인트를 정하고, 캐릭터는 숫자형 스탯에 포인트를 나눠 투자 (합계 ≤ 전체 포인트)
 - EC2(m6id Instance Store) 배포 스크립트와 **`deploy.js` 한 번으로 전체 업데이트**
 
@@ -24,8 +24,10 @@ ProjectQ/
 │     ├─ router.js         라우트 + 로그인/관리자 가드
 │     ├─ character.js      캐릭터 폼 헬퍼
 │     ├─ menu.js           상단 메뉴 목록
+│     ├─ markdown/         ★ 마크다운 모듈 (renderMarkdown, MarkdownEditor, MarkdownView) — markdown/README.md
+│     ├─ upload.js         이미지 업로드
 │     ├─ pages/            콘텐츠 페이지 (notice, world, system, guide) — 페이지마다 폴더
-│     ├─ components/       PageContainer(페이지 틀), CharacterForm/Card, AttributeInput/Value, PostEditor, MarkdownView
+│     ├─ components/       PageContainer(페이지 틀), CharacterForm/Card, AttributeInput/Value, PostEditor
 │     └─ views/            Home, Login, Signup, MyPage, Admin, Board*/Post*(Q&A), Notifications
 ├─ server/                 Express API
 │  ├─ src/

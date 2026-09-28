@@ -5,7 +5,7 @@ import { useRoute, useRouter } from 'vue-router';
 import { api } from '../api';
 import { auth } from '../auth';
 import { BOARDS, formatDate } from '../boards';
-import MarkdownView from '../components/MarkdownView.vue';
+import { MarkdownView } from '../markdown';
 import PostEditor from '../components/PostEditor.vue';
 
 const route = useRoute();

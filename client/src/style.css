@@ -56,7 +56,6 @@ input.narrow { width: 72px; }
 .image-actions { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
 .image-actions input[type=file] { border: 0; padding: 0; }
 .thumb { max-width: 240px; max-height: 240px; border-radius: 8px; border: 1px solid #e5e7eb; object-fit: contain; display: block; }
-.long-text { white-space: pre-wrap; }
 .kv dd a { word-break: break-all; }
 /* 관리자 표 */
 button.danger { background: #fee2e2; color: #b91c1c; }
@@ -141,7 +140,8 @@ a.button.small, .row-actions a.button { padding: 6px 10px; font-size: 13px; }
 .toolbar-file { position: relative; overflow: hidden; display: inline-flex; align-items: center; }
 .toolbar-file input { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
 .toolbar-file.disabled { opacity: .6; }
-.post-editor textarea { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 14px; resize: vertical; }
+.markdown-editor { display: flex; flex-direction: column; gap: 8px; }
+.markdown-editor textarea { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 14px; resize: vertical; }
 .preview { min-height: 200px; padding: 12px; border: 1px solid #e5e7eb; border-radius: 6px; }
 /* 관리자 */
 .admin-nav { display: flex; gap: 8px; margin-bottom: 12px; }

@@ -19,14 +19,6 @@ export async function fetchAttributes() {
   return api('/attributes');
 }
 
-// 이미지 업로드 → 저장할 경로(url) 반환
-export async function uploadImage(file) {
-  const body = new FormData();
-  body.append('file', file);
-  const { url } = await api('/uploads', { method: 'POST', body });
-  return url;
-}
-
 // 폼 상태 만들기. character 가 있으면 기존 값으로 채움
 export function toCharacterForm(definitions, character = null) {
   const valuesOf = (list) => Object.fromEntries((list || []).map((a) => [a.code, a.value ?? '']));
