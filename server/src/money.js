@@ -10,7 +10,7 @@
 //   // 트랜잭션 안에서는 마지막 인자로 커넥션 → 함께 커밋/롤백 (상점 구매처럼 여러 작업을 묶을 때)
 //   await withTransaction(async (conn) => { await changeMoney({...}, conn); await giveItem({...}, conn); });
 const pool = require('./db');
-const { HttpError } = require('./characters');
+const { HttpError } = require('./errors');
 
 const MAX_MONEY = 1_000_000_000_000;   // 1조
 const REASON_RE = /^[a-z][a-z0-9_]{0,29}$/;

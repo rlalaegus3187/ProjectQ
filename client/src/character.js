@@ -1,4 +1,5 @@
 import { api } from './api';
+import { youtubeUrl } from './music';
 
 // 항목 형식 (캐릭터 스탯 / 프로필 양식 공통)
 export const VALUE_TYPES = [
@@ -32,6 +33,7 @@ export function toCharacterForm(definitions, character = null) {
     name: character?.name ?? '',
     hp: character?.hp ?? '',
     stats: fill(definitions.stats, valuesOf(character?.stats)),
+    music: '',
     details: fill(definitions.details, {}),
   };
 }
@@ -40,6 +42,7 @@ export function toCharacterForm(definitions, character = null) {
 export function toProfileForm(definitions, profile = null) {
   return {
     name: profile?.name ?? '',
+    music: youtubeUrl(profile?.musicVideoId),   // 프로필 음악 (유튜브 링크)
     details: fill(definitions.details, valuesOf(profile?.details)),
   };
 }

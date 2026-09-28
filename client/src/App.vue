@@ -3,8 +3,23 @@ import { useRouter } from 'vue-router';
 import { auth, isAdmin, logout } from './auth';
 import { SITE_MENU } from './menu';
 import { notifications, refreshUnread } from './notifications';
+import { onMounted } from 'vue';
+import { useRoute } from 'vue-router';
+import { api } from './api';
+import { MusicPlayer, setSiteMusic, usePageMusic } from './music';
 
 const router = useRouter();
+const route = useRoute();
+
+// 라우트별 음악: router.js 에서 { path, component, meta: { music: '영상ID' } } 로 지정 가능
+usePageMusic(() => route.meta.music);
+
+// 사이트 전체 음악 (관리자 설정)
+onMounted(async () => {
+  try {
+    setSiteMusic((await api('/settings')).siteMusic);
+  } catch { /* 음악 설정을 못 불러와도 사이트는 동작 */ }
+});
 
 async function onLogout() {
   await logout();
@@ -40,4 +55,5 @@ async function onLogout() {
   <main class="container">
     <RouterView />
   </main>
+  <MusicPlayer />
 </template>

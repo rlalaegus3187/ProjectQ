@@ -5,6 +5,8 @@ const requireAdmin = require('../middleware/requireAdmin');
 const {
   VALUE_TYPES, HttpError, getDefinitions, groupDefinitions, withTransaction, getStatPoints, setStatPoints,
 } = require('../characters');
+const { getSetting, setSetting } = require('../settings');
+const { parseYouTubeId } = require('../youtube');
 
 const router = express.Router();
 router.use(requireAdmin);
@@ -41,16 +43,26 @@ function parseOptions(value) {
   return unique;
 }
 
-// 전역 설정: 초기 투자 포인트
+// 전역 설정: 초기 투자 포인트, 사이트 전체 음악(유튜브 영상 ID)
+async function currentSettings() {
+  return { statPoints: await getStatPoints(), siteMusic: await getSetting('site_music') };
+}
+
 router.get('/settings', async (req, res) => {
-  res.json({ statPoints: await getStatPoints() });
+  res.json(await currentSettings());
 });
 
+// 보낸 값만 변경: { statPoints?, siteMusic?(유튜브 링크, 빈 값이면 끔) }
 router.put('/settings', async (req, res) => {
-  const n = Number(req.body?.statPoints);
-  if (!Number.isInteger(n) || n < 0 || n > 1000000) throw new HttpError(400, '투자 포인트는 0 ~ 1,000,000 사이의 정수로 입력해주세요.');
-  await setStatPoints(n);
-  res.json({ statPoints: n });
+  if (req.body?.statPoints !== undefined) {
+    const n = Number(req.body.statPoints);
+    if (!Number.isInteger(n) || n < 0 || n > 1000000) throw new HttpError(400, '투자 포인트는 0 ~ 1,000,000 사이의 정수로 입력해주세요.');
+    await setStatPoints(n);
+  }
+  if (req.body?.siteMusic !== undefined) {
+    await setSetting('site_music', parseYouTubeId(req.body.siteMusic, '사이트 음악'));
+  }
+  res.json(await currentSettings());
 });
 
 // 전체 항목 (비활성 포함)

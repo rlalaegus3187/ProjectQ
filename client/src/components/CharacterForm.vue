@@ -45,5 +45,5 @@ const remaining = computed(() => totalPoints.value - usedPoints.value);
     </template>
   </fieldset>
 
-  <ProfileFields v-if="withProfile" v-model:details="form.details" :definitions="definitions" legend="프로필" :show-name="false" />
+  <ProfileFields v-if="withProfile" v-model:details="form.details" v-model:music="form.music" :definitions="definitions" legend="프로필" :show-name="false" />
 </template>

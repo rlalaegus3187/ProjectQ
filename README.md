@@ -7,6 +7,7 @@ Vue 3 + Node.js/Express + MySQL 로 만든 SPA 로그인 샘플입니다.
 - **콘텐츠 페이지**: 공지 · 세계관 · 시스템 · 캐릭터 가이드 — `client/src/pages/<이름>/` 폴더 + 빈 컨테이너 (내용은 직접 채움, `pages/README.md` 참고)
 - **Q&A 게시판**: 회원 질문·비밀글, 관리자 답변·메인 글 (마크다운 등록툴 + 이미지)
 - **알림**: 내 Q&A 질문에 답변이 달리면 상단 `알림` 에 표시
+- **음악**: 프로필별 유튜브 음악, 사이트 전체 음악(관리 → 사이트 설정), 페이지별 음악(`usePageMusic`) — 오른쪽 아래 플레이어, 볼륨/정지는 계정별 저장 (`client/src/music/README.md`)
 - **소지금 / 상점**: 캐릭터 소지금(내역 기록), 관리자가 소지금 지급·회수, `상점 관리`에서 등록된 아이템을 골라 가격·재고 설정, 회원은 `상점`에서 구매
 - **아이템 / 인벤토리**: 관리자가 아이템 등록(이미지·효과·귀속·판매가능) 후 캐릭터에게 지급/회수, 회원은 `인벤토리` 에서 확인·버리기
 - **계정당 캐릭터 1개** — 가입할 때 함께 등록, 마이페이지에서 기본정보·캐릭터 스탯 표시·수정
@@ -29,6 +30,7 @@ ProjectQ/
 │     ├─ character.js      캐릭터 폼 헬퍼
 │     ├─ menu.js           상단 메뉴 목록
 │     ├─ markdown/         ★ 마크다운 모듈 (renderMarkdown, MarkdownEditor, MarkdownView) — markdown/README.md
+│     ├─ music/            ★ 음악 모듈 (MusicPlayer, usePageMusic, setSiteMusic, 볼륨/정지) — music/README.md
 │     ├─ upload.js         이미지 업로드
 │     ├─ pages/            콘텐츠 페이지 (notice, world, system, guide) — 페이지마다 폴더
 │     ├─ components/       PageContainer(페이지 틀), CharacterForm/Card, AttributeInput/Value, PostEditor
@@ -54,7 +56,7 @@ ProjectQ/
 │  ├─ scripts/migrate.js   DB 마이그레이션
 │  └─ scripts/seed.js      샘플 계정 생성
 ├─ db/                    MySQL 스키마 (구조 설명: db/README.md)
-│  └─ migrations/          001_init.sql … 009_money_shop.sql
+│  └─ migrations/          001_init.sql … 010_music.sql
 ├─ deploy/
 │  ├─ mount-instance-store.sh  ① NVMe Instance Store → /data 마운트
 │  ├─ setup-server.sh      ② EC2 기본 세팅 (Node, MySQL 데이터·임시파일·로그→/data, Nginx, PM2)
@@ -71,15 +73,17 @@ ProjectQ/
 | POST | `/api/auth/signup` | `{ name, email, password, character: { name, hp, stats: {code: 값}, details: {code: 값} } }` 가입 + 캐릭터 등록 후 자동 로그인 |
 | POST | `/api/auth/login` | `{ email, password }` |
 | POST | `/api/auth/logout` | 세션 삭제 |
+| PUT | `/api/auth/me/preferences` | 계정 음악 설정 `{ musicVolume(0~100), musicEnabled }` |
+| GET | `/api/settings` | 공개 설정 `{ siteMusic }` (사이트 전체 음악 영상 ID) |
 | GET | `/api/auth/me` | 현재 로그인 사용자 `{ id, email, name, role }` (401 이면 비로그인) |
 | GET | `/api/attributes` | 현재 입력받는 항목 + 투자 포인트 `{ stats, details, statPoints }` |
 | GET | `/api/characters/me` | 내 캐릭터 (없으면 `character: null`) |
 | POST | `/api/characters` | 캐릭터 등록 `{ name, hp, stats, details }` → 대표 프로필(캐릭터 이름으로 표시) 함께 생성 (계정당 1개) |
 | PUT | `/api/characters/me` | 기본정보 + 스탯 수정 `{ name, hp, stats }` |
-| POST | `/api/characters/me/profiles` | 프로필 추가 `{ name, details }` |
+| POST | `/api/characters/me/profiles` | 프로필 추가 `{ name, music?(유튜브 링크), details }` |
 | PUT/DELETE | `/api/characters/me/profiles/:id` | 프로필 수정 `{ name, details }` (대표는 name 없음) / 삭제 (대표는 삭제 불가) |
 | PUT | `/api/characters/me/profiles/:id/main` | 대표 프로필 지정 |
-| GET/PUT | `/api/admin/settings` | (관리자) 초기 투자 포인트 `{ statPoints }` 조회/변경 |
+| GET/PUT | `/api/admin/settings` | (관리자) `{ statPoints, siteMusic(유튜브 링크, 빈 값=끔) }` 조회/변경 (보낸 값만) |
 | GET | `/api/admin/attributes` | (관리자) 전체 항목, 비활성 포함 |
 | POST | `/api/admin/attributes` | (관리자) `{ category: stat/detail, code, label, valueType, options, isRequired, sortOrder }` 항목 추가 |
 | PATCH | `/api/admin/attributes/:id` | (관리자) `{ label, valueType, options, isRequired, sortOrder, isActive }` 수정 |

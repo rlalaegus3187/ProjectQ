@@ -6,11 +6,13 @@ import { api } from '../api';
 import { toProfileForm } from '../character';
 import AttributeValue from './AttributeValue.vue';
 import ProfileFields from './ProfileFields.vue';
+import { usePageMusic, youtubeUrl } from '../music';
 
 const props = defineProps({
   character: { type: Object, required: true },
   definitions: { type: Object, default: null },   // readonly 면 필요 없음
   readonly: { type: Boolean, default: false },     // 멤버란 등 보기 전용
+  playMusic: { type: Boolean, default: true },     // 보고 있는 프로필의 음악 재생
 });
 const emit = defineEmits(['updated']);   // 서버가 돌려준 최신 캐릭터
 
@@ -26,6 +28,9 @@ const selected = computed(() => profiles.value.find((p) => p.id === selectedId.v
 const tabLabel = (p) => (p.isMain ? props.character.name : p.name);
 const editingMain = computed(() => editingId.value !== null && profiles.value.find((p) => p.id === editingId.value)?.isMain);
 const canAdd = computed(() => profiles.value.length < (props.character.maxProfiles ?? 10));
+
+// 보고 있는 프로필의 음악 재생 (음악이 없는 프로필이면 페이지/사이트 음악으로)
+usePageMusic(() => (props.playMusic ? selected.value?.musicVideoId : null));
 
 // 목록이 바뀌어 선택한 프로필이 없어지면 대표 프로필로
 watch(profiles, (list) => {
@@ -100,7 +105,7 @@ async function remove() {
     </div>
 
     <form v-if="form" class="form" @submit.prevent="save">
-      <ProfileFields v-model:name="form.name" v-model:details="form.details" :definitions="definitions"
+      <ProfileFields v-model:name="form.name" v-model:details="form.details" v-model:music="form.music" :definitions="definitions"
         :legend="editingId === null ? '새 프로필' : editingMain ? `대표 프로필 수정 (${character.name})` : '프로필 수정'" :show-name="!editingMain" />
       <p v-if="error" class="error">{{ error }}</p>
       <div class="actions">
@@ -115,6 +120,9 @@ async function remove() {
         <button v-if="!selected.isMain" type="button" class="secondary" :disabled="busy" @click="makeMain">대표로 지정</button>
         <button v-if="!selected.isMain" type="button" class="danger" :disabled="busy" @click="remove">삭제</button>
       </div>
+      <p v-if="selected.musicVideoId" class="profile-music">
+        ♪ 프로필 음악 <a :href="youtubeUrl(selected.musicVideoId)" target="_blank" rel="noopener noreferrer">유튜브에서 보기</a>
+      </p>
       <p v-if="!selected.details.length" class="muted">등록된 프로필 양식이 없습니다.</p>
       <dl v-else class="kv">
         <template v-for="detail in selected.details" :key="detail.code">

@@ -21,10 +21,19 @@ const authLimiter = rateLimit({
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-const USER_COLUMNS = 'id, email, name, role, created_at';
+const USER_COLUMNS = 'id, email, name, role, music_volume, music_enabled, created_at';
 
 function toPublicUser(row) {
-  return { id: row.id, email: row.email, name: row.name, role: row.role, createdAt: row.created_at };
+  return {
+    id: row.id,
+    email: row.email,
+    name: row.name,
+    role: row.role,
+    // 계정별 음악 설정 (음악 모듈이 사용)
+    musicVolume: row.music_volume,
+    musicEnabled: !!row.music_enabled,
+    createdAt: row.created_at,
+  };
 }
 
 // 세션 고정(session fixation) 공격 방지를 위해 로그인 시 세션 ID 를 새로 발급
@@ -52,7 +61,7 @@ router.post('/signup', authLimiter, async (req, res) => {
   const character = validateCharacterInput(req.body?.character, defs, await getStatPoints());
   // 대표 프로필: { details } (이름은 쓰지 않음 — 캐릭터 이름으로 표시)
   const profile = validateProfileInput(
-    { details: req.body?.character?.details },
+    { details: req.body?.character?.details, music: req.body?.character?.music },
     defs,
     { defaultName: DEFAULT_PROFILE_NAME },
   );
@@ -111,6 +120,22 @@ router.get('/me', requireAuth, async (req, res) => {
     req.session.destroy(() => {});
     return res.status(401).json({ message: '로그인이 필요합니다.' });
   }
+  res.json({ user: toPublicUser(rows[0]) });
+});
+
+// 계정별 음악 설정 저장: { musicVolume?: 0~100, musicEnabled?: boolean }
+router.put('/me/preferences', requireAuth, async (req, res) => {
+  const updates = [];
+  const params = [];
+  if (req.body?.musicVolume !== undefined) {
+    const v = Number(req.body.musicVolume);
+    if (!Number.isInteger(v) || v < 0 || v > 100) return res.status(400).json({ message: '볼륨은 0~100 사이의 정수여야 합니다.' });
+    updates.push('music_volume = ?'); params.push(v);
+  }
+  if (req.body?.musicEnabled !== undefined) { updates.push('music_enabled = ?'); params.push(req.body.musicEnabled ? 1 : 0); }
+  if (!updates.length) return res.status(400).json({ message: '변경할 내용이 없습니다.' });
+  await pool.execute(`UPDATE users SET ${updates.join(', ')} WHERE id = ?`, [...params, req.session.userId]);
+  const [rows] = await pool.execute(`SELECT ${USER_COLUMNS} FROM users WHERE id = ?`, [req.session.userId]);
   res.json({ user: toPublicUser(rows[0]) });
 });
 

@@ -9,13 +9,8 @@ const MAX_LENGTH = { text: 500, long_text: 10000, link: 2000 };
 // 이미지 값은 이 서버에 업로드한 파일 경로만 허용 (routes/uploads.js)
 const UPLOAD_URL_RE = /^\/api\/uploads\/[a-f0-9]{32}\.(png|jpg|gif|webp)$/;
 
-class HttpError extends Error {
-  constructor(status, message) {
-    super(message);
-    this.status = status;
-    this.expose = true;
-  }
-}
+const { HttpError } = require('./errors');
+const { parseYouTubeId } = require('./youtube');
 
 // 숫자형 캐릭터 스탯 = 투자 포인트를 분배하는 스탯 (0 이상의 정수, 합계 ≤ 투자 포인트)
 const isPointStat = (def) => def.category === 'stat' && def.valueType === 'number';
@@ -163,7 +158,9 @@ function validateProfileInput(input, defs, { defaultName = null, requireName = t
   if (name.length > 50) throw new HttpError(400, '프로필 이름은 50자 이내로 입력해주세요.');
   if (requireName && !name) throw new HttpError(400, '프로필 이름을 입력해주세요.');
   const { details } = groupDefinitions(defs);
-  return { name, details: validateValues(input?.details, details) };
+  // 프로필 음악: 유튜브 링크 → 영상 ID (비우면 음악 없음)
+  const musicVideoId = parseYouTubeId(input?.music, '프로필 음악');
+  return { name, musicVideoId, details: validateValues(input?.details, details) };
 }
 
 // 값 저장: keyColumn = character_id(스탯) / profile_id(프로필)
@@ -214,8 +211,8 @@ async function createProfile(conn, characterId, profile, { isMain = false } = {}
   );
   if (Number(count) >= MAX_PROFILES) throw new HttpError(400, `프로필은 최대 ${MAX_PROFILES}개까지 만들 수 있습니다.`);
   const [result] = await conn.execute(
-    'INSERT INTO character_profiles (character_id, name, is_main, sort_order) VALUES (?, ?, ?, ?)',
-    [characterId, profile.name, isMain || Number(count) === 0 ? 1 : 0, Number(maxOrder) + 1],
+    'INSERT INTO character_profiles (character_id, name, music_video_id, is_main, sort_order) VALUES (?, ?, ?, ?, ?)',
+    [characterId, profile.name, profile.musicVideoId ?? null, isMain || Number(count) === 0 ? 1 : 0, Number(maxOrder) + 1],
   );
   await saveValues(conn, 'character_details', 'profile_id', result.insertId, profile.details);
   return result.insertId;
@@ -234,6 +231,7 @@ async function findProfile(conn, characterId, profileId) {
 // 대표 프로필은 이름을 쓰지 않으므로(캐릭터 이름으로 표시) 이름은 그대로 두고 값만 수정
 async function updateProfile(conn, characterId, profileId, profile) {
   const row = await findProfile(conn, characterId, profileId);
+  await conn.execute('UPDATE character_profiles SET music_video_id = ? WHERE id = ?', [profile.musicVideoId ?? null, row.id]);
   if (!row.is_main) {
     if (!profile.name) throw new HttpError(400, '프로필 이름을 입력해주세요.');
     await conn.execute('UPDATE character_profiles SET name = ? WHERE id = ?', [profile.name, row.id]);
@@ -271,7 +269,7 @@ async function getCharacter({ userId, characterId }, conn = pool) {
   const [defs, totalPoints] = await Promise.all([getDefinitions(conn), getStatPoints(conn)]);
   const [statRows] = await conn.execute('SELECT definition_id, value FROM character_stats WHERE character_id = ?', [character.id]);
   const [profileRows] = await conn.execute(
-    'SELECT id, name, is_main, created_at, updated_at FROM character_profiles WHERE character_id = ? ORDER BY is_main DESC, sort_order, id',
+    'SELECT id, name, music_video_id, is_main, created_at, updated_at FROM character_profiles WHERE character_id = ? ORDER BY is_main DESC, sort_order, id',
     [character.id],
   );
   const [detailRows] = profileRows.length
@@ -297,7 +295,9 @@ async function getCharacter({ userId, characterId }, conn = pool) {
     statPoints: { total: totalPoints, used: usedPoints },
     profiles: profileRows.map((p) => {
       const values = new Map(detailRows.filter((d) => d.profile_id === p.id).map((d) => [d.definition_id, d.value]));
-      return { id: p.id, name: p.name, isMain: !!p.is_main, details: details.map(withValue(values)), updatedAt: p.updated_at };
+      return {
+        id: p.id, name: p.name, isMain: !!p.is_main, musicVideoId: p.music_video_id, details: details.map(withValue(values)), updatedAt: p.updated_at,
+      };
     }),
     maxProfiles: MAX_PROFILES,
     createdAt: character.created_at,

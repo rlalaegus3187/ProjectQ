@@ -29,6 +29,15 @@ import WorldMap from './WorldMap.vue';          // pages/world/WorldMap.vue
 
 이미지 같은 파일은 `client/public/` 에 넣고 `/파일명` 으로 쓰거나, 컴포넌트 옆에 두고 `import` 합니다.
 
+## 이 페이지에서만 음악 틀기
+```vue
+<script setup>
+import PageContainer from '../../components/PageContainer.vue';
+import { usePageMusic } from '../../music';
+usePageMusic('유튜브영상ID');   // 이 페이지에 있는 동안만 재생 (자세한 건 src/music/README.md)
+</script>
+```
+
 ## 새 페이지 추가
 1. `pages/<이름>/<이름>Page.vue` 생성 (위 페이지 복사)
 2. `src/router.js` 의 routes 에 한 줄 추가: `{ path: '/<주소>', component: () => import('./pages/<이름>/<이름>Page.vue') }`

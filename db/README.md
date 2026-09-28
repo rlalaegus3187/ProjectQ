@@ -46,6 +46,9 @@ items          아이템 (uid=id, name, description(마크다운), small_image, 
                effect ENUM(none/hp_recover/stat_bonus/custom), effect_values JSON, is_bound 귀속, is_sellable 판매가능)
 inventory      캐릭터 인벤토리 (캐릭터 귀속)  character_id, item_id, quantity — (character_id, item_id) UNIQUE, 수량으로 쌓임
                → 지급/회수는 server/src/inventory.js 의 giveItem()/takeItem()/getInventory() 사용
+character_profiles.music_video_id  프로필 음악 (유튜브 영상 ID, NULL = 없음)
+users.music_volume / music_enabled  계정별 음악 볼륨(0~100) / 재생 여부
+settings.site_music                 사이트 전체 음악 (유튜브 영상 ID)
 characters.money  소지금 (캐릭터 귀속)
 money_logs     소지금 내역  character_id, amount(+/-), balance(변화 후 잔액), reason(admin/shop_buy/...), memo
                → 변경은 server/src/money.js 의 changeMoney() 사용 (잔액 확인 + 내역 기록 + 행 잠금)
