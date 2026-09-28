@@ -46,6 +46,10 @@ items          아이템 (uid=id, name, description(마크다운), small_image, 
                effect ENUM(none/hp_recover/stat_bonus/custom), effect_values JSON, is_bound 귀속, is_sellable 판매가능)
 inventory      캐릭터 인벤토리 (캐릭터 귀속)  character_id, item_id, quantity — (character_id, item_id) UNIQUE, 수량으로 쌓임
                → 지급/회수는 server/src/inventory.js 의 giveItem()/takeItem()/getInventory() 사용
+characters.money  소지금 (캐릭터 귀속)
+money_logs     소지금 내역  character_id, amount(+/-), balance(변화 후 잔액), reason(admin/shop_buy/...), memo
+               → 변경은 server/src/money.js 의 changeMoney() 사용 (잔액 확인 + 내역 기록 + 행 잠금)
+shop_items     상점 상품  item_id(UNIQUE, FK → items), price, stock(NULL=무제한), is_active, sort_order
 sessions  (express-mysql-session 로그인 세션)
 ```
 

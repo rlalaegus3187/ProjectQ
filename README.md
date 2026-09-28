@@ -7,6 +7,7 @@ Vue 3 + Node.js/Express + MySQL 로 만든 SPA 로그인 샘플입니다.
 - **콘텐츠 페이지**: 공지 · 세계관 · 시스템 · 캐릭터 가이드 — `client/src/pages/<이름>/` 폴더 + 빈 컨테이너 (내용은 직접 채움, `pages/README.md` 참고)
 - **Q&A 게시판**: 회원 질문·비밀글, 관리자 답변·메인 글 (마크다운 등록툴 + 이미지)
 - **알림**: 내 Q&A 질문에 답변이 달리면 상단 `알림` 에 표시
+- **소지금 / 상점**: 캐릭터 소지금(내역 기록), 관리자가 소지금 지급·회수, `상점 관리`에서 등록된 아이템을 골라 가격·재고 설정, 회원은 `상점`에서 구매
 - **아이템 / 인벤토리**: 관리자가 아이템 등록(이미지·효과·귀속·판매가능) 후 캐릭터에게 지급/회수, 회원은 `인벤토리` 에서 확인·버리기
 - **계정당 캐릭터 1개** — 가입할 때 함께 등록, 마이페이지에서 기본정보·캐릭터 스탯 표시·수정
 - **멤버란** (`/members`): 전체 캐릭터 목록(대표 프로필 이미지·검색) + 캐릭터 상세(기본정보·스탯·프로필, 보기 전용, 로그인 없이 공개)
@@ -41,6 +42,9 @@ ProjectQ/
 │  │  ├─ routes/adminItems.js  /api/admin/items, /api/admin/characters (관리자)
 │  │  ├─ routes/inventory.js   /api/inventory (내 인벤토리)
 │  │  ├─ routes/members.js     /api/members (멤버란, 공개)
+│  │  ├─ money.js          ★ 소지금 공용 함수 (getMoney / changeMoney / getMoneyLogs)
+│  │  ├─ routes/shop.js        /api/shop (상점 목록·구매)
+│  │  ├─ routes/adminShop.js   /api/admin/shop (상점 관리)
 │  │  ├─ routes/auth.js    /api/auth/signup, login, logout, me
 │  │  ├─ routes/characters.js  /api/attributes, /api/characters
 │  │  ├─ routes/admin.js   /api/admin/attributes (관리자)
@@ -50,7 +54,7 @@ ProjectQ/
 │  ├─ scripts/migrate.js   DB 마이그레이션
 │  └─ scripts/seed.js      샘플 계정 생성
 ├─ db/                    MySQL 스키마 (구조 설명: db/README.md)
-│  └─ migrations/          001_init.sql … 008_character_profiles.sql
+│  └─ migrations/          001_init.sql … 009_money_shop.sql
 ├─ deploy/
 │  ├─ mount-instance-store.sh  ① NVMe Instance Store → /data 마운트
 │  ├─ setup-server.sh      ② EC2 기본 세팅 (Node, MySQL 데이터·임시파일·로그→/data, Nginx, PM2)
@@ -93,7 +97,11 @@ ProjectQ/
 | DELETE | `/api/admin/characters/:id/inventory/:itemId?quantity=` | (관리자) 회수 |
 | GET | `/api/members?q=&page=` | 멤버란 목록 (캐릭터 이름 검색, 24개씩) |
 | GET | `/api/members/:id` | 캐릭터 상세 (기본정보·스탯·프로필, 계정 정보·인벤토리 제외) |
-| GET | `/api/inventory` | 내 캐릭터 인벤토리 |
+| GET | `/api/shop` | 판매 중인 상품 (+ 로그인 시 내 `money`) |
+| POST | `/api/shop/:id/buy` | 구매 `{ quantity }` — 소지금·재고 차감 + 인벤토리 지급 (한 트랜잭션) |
+| GET/POST/PUT/DELETE | `/api/admin/shop[/:id]` | (관리자) 상점 상품 `{ itemId, price, stock(빈값=무제한), isActive, sortOrder }` |
+| POST | `/api/admin/characters/:id/money` | (관리자) 소지금 지급/회수 `{ amount(+/-), memo }` (알림 발송) |
+| GET | `/api/inventory` | 내 캐릭터 인벤토리 + `money` + `moneyLogs` |
 | POST | `/api/inventory/:itemId/discard` | `{ quantity }` 버리기 |
 | GET | `/api/notifications` | 내 알림 50개 + `unreadCount` |
 | POST | `/api/notifications/:id/read`, `/read-all` | 읽음 처리 |
@@ -137,6 +145,16 @@ const { giveItem, takeItem, getInventory } = require('../inventory');
 await giveItem({ characterId, itemId, quantity: 2, notifyUser: true });   // 지급 (+ 알림) → 보유 수량
 await takeItem({ characterId, itemId, quantity: 1 });                     // 회수/사용 → 남은 수량 (0 이면 삭제)
 await getInventory(characterId);                                          // [{ item, quantity, acquiredAt }]
+```
+
+## 소지금 (서버 공용 함수)
+
+`server/src/money.js` — 보상·거래 등 다른 기능에서 불러 씁니다. 모든 변화는 `money_logs` 에 기록됩니다.
+
+```js
+const { getMoney, changeMoney, getMoneyLogs } = require('../money');
+await changeMoney({ characterId, amount: 500, reason: 'event', memo: '출석 보상' });   // → 잔액
+await changeMoney({ characterId, amount: -300, reason: 'shop_buy', memo: '포션 x3' });  // 부족하면 400
 ```
 
 ## 로컬 개발

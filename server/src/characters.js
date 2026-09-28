@@ -262,7 +262,7 @@ async function getCharacterByUserId(userId, conn = pool) {
 // { userId } 또는 { characterId } 로 조회 (멤버란은 characterId)
 async function getCharacter({ userId, characterId }, conn = pool) {
   const [rows] = await conn.execute(
-    `SELECT id, name, hp, created_at, updated_at FROM characters WHERE ${userId !== undefined ? 'user_id' : 'id'} = ?`,
+    `SELECT id, name, hp, money, created_at, updated_at FROM characters WHERE ${userId !== undefined ? 'user_id' : 'id'} = ?`,
     [Number(userId !== undefined ? userId : characterId)],
   );
   const character = rows[0];
@@ -292,6 +292,7 @@ async function getCharacter({ userId, characterId }, conn = pool) {
     id: character.id,
     name: character.name,
     hp: character.hp,
+    money: Number(character.money),
     stats: stats.map(withValue(statValues)),
     statPoints: { total: totalPoints, used: usedPoints },
     profiles: profileRows.map((p) => {

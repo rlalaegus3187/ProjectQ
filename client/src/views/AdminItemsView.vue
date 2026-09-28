@@ -7,6 +7,8 @@ import { MarkdownEditor } from '../markdown';
 import AdminNav from '../components/AdminNav.vue';
 import ImageField from '../components/ImageField.vue';
 import ModalDialog from '../components/ModalDialog.vue';
+import MoneyLogList from '../components/MoneyLogList.vue';
+import { formatMoney } from '../items';
 
 const items = ref([]);
 const error = ref('');
@@ -89,6 +91,9 @@ const query = ref('');
 const results = ref([]);
 const target = ref(null);          // 선택한 캐릭터
 const targetInventory = ref([]);
+const targetMoney = ref(0);
+const targetMoneyLogs = ref([]);
+const moneyForm = ref({ amount: '', memo: '' });
 const give = ref({ itemId: '', quantity: 1 });
 const giveError = ref('');
 
@@ -103,7 +108,10 @@ async function selectTarget(c) {
 }
 
 async function loadTargetInventory() {
-  targetInventory.value = (await api(`/admin/characters/${target.value.id}/inventory`)).inventory;
+  const data = await api(`/admin/characters/${target.value.id}/inventory`);
+  targetInventory.value = data.inventory;
+  targetMoney.value = data.money;
+  targetMoneyLogs.value = data.moneyLogs;
 }
 
 async function giveItem() {
@@ -114,6 +122,20 @@ async function giveItem() {
     flash(`${target.value.name}에게 '${item?.name}' ${give.value.quantity}개를 지급했습니다. (알림 발송)`);
     give.value = { itemId: give.value.itemId, quantity: 1 };
     await Promise.all([loadTargetInventory(), loadItems()]);
+  } catch (e) {
+    giveError.value = e.message;
+  }
+}
+
+// 소지금 지급(+) / 회수(-)
+async function changeMoney(sign) {
+  giveError.value = '';
+  const amount = Math.abs(Number(moneyForm.value.amount)) * sign;
+  try {
+    const { money } = await api(`/admin/characters/${target.value.id}/money`, { method: 'POST', body: { amount, memo: moneyForm.value.memo } });
+    flash(`${target.value.name} 소지금 ${amount > 0 ? '+' : ''}${formatMoney(amount)} → ${formatMoney(money)} (알림 발송)`);
+    moneyForm.value = { amount: '', memo: '' };
+    await loadTargetInventory();
   } catch (e) {
     giveError.value = e.message;
   }
@@ -183,7 +205,18 @@ onMounted(() => Promise.all([loadItems(), search()]).catch((e) => { error.value 
     </ul>
 
     <div v-if="target" class="target-panel">
-      <h3>{{ target.name }}의 인벤토리</h3>
+      <h3>{{ target.name }} <span class="money-badge">소지금 <strong>{{ formatMoney(targetMoney) }}</strong></span></h3>
+      <form class="add-row" @submit.prevent>
+        <input v-model.number="moneyForm.amount" class="money-input" type="number" min="1" step="1" placeholder="금액" required />
+        <input v-model="moneyForm.memo" maxlength="100" placeholder="메모 (예: 이벤트 보상)" />
+        <button type="button" :disabled="!moneyForm.amount" @click="changeMoney(1)">지급</button>
+        <button type="button" class="danger" :disabled="!moneyForm.amount" @click="changeMoney(-1)">회수</button>
+      </form>
+      <details class="money-details">
+        <summary>최근 소지금 내역</summary>
+        <MoneyLogList :logs="targetMoneyLogs" />
+      </details>
+      <h3>인벤토리</h3>
       <form class="add-row" @submit.prevent="giveItem">
         <select v-model="give.itemId" required>
           <option value="" disabled>지급할 아이템 선택</option>

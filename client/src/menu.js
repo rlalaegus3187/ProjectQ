@@ -5,5 +5,6 @@ export const SITE_MENU = [
   { to: '/system', label: '시스템' },
   { to: '/guide', label: '캐릭터 가이드' },
   { to: '/members', label: '멤버' },
+  { to: '/shop', label: '상점' },
   { to: '/qna', label: 'Q&A' },
 ];

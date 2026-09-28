@@ -6,6 +6,7 @@ import { fetchAttributes, toCharacterForm } from '../character';
 import CharacterCard from '../components/CharacterCard.vue';
 import CharacterForm from '../components/CharacterForm.vue';
 import ProfileSection from '../components/ProfileSection.vue';
+import { formatMoney } from '../items';
 
 const character = ref(null);
 const definitions = ref(null);
@@ -63,6 +64,7 @@ onMounted(() => load().catch((e) => { error.value = e.message; loaded.value = tr
     <div class="card-head">
       <h2>내 캐릭터</h2>
       <div v-if="character && !form" class="actions">
+        <span class="money-badge">소지금 <strong>{{ formatMoney(character.money) }}</strong></span>
         <RouterLink to="/inventory" class="button secondary">인벤토리</RouterLink>
         <button class="secondary" @click="startEdit">수정하기</button>
       </div>

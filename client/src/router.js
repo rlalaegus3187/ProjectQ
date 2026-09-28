@@ -27,6 +27,8 @@ const router = createRouter({
     { path: '/inventory', component: InventoryView, meta: { requiresAuth: true } },
     { path: '/admin', component: AdminView, meta: { requiresAuth: true, requiresAdmin: true } },
     { path: '/admin/items', component: () => import('./views/AdminItemsView.vue'), meta: { requiresAuth: true, requiresAdmin: true } },
+    { path: '/admin/shop', component: () => import('./views/AdminShopView.vue'), meta: { requiresAuth: true, requiresAdmin: true } },
+    { path: '/shop', component: () => import('./views/ShopView.vue') },
     // 멤버란 (전체 캐릭터) — 로그인 없이 공개. 회원만 보게 하려면 meta: { requiresAuth: true } 추가
     { path: '/members', component: () => import('./views/MemberListView.vue') },
     { path: '/members/:id(\\d+)', component: () => import('./views/MemberDetailView.vue') },

@@ -4,6 +4,7 @@ const pool = require('../db');
 const requireAuth = require('../middleware/requireAuth');
 const { HttpError } = require('../characters');
 const { getInventory, takeItem, parseQuantity } = require('../inventory');
+const { getMoney, getMoneyLogs } = require('../money');
 
 const router = express.Router();
 router.use(requireAuth);
@@ -14,8 +15,13 @@ async function myCharacterId(req) {
   return rows[0].id;
 }
 
+// 인벤토리 + 소지금 + 최근 소지금 내역
 router.get('/', async (req, res) => {
-  res.json({ inventory: await getInventory(await myCharacterId(req)) });
+  const characterId = await myCharacterId(req);
+  const [inventory, money, moneyLogs] = await Promise.all([
+    getInventory(characterId), getMoney(characterId), getMoneyLogs(characterId, 20),
+  ]);
+  res.json({ inventory, money, moneyLogs });
 });
 
 // 버리기

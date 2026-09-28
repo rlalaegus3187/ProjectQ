@@ -12,3 +12,10 @@ export function formatEffectValues(values) {
   const entries = Object.entries(values || {});
   return entries.length ? entries.map(([k, v]) => `${k} ${typeof v === 'object' ? JSON.stringify(v) : v}`).join(', ') : '';
 }
+
+// 소지금 표시: 12345 → "12,345"
+export const formatMoney = (n) => Number(n ?? 0).toLocaleString('ko-KR');
+
+// 소지금 내역 사유
+const MONEY_REASONS = { admin: '관리자', shop_buy: '상점 구매' };
+export const moneyReasonLabel = (reason) => MONEY_REASONS[reason] ?? reason;

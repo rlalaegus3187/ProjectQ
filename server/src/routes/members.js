@@ -52,6 +52,7 @@ router.get('/:id', async (req, res) => {
   if (!/^\d+$/.test(req.params.id)) throw new HttpError(404, '캐릭터를 찾을 수 없습니다.');
   const character = await getCharacter({ characterId: req.params.id });
   if (!character) throw new HttpError(404, '캐릭터를 찾을 수 없습니다.');
+  delete character.money;   // 소지금은 공개하지 않음
   res.json({ character });
 });
 

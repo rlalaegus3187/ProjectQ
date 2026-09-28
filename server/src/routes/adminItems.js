@@ -6,6 +6,8 @@ const { HttpError } = require('../characters');
 const {
   toItem, getItem, validateItemInput, parseQuantity, giveItem, takeItem, getInventory, ITEM_COLUMNS,
 } = require('../inventory');
+const { getMoney, changeMoney, getMoneyLogs } = require('../money');
+const { notify } = require('../notify');
 
 const router = express.Router();
 router.use(requireAdmin);
@@ -61,8 +63,27 @@ router.get('/characters', async (req, res) => {
   res.json({ characters: rows.map((r) => ({ id: r.id, name: r.name, userName: r.user_name, email: r.email })) });
 });
 
+// 인벤토리 + 소지금 + 최근 소지금 내역
 router.get('/characters/:id/inventory', async (req, res) => {
-  res.json({ inventory: await getInventory(req.params.id) });
+  const [inventory, money, moneyLogs] = await Promise.all([
+    getInventory(req.params.id), getMoney(req.params.id), getMoneyLogs(req.params.id, 10),
+  ]);
+  res.json({ inventory, money, moneyLogs });
+});
+
+// 소지금 지급(+)/회수(-): { amount, memo } → 받은 회원에게 알림
+router.post('/characters/:id/money', async (req, res) => {
+  const amount = Number(req.body?.amount);
+  const memo = String(req.body?.memo ?? '').trim() || null;
+  const money = await changeMoney({ characterId: req.params.id, amount, reason: 'admin', memo });
+  const [rows] = await pool.execute('SELECT user_id FROM characters WHERE id = ?', [Number(req.params.id)]);
+  await notify({
+    userId: rows[0].user_id,
+    type: 'money',
+    message: `소지금 ${amount > 0 ? '+' : ''}${amount.toLocaleString()}${memo ? ` (${memo})` : ''} — 잔액 ${money.toLocaleString()}`,
+    link: '/inventory',
+  });
+  res.json({ money });
 });
 
 // 지급 (받은 회원에게 알림)
