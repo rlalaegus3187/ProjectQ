@@ -11,6 +11,7 @@ import BoardListView from './views/BoardListView.vue';
 import PostDetailView from './views/PostDetailView.vue';
 import PostEditView from './views/PostEditView.vue';
 import NotificationsView from './views/NotificationsView.vue';
+import InventoryView from './views/InventoryView.vue';
 
 // 게시판 (/qna)
 const BOARD = `:board(${Object.keys(BOARDS).join('|')})`;
@@ -23,7 +24,9 @@ const router = createRouter({
     { path: '/signup', component: SignupView, meta: { guestOnly: true } },
     { path: '/mypage', component: MyPageView, meta: { requiresAuth: true } },
     { path: '/notifications', component: NotificationsView, meta: { requiresAuth: true } },
+    { path: '/inventory', component: InventoryView, meta: { requiresAuth: true } },
     { path: '/admin', component: AdminView, meta: { requiresAuth: true, requiresAdmin: true } },
+    { path: '/admin/items', component: () => import('./views/AdminItemsView.vue'), meta: { requiresAuth: true, requiresAdmin: true } },
     // 콘텐츠 페이지 (pages/ 폴더) — 들어갈 때만 불러옴
     { path: '/notice', component: () => import('./pages/notice/NoticePage.vue') },
     { path: '/world', component: () => import('./pages/world/WorldPage.vue') },

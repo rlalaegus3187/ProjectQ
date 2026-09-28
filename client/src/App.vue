@@ -23,6 +23,7 @@ async function onLogout() {
     </div>
     <nav>
       <template v-if="auth.user">
+        <RouterLink to="/inventory">인벤토리</RouterLink>
         <RouterLink to="/notifications" class="bell">
           알림<span v-if="notifications.unread" class="count">{{ notifications.unread > 99 ? '99+' : notifications.unread }}</span>
         </RouterLink>

@@ -247,6 +247,7 @@ async function withTransaction(fn) {
 
 module.exports = {
   VALUE_TYPES,
+  UPLOAD_URL_RE,
   isPointStat,
   getStatPoints,
   setStatPoints,

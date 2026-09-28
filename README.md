@@ -7,6 +7,7 @@ Vue 3 + Node.js/Express + MySQL 로 만든 SPA 로그인 샘플입니다.
 - **콘텐츠 페이지**: 공지 · 세계관 · 시스템 · 캐릭터 가이드 — `client/src/pages/<이름>/` 폴더 + 빈 컨테이너 (내용은 직접 채움, `pages/README.md` 참고)
 - **Q&A 게시판**: 회원 질문·비밀글, 관리자 답변·메인 글 (마크다운 등록툴 + 이미지)
 - **알림**: 내 Q&A 질문에 답변이 달리면 상단 `알림` 에 표시
+- **아이템 / 인벤토리**: 관리자가 아이템 등록(이미지·효과·귀속·판매가능) 후 캐릭터에게 지급/회수, 회원은 `인벤토리` 에서 확인·버리기
 - **계정당 캐릭터 1개** — 가입할 때 함께 등록, 로그인하면 마이페이지에서 내 캐릭터(기본정보/캐릭터 스탯/프로필) 표시·수정
 - **관리자/일반 권한** (지금은 가입하면 모두 관리자) — 관리자는 `/admin` 에서 캐릭터 스탯·프로필 양식 항목을 추가/수정/삭제
 - 항목 형식: 숫자, 짧은 텍스트, 긴 텍스트(마크다운 편집기), 링크, 이미지(업로드), 드롭다운
@@ -34,6 +35,9 @@ ProjectQ/
 │  │  ├─ index.js          앱 진입점 (세션, 라우트)
 │  │  ├─ characters.js     캐릭터/항목 정의 검증·저장 로직
 │  │  ├─ notify.js         ★ 알림 보내기 공용 함수 (notify / notifyUsers / notifyAdmins)
+│  │  ├─ inventory.js      ★ 아이템/인벤토리 공용 함수 (giveItem / takeItem / getInventory)
+│  │  ├─ routes/adminItems.js  /api/admin/items, /api/admin/characters (관리자)
+│  │  ├─ routes/inventory.js   /api/inventory (내 인벤토리)
 │  │  ├─ routes/auth.js    /api/auth/signup, login, logout, me
 │  │  ├─ routes/characters.js  /api/attributes, /api/characters
 │  │  ├─ routes/admin.js   /api/admin/attributes (관리자)
@@ -43,7 +47,7 @@ ProjectQ/
 │  ├─ scripts/migrate.js   DB 마이그레이션
 │  └─ scripts/seed.js      샘플 계정 생성
 ├─ db/                    MySQL 스키마 (구조 설명: db/README.md)
-│  └─ migrations/          001_init.sql … 006_notification_link.sql
+│  └─ migrations/          001_init.sql … 007_items_inventory.sql
 ├─ deploy/
 │  ├─ mount-instance-store.sh  ① NVMe Instance Store → /data 마운트
 │  ├─ setup-server.sh      ② EC2 기본 세팅 (Node, MySQL 데이터·임시파일·로그→/data, Nginx, PM2)
@@ -77,6 +81,12 @@ ProjectQ/
 | PUT | `/api/boards/qna/posts/:id/pin` | (관리자) `{ isPinned }` 메인 글 지정/해제 |
 | POST | `/api/boards/qna/posts/:id/replies` | (관리자) 답변 → 질문자에게 알림 |
 | PUT/DELETE | `/api/boards/qna/replies/:id` | (관리자) 답변 수정/삭제 |
+| GET/POST/PUT/DELETE | `/api/admin/items[/:id]` | (관리자) 아이템 목록/등록/수정/삭제 |
+| GET | `/api/admin/characters?q=` | (관리자) 캐릭터 검색 |
+| GET/POST | `/api/admin/characters/:id/inventory` | (관리자) 인벤토리 조회 / 지급 `{ itemId, quantity }` (알림 발송) |
+| DELETE | `/api/admin/characters/:id/inventory/:itemId?quantity=` | (관리자) 회수 |
+| GET | `/api/inventory` | 내 캐릭터 인벤토리 |
+| POST | `/api/inventory/:itemId/discard` | `{ quantity }` 버리기 |
 | GET | `/api/notifications` | 내 알림 50개 + `unreadCount` |
 | POST | `/api/notifications/:id/read`, `/read-all` | 읽음 처리 |
 | GET | `/api/health` | 헬스체크 |
@@ -109,6 +119,17 @@ await withTransaction(async (conn) => { /* ... */ await notify({ userId, message
 | `type` | 종류 (영문 소문자/숫자/_ 30자, 기본 `general`) |
 | `postId` | 관련 게시글 id (선택) |
 | `link` | 이동할 주소, `/` 로 시작하는 사이트 내부 주소만 (선택) |
+
+## 아이템 지급/회수 (서버 공용 함수)
+
+`server/src/inventory.js` — 보상 지급 등 다른 기능에서 불러 씁니다.
+
+```js
+const { giveItem, takeItem, getInventory } = require('../inventory');
+await giveItem({ characterId, itemId, quantity: 2, notifyUser: true });   // 지급 (+ 알림) → 보유 수량
+await takeItem({ characterId, itemId, quantity: 1 });                     // 회수/사용 → 남은 수량 (0 이면 삭제)
+await getInventory(characterId);                                          // [{ item, quantity, acquiredAt }]
+```
 
 ## 로컬 개발
 

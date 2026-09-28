@@ -37,6 +37,10 @@ posts          게시글  board: qna(Q&A) — 화면에서 쓰는 게시판은 Q
 post_replies   Q&A 답변 (관리자)  post_id FK → posts.id (글 삭제 시 함께 삭제)
 notifications  계정별 알림  user_id, type, post_id, link(이동 주소), message, is_read
                → 추가는 server/src/notify.js 의 notify()/notifyUsers()/notifyAdmins() 사용
+items          아이템 (uid=id, name, description(마크다운), small_image, large_image,
+               effect ENUM(none/hp_recover/stat_bonus/custom), effect_values JSON, is_bound 귀속, is_sellable 판매가능)
+inventory      캐릭터 인벤토리 (캐릭터 귀속)  character_id, item_id, quantity — (character_id, item_id) UNIQUE, 수량으로 쌓임
+               → 지급/회수는 server/src/inventory.js 의 giveItem()/takeItem()/getInventory() 사용
 sessions  (express-mysql-session 로그인 세션)
 ```
 
