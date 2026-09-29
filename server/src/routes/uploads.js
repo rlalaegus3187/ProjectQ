@@ -32,13 +32,15 @@ function detectImageType(buf) {
   if (buf.length >= 3 && buf[0] === 0xff && buf[1] === 0xd8 && buf[2] === 0xff) return 'jpg';
   if (buf.length >= 6 && ['GIF87a', 'GIF89a'].includes(buf.subarray(0, 6).toString('latin1'))) return 'gif';
   if (buf.length >= 12 && buf.subarray(0, 4).toString('latin1') === 'RIFF' && buf.subarray(8, 12).toString('latin1') === 'WEBP') return 'webp';
+  // .ico (파비콘): 00 00 01 00 + 이미지 개수(1 이상). 사이트 파비콘에만 쓸 수 있음 (다른 이미지 칸은 png/jpg/gif/webp)
+  if (buf.length >= 6 && buf.readUInt32BE(0) === 0x00000100 && buf.readUInt16LE(4) > 0) return 'ico';
   return null;
 }
 
 router.post('/', uploadLimiter, upload.single('file'), async (req, res) => {
   if (!req.file) throw new HttpError(400, '업로드할 파일이 없습니다.');
   const ext = detectImageType(req.file.buffer);
-  if (!ext) throw new HttpError(400, '이미지 파일(png, jpg, gif, webp)만 올릴 수 있습니다.');
+  if (!ext) throw new HttpError(400, '이미지 파일(png, jpg, gif, webp, ico)만 올릴 수 있습니다.');
 
   const name = `${crypto.randomBytes(16).toString('hex')}.${ext}`;
   await fs.mkdir(config.uploadDir, { recursive: true });

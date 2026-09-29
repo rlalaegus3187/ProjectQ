@@ -2,11 +2,10 @@
 // 음악 플레이어 — App.vue 에 한 번만 둠. 페이지가 바뀌어도(SPA) 끊기지 않고 계속 재생
 // 어떤 곡을 틀지는 store(currentTrack)가 정하고, 여기서는 유튜브 플레이어만 조작
 import { ref, watch, onMounted, onBeforeUnmount } from 'vue';
-import { loadYouTubeApi, youtubeUrl } from './youtube';
+import { loadYouTubeApi } from './youtube';
 import { music, currentTrack, setVolume, toggleMusic } from './store';
 
 const host = ref(null);          // 유튜브 iframe 이 들어갈 자리
-const showVideo = ref(false);    // 영상 보기 (유튜브 정책상 플레이어는 최소 200x200)
 let player = null;
 let creating = false;   // 플레이어를 두 번 만들지 않도록
 let ready = false;
@@ -123,27 +122,21 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <div class="music-player" :class="{ hidden: !currentTrack, 'video-open': showVideo }" aria-label="음악 플레이어">
-    <!-- 유튜브 플레이어: 평소엔 화면 밖, [영상] 누르면 표시 -->
+  <!-- 재생/정지 + 볼륨만 표시 (곡 이름·영상은 보여주지 않음) -->
+  <div class="music-player" :class="{ hidden: !currentTrack }" aria-label="음악 플레이어">
+    <!-- 유튜브 플레이어: 화면 밖에 둠 -->
     <div class="music-video"><div ref="host" /></div>
 
     <div v-if="currentTrack" class="music-bar">
-      <button type="button" class="music-btn" :title="music.enabled ? '정지' : '재생'" :aria-label="music.enabled ? '음악 정지' : '음악 재생'"
+      <!-- 자동 재생이 막혔거나(blocked) 정지 상태면 ▶, 재생 중이면 ❚❚. 재생 못 하는 영상이면 버튼에 마우스를 올려 이유 확인 -->
+      <button type="button" class="music-btn" :class="{ error: music.error }"
+        :title="music.error || (music.enabled && !music.blocked ? '정지' : '재생')"
+        :aria-label="music.enabled && !music.blocked ? '음악 정지' : '음악 재생'"
         @click="music.blocked && music.enabled ? play() : toggleMusic()">
         {{ music.enabled && !music.blocked ? '❚❚' : '▶' }}
       </button>
-      <span class="music-title" :title="music.title">
-        <template v-if="music.error">{{ music.error }}</template>
-        <template v-else-if="music.blocked && music.enabled">클릭하면 음악이 재생됩니다</template>
-        <template v-else-if="!music.enabled">음악 정지됨</template>
-        <template v-else>♪ {{ music.title || '재생 중…' }}</template>
-      </span>
       <input class="music-volume" type="range" min="0" max="100" step="1" :value="music.volume" aria-label="볼륨"
         :title="`볼륨 ${music.volume}`" @input="setVolume($event.target.value)" />
-      <button type="button" class="music-btn small" :title="showVideo ? '영상 닫기' : '영상 보기'" @click="showVideo = !showVideo">
-        {{ showVideo ? '✕' : '영상' }}
-      </button>
-      <a class="music-btn small" :href="youtubeUrl(currentTrack)" target="_blank" rel="noopener noreferrer" title="유튜브에서 보기">↗</a>
     </div>
   </div>
 </template>

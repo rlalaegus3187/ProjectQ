@@ -52,7 +52,7 @@ character_profiles.music_video_id  프로필 음악 (유튜브 영상 ID, NULL =
 users.music_volume / music_enabled  계정별 음악 볼륨(0~100) / 재생 여부
 settings.site_music                 사이트 전체 음악 (유튜브 영상 ID)
 settings.site_name                  사이트 이름 (없으면 ProjectQ)
-settings.site_icon                  사이트 아이콘: 이모지 또는 업로드 이미지 경로 (없으면 아이콘 없음)
+settings.site_favicon               파비콘(브라우저 탭 아이콘): 업로드 이미지 경로 ico/png 등 (없으면 없음)
 characters.money  소지금 (캐릭터 귀속)
 content_pages  콘텐츠 페이지  slug(PK: notice/world/system/guide), title, description, body(마크다운), music_video_id
 money_logs     소지금 내역  character_id, amount(+/-), balance(변화 후 잔액), reason(admin/shop_buy/...), memo

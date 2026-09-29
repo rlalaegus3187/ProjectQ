@@ -3,7 +3,7 @@ import { useRouter } from 'vue-router';
 import { auth, isAdmin, logout } from './auth';
 import { SITE_MENU, menuLabel } from './menu';
 import { loadContentTitles } from './contents';
-import { site, setSite, isImageIcon } from './site';
+import { site, setSite } from './site';
 import { notifications, refreshUnread } from './notifications';
 import { onMounted } from 'vue';
 import { useRoute } from 'vue-router';
@@ -16,7 +16,7 @@ const route = useRoute();
 // 라우트별 음악: router.js 에서 { path, component, meta: { music: '영상ID' } } 로 지정 가능
 usePageMusic(() => route.meta.music);
 
-// 사이트 이름·아이콘, 사이트 전체 음악 (관리 → 사이트 설정)
+// 사이트 이름·파비콘, 사이트 전체 음악 (관리 → 사이트 설정)
 onMounted(async () => {
   try {
     const settings = await api('/settings');
@@ -37,13 +37,7 @@ async function onLogout() {
 <template>
   <header class="nav">
     <div class="nav-left">
-      <RouterLink to="/" class="brand">
-        <template v-if="site.icon">
-          <img v-if="isImageIcon(site.icon)" :src="site.icon" alt="" class="brand-icon" />
-          <span v-else class="brand-icon">{{ site.icon }}</span>
-        </template>
-        {{ site.name }}
-      </RouterLink>
+      <RouterLink to="/" class="brand">{{ site.name }}</RouterLink>
       <nav class="board-links">
         <RouterLink v-for="m in SITE_MENU" :key="m.to" :to="m.to">{{ menuLabel(m) }}</RouterLink>
       </nav>

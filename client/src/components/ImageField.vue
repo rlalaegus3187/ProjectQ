@@ -7,6 +7,8 @@ import { uploadImage } from '../upload';
 defineProps({
   id: { type: String, default: undefined },
   alt: { type: String, default: '' },
+  accept: { type: String, default: 'image/png,image/jpeg,image/gif,image/webp' },
+  hint: { type: String, default: 'png, jpg, gif, webp · 5MB 이하' },
 });
 const value = defineModel({ type: String, default: '' });
 
@@ -33,11 +35,11 @@ async function onFile(event) {
   <div class="image-field">
     <img v-if="value" :src="value" :alt="alt" class="thumb" />
     <div class="image-actions">
-      <input :id="id" type="file" accept="image/png,image/jpeg,image/gif,image/webp" :disabled="uploading" @change="onFile" />
+      <input :id="id" type="file" :accept="accept" :disabled="uploading" @change="onFile" />
       <button v-if="value" type="button" class="link" @click="value = ''">이미지 삭제</button>
     </div>
     <span v-if="uploading" class="muted">업로드 중…</span>
-    <span v-else class="muted">png, jpg, gif, webp · 5MB 이하</span>
+    <span v-else class="muted">{{ hint }}</span>
     <span v-if="error" class="error">{{ error }}</span>
   </div>
 </template>

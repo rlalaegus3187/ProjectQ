@@ -18,11 +18,11 @@ async function setSetting(name, value, conn = pool) {
   }
 }
 
-// ---------- 사이트 이름 / 아이콘 (관리 → 사이트 설정) ----------
+// ---------- 사이트 이름 / 파비콘 (관리 → 사이트 설정) ----------
 const { HttpError } = require('./errors');
 
 const DEFAULT_SITE_NAME = 'ProjectQ';
-const UPLOAD_URL_RE = /^\/api\/uploads\/[a-f0-9]{32}\.(png|jpg|gif|webp)$/;
+const FAVICON_URL_RE = /^\/api\/uploads\/[a-f0-9]{32}\.(ico|png|jpg|gif|webp)$/;
 
 // 사이트 이름: 1~30자 (상단 로고, 브라우저 탭 제목)
 function parseSiteName(value) {
@@ -31,26 +31,23 @@ function parseSiteName(value) {
   return name;
 }
 
-// 사이트 아이콘: 이모지(또는 짧은 글자, 4글자 이내) 또는 업로드한 이미지 경로. 비우면 없음(null)
-function parseSiteIcon(value) {
-  const icon = String(value ?? '').trim();
-  if (!icon) return null;
-  if (UPLOAD_URL_RE.test(icon)) return icon;
-  if ([...new Intl.Segmenter().segment(icon)].length > 4 || /[<>&"'\\]/.test(icon)) {
-    throw new HttpError(400, '아이콘은 이모지(4글자 이내) 또는 업로드한 이미지만 쓸 수 있습니다.');
-  }
-  return icon;
+// 파비콘(브라우저 탭 아이콘): 업로드한 이미지 경로(ico/png/...). 비우면 없음(null)
+function parseFavicon(value) {
+  const url = String(value ?? '').trim();
+  if (!url) return null;
+  if (!FAVICON_URL_RE.test(url)) throw new HttpError(400, '파비콘 이미지를 다시 업로드해주세요.');
+  return url;
 }
 
 // 공개 설정 (로그인 없이 GET /api/settings, 관리자 설정 화면)
 async function getSiteSettings(conn = pool) {
   return {
     siteName: (await getSetting('site_name', conn)) || DEFAULT_SITE_NAME,
-    siteIcon: await getSetting('site_icon', conn),
+    siteFavicon: await getSetting('site_favicon', conn),
     siteMusic: await getSetting('site_music', conn),
   };
 }
 
 module.exports = {
-  getSetting, setSetting, parseSiteName, parseSiteIcon, getSiteSettings, DEFAULT_SITE_NAME,
+  getSetting, setSetting, parseSiteName, parseFavicon, getSiteSettings, DEFAULT_SITE_NAME,
 };

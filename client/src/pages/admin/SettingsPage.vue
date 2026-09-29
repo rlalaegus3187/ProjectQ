@@ -1,50 +1,26 @@
 <script setup>
-// 관리자: 사이트 설정 — 사이트 이름·아이콘(상단 로고, 브라우저 탭), 사이트 전체 음악
+// 관리자: 사이트 설정 — 사이트 이름(상단 로고, 브라우저 탭 제목), 파비콘(브라우저 탭 아이콘), 사이트 전체 음악
 import { ref, computed, onMounted } from 'vue';
 import { api } from '../../api';
 import { parseYouTubeId, setSiteMusic, youtubeUrl } from '../../music';
-import { setSite, isImageIcon } from '../../site';
+import { setSite } from '../../site';
 import ImageField from '../../components/ImageField.vue';
 
-const EMOJI_PICKS = ['⭐', '🌙', '🔥', '🗡️', '🛡️', '🐉', '🌸', '🍀', '💎', '🎲', '📜', '🏰'];
-
-const form = ref(null);   // { siteName, iconType: none|emoji|image, emoji, image, siteMusic }
+const form = ref(null);   // { siteName, siteFavicon, siteMusic }
 const error = ref('');
 const message = ref('');
 const saving = ref(false);
 
-const icon = computed(() => {
-  if (!form.value) return null;
-  if (form.value.iconType === 'emoji') return form.value.emoji.trim() || null;
-  if (form.value.iconType === 'image') return form.value.image || null;
-  return null;
-});
 const musicInvalid = computed(() => !!form.value?.siteMusic && !parseYouTubeId(form.value.siteMusic));
 
-function toForm(s) {
-  const image = isImageIcon(s.siteIcon);
-  return {
-    siteName: s.siteName,
-    iconType: !s.siteIcon ? 'none' : image ? 'image' : 'emoji',
-    emoji: s.siteIcon && !image ? s.siteIcon : '',
-    image: image ? s.siteIcon : '',
-    siteMusic: youtubeUrl(s.siteMusic),
-  };
-}
+const toForm = (s) => ({ siteName: s.siteName, siteFavicon: s.siteFavicon || '', siteMusic: youtubeUrl(s.siteMusic) });
 
 async function save() {
   error.value = '';
   message.value = '';
-  if (form.value.iconType !== 'none' && !icon.value) {
-    error.value = form.value.iconType === 'emoji' ? '이모지를 입력하거나 "없음"을 골라주세요.' : '이미지를 올리거나 "없음"을 골라주세요.';
-    return;
-  }
   saving.value = true;
   try {
-    const s = await api('/admin/settings', {
-      method: 'PUT',
-      body: { siteName: form.value.siteName, siteIcon: icon.value ?? '', siteMusic: form.value.siteMusic },
-    });
+    const s = await api('/admin/settings', { method: 'PUT', body: form.value });
     form.value = toForm(s);
     setSite(s);                 // 상단 로고·브라우저 탭에 바로 반영
     setSiteMusic(s.siteMusic);
@@ -71,45 +47,23 @@ onMounted(async () => {
     <p v-if="!form && !error" class="muted">불러오는 중…</p>
     <form v-else-if="form" class="form" @submit.prevent="save">
       <fieldset class="fieldset stack">
-        <legend>사이트 이름 · 아이콘</legend>
+        <legend>사이트 이름 · 파비콘</legend>
         <label class="field">
           사이트 이름 <span class="muted">(상단 로고, 브라우저 탭 제목)</span>
           <input v-model="form.siteName" required maxlength="30" />
         </label>
 
         <div class="field">
-          <span>아이콘 <span class="muted">(사이트 이름 옆, 브라우저 탭)</span></span>
-          <div class="icon-choices">
-            <label class="inline"><input v-model="form.iconType" type="radio" value="none" /> 없음</label>
-            <label class="inline"><input v-model="form.iconType" type="radio" value="emoji" /> 이모지</label>
-            <label class="inline"><input v-model="form.iconType" type="radio" value="image" /> 이미지</label>
-          </div>
-        </div>
-
-        <div v-if="form.iconType === 'emoji'" class="field">
-          <input v-model="form.emoji" class="emoji-input" maxlength="16" placeholder="⭐" aria-label="이모지" />
-          <div class="emoji-picks">
-            <button v-for="e in EMOJI_PICKS" :key="e" type="button" :title="e" @click="form.emoji = e">{{ e }}</button>
-          </div>
-          <span class="muted">다른 이모지는 Windows <kbd>Win</kbd>+<kbd>.</kbd> / Mac <kbd>Ctrl</kbd>+<kbd>Cmd</kbd>+<kbd>Space</kbd> 로 입력</span>
-        </div>
-        <div v-else-if="form.iconType === 'image'" class="field">
-          <ImageField v-model="form.image" alt="사이트 아이콘" />
-          <span class="muted">정사각형 이미지를 권장합니다 (예: 64×64, 투명 배경 png)</span>
+          <span>파비콘 <span class="muted">(브라우저 탭에 보이는 작은 아이콘, 비우면 없음)</span></span>
+          <ImageField v-model="form.siteFavicon" alt="파비콘"
+            accept=".ico,image/x-icon,image/vnd.microsoft.icon,image/png,image/jpeg,image/gif,image/webp"
+            hint="ico, png(권장: 32×32 또는 64×64 정사각형) · 5MB 이하" />
         </div>
 
         <div class="site-preview" aria-label="미리보기">
-          <span class="muted">미리보기</span>
+          <span class="muted">브라우저 탭 미리보기</span>
           <span class="tab">
-            <img v-if="icon && isImageIcon(icon)" :src="icon" alt="" />
-            <span v-else-if="icon">{{ icon }}</span>
-            {{ form.siteName || '사이트 이름' }}
-          </span>
-          <span class="brand">
-            <template v-if="icon">
-              <img v-if="isImageIcon(icon)" :src="icon" alt="" class="brand-icon" />
-              <span v-else class="brand-icon">{{ icon }}</span>
-            </template>
+            <img v-if="form.siteFavicon" :src="form.siteFavicon" alt="" />
             {{ form.siteName || '사이트 이름' }}
           </span>
         </div>

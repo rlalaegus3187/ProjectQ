@@ -6,7 +6,7 @@ const {
   VALUE_TYPES, HttpError, getDefinitions, groupDefinitions, withTransaction, getStatPoints, setStatPoints,
 } = require('../characters');
 const {
-  setSetting, parseSiteName, parseSiteIcon, getSiteSettings,
+  setSetting, parseSiteName, parseFavicon, getSiteSettings,
 } = require('../settings');
 const { parseYouTubeId } = require('../youtube');
 
@@ -45,7 +45,7 @@ function parseOptions(value) {
   return unique;
 }
 
-// 전역 설정: 초기 투자 포인트, 사이트 이름·아이콘, 사이트 전체 음악(유튜브 영상 ID)
+// 전역 설정: 초기 투자 포인트, 사이트 이름·파비콘, 사이트 전체 음악(유튜브 영상 ID)
 async function currentSettings() {
   return { statPoints: await getStatPoints(), ...(await getSiteSettings()) };
 }
@@ -54,7 +54,7 @@ router.get('/settings', async (req, res) => {
   res.json(await currentSettings());
 });
 
-// 보낸 값만 변경: { statPoints?, siteName?, siteIcon?(이모지 또는 업로드 이미지, 빈 값이면 없음), siteMusic?(유튜브 링크, 빈 값이면 끔) }
+// 보낸 값만 변경: { statPoints?, siteName?, siteFavicon?(업로드한 이미지 경로, 빈 값이면 없음), siteMusic?(유튜브 링크, 빈 값이면 끔) }
 router.put('/settings', async (req, res) => {
   const body = req.body ?? {};
   // 검증을 먼저 모두 한 뒤 저장 (하나라도 틀리면 아무것도 바꾸지 않음)
@@ -66,12 +66,12 @@ router.put('/settings', async (req, res) => {
     }
   }
   const siteName = body.siteName !== undefined ? parseSiteName(body.siteName) : undefined;
-  const siteIcon = body.siteIcon !== undefined ? parseSiteIcon(body.siteIcon) : undefined;
+  const siteFavicon = body.siteFavicon !== undefined ? parseFavicon(body.siteFavicon) : undefined;
   const siteMusic = body.siteMusic !== undefined ? parseYouTubeId(body.siteMusic, '사이트 음악') : undefined;
 
   if (statPoints !== undefined) await setStatPoints(statPoints);
   if (siteName !== undefined) await setSetting('site_name', siteName);
-  if (siteIcon !== undefined) await setSetting('site_icon', siteIcon);
+  if (siteFavicon !== undefined) await setSetting('site_favicon', siteFavicon);
   if (siteMusic !== undefined) await setSetting('site_music', siteMusic);
   res.json(await currentSettings());
 });
