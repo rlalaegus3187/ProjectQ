@@ -1,11 +1,11 @@
 <script setup>
 // 상점: 판매 중인 상품 목록 + 구매 (로그인한 회원, 소지금으로)
 import { ref, computed, onMounted } from 'vue';
-import { api } from '../api';
-import { auth } from '../auth';
-import { formatMoney } from '../items';
-import ItemDetail from '../components/ItemDetail.vue';
-import ModalDialog from '../components/ModalDialog.vue';
+import { api } from '../../api';
+import { auth } from '../../auth';
+import { formatMoney } from '../../items';
+import ItemDetail from '../../components/ItemDetail.vue';
+import ModalDialog from '../../components/ModalDialog.vue';
 
 const listings = ref(null);
 const money = ref(null);

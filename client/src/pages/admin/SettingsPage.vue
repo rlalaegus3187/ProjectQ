@@ -1,9 +1,8 @@
 <script setup>
 // 관리자: 사이트 설정 — 사이트 전체 음악
 import { ref, onMounted } from 'vue';
-import { api } from '../api';
-import { parseYouTubeId, setSiteMusic, youtubeUrl } from '../music';
-import AdminNav from '../components/AdminNav.vue';
+import { api } from '../../api';
+import { parseYouTubeId, setSiteMusic, youtubeUrl } from '../../music';
 
 const siteMusic = ref('');
 const saved = ref(null);
@@ -34,7 +33,6 @@ onMounted(() => load().catch((e) => { error.value = e.message; }));
 </script>
 
 <template>
-  <AdminNav />
   <section class="card">
     <h1>사이트 설정</h1>
     <form class="form" @submit.prevent="save">

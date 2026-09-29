@@ -2,9 +2,9 @@
 // 글쓰기 / 수정 (공지·세계관·캐릭터 가이드는 관리자, Q&A 는 회원)
 import { ref, computed, onMounted } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
-import { api } from '../api';
-import { BOARDS } from '../boards';
-import PostEditor from '../components/PostEditor.vue';
+import { api } from '../../api';
+import { BOARDS } from '../../boards';
+import PostEditor from '../../components/PostEditor.vue';
 
 const route = useRoute();
 const router = useRouter();

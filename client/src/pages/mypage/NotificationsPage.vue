@@ -2,9 +2,9 @@
 // 내 알림 (Q&A 답변 등)
 import { ref, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
-import { api } from '../api';
-import { formatDate } from '../boards';
-import { notifications as badge } from '../notifications';
+import { api } from '../../api';
+import { formatDate } from '../../boards';
+import { notifications as badge } from '../../notifications';
 
 const router = useRouter();
 const list = ref(null);

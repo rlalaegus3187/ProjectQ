@@ -1,13 +1,12 @@
 <script setup>
 // 관리자: 신청자 관리 — 신청자 캐릭터(프로필) 확인, 체크해서 한꺼번에 멤버 전환 / 삭제
 import { ref, computed, watch, onMounted } from 'vue';
-import { api } from '../api';
-import { APPLICATION_LABELS } from '../auth';
-import { formatDate } from '../boards';
-import AdminNav from '../components/AdminNav.vue';
-import ModalDialog from '../components/ModalDialog.vue';
-import CharacterCard from '../components/CharacterCard.vue';
-import ProfileSection from '../components/ProfileSection.vue';
+import { api } from '../../api';
+import { APPLICATION_LABELS } from '../../auth';
+import { formatDate } from '../../boards';
+import ModalDialog from '../../components/ModalDialog.vue';
+import CharacterCard from '../../components/CharacterCard.vue';
+import ProfileSection from '../../components/ProfileSection.vue';
 
 const FILTERS = [
   { value: 'submitted', label: '작성완료' },
@@ -117,7 +116,6 @@ onMounted(load);
 </script>
 
 <template>
-  <AdminNav />
   <section class="card">
     <div class="card-head">
       <h1>신청자 관리</h1>

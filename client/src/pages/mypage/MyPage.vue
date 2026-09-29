@@ -1,12 +1,12 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue';
-import { api } from '../api';
-import { auth, roleLabel, APPLICATION_LABELS } from '../auth';
-import { fetchAttributes, toCharacterForm } from '../character';
-import CharacterCard from '../components/CharacterCard.vue';
-import CharacterForm from '../components/CharacterForm.vue';
-import ProfileSection from '../components/ProfileSection.vue';
-import { formatMoney } from '../items';
+import { api } from '../../api';
+import { auth, roleLabel, APPLICATION_LABELS } from '../../auth';
+import { fetchAttributes, toCharacterForm } from '../../character';
+import CharacterCard from '../../components/CharacterCard.vue';
+import CharacterForm from '../../components/CharacterForm.vue';
+import ProfileSection from '../../components/ProfileSection.vue';
+import { formatMoney } from '../../items';
 
 const character = ref(null);
 const definitions = ref(null);

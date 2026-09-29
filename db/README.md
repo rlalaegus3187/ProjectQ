@@ -52,6 +52,7 @@ character_profiles.music_video_id  프로필 음악 (유튜브 영상 ID, NULL =
 users.music_volume / music_enabled  계정별 음악 볼륨(0~100) / 재생 여부
 settings.site_music                 사이트 전체 음악 (유튜브 영상 ID)
 characters.money  소지금 (캐릭터 귀속)
+content_pages  콘텐츠 페이지  slug(PK: notice/world/system/guide), title, description, body(마크다운), music_video_id
 money_logs     소지금 내역  character_id, amount(+/-), balance(변화 후 잔액), reason(admin/shop_buy/...), memo
                → 변경은 server/src/money.js 의 changeMoney() 사용 (잔액 확인 + 내역 기록 + 행 잠금)
 shop_items     상점 상품  item_id(UNIQUE, FK → items), price, stock(NULL=무제한), is_active, sort_order

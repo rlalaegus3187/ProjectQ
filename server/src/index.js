@@ -10,7 +10,7 @@ const app = express();
 // Nginx 뒤에서 동작하므로 X-Forwarded-* 헤더를 신뢰 (secure 쿠키, 클라이언트 IP 판별에 필요)
 app.set('trust proxy', 1);
 app.use(helmet());
-app.use(express.json({ limit: '100kb' }));
+app.use(express.json({ limit: '1mb' }));   // 긴 글(콘텐츠 페이지 등) 저장용
 
 // 세션은 MySQL(sessions 테이블)에 저장 → PM2 재시작/재배포해도 로그인 유지
 const sessionStore = new MySQLStore({ createDatabaseTable: false }, pool);
@@ -46,6 +46,8 @@ app.use('/api/shop', require('./routes/shop'));
 app.use('/api/settings', require('./routes/settings'));
 app.use('/api/admin', require('./routes/adminShop'));
 app.use('/api/admin', require('./routes/adminApplicants'));
+app.use('/api/contents', require('./routes/contents').publicRouter);
+app.use('/api/admin', require('./routes/contents').adminRouter);
 
 app.use('/api', (req, res) => res.status(404).json({ message: 'Not Found' }));
 

@@ -1,9 +1,8 @@
 <script setup>
 // 관리자: 상점 관리 — 등록된 아이템을 골라 가격·재고를 정해 상점에 올림
 import { ref, reactive, computed, onMounted } from 'vue';
-import { api } from '../api';
-import { formatMoney } from '../items';
-import AdminNav from '../components/AdminNav.vue';
+import { api } from '../../api';
+import { formatMoney } from '../../items';
 
 const listings = ref([]);
 const items = ref([]);
@@ -58,7 +57,6 @@ onMounted(() => load().catch((e) => { error.value = e.message; }));
 </script>
 
 <template>
-  <AdminNav />
   <section class="card">
     <h1>상점 관리</h1>
     <p class="muted">

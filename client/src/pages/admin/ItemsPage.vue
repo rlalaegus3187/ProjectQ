@@ -1,14 +1,13 @@
 <script setup>
 // 관리자: 아이템 등록/수정/삭제 + 캐릭터 인벤토리 지급/회수
 import { ref, onMounted } from 'vue';
-import { api } from '../api';
-import { EFFECTS, effectLabel, formatEffectValues } from '../items';
-import { MarkdownEditor } from '../markdown';
-import AdminNav from '../components/AdminNav.vue';
-import ImageField from '../components/ImageField.vue';
-import ModalDialog from '../components/ModalDialog.vue';
-import MoneyLogList from '../components/MoneyLogList.vue';
-import { formatMoney } from '../items';
+import { api } from '../../api';
+import { EFFECTS, effectLabel, formatEffectValues } from '../../items';
+import { MarkdownEditor } from '../../markdown';
+import ImageField from '../../components/ImageField.vue';
+import ModalDialog from '../../components/ModalDialog.vue';
+import MoneyLogList from '../../components/MoneyLogList.vue';
+import { formatMoney } from '../../items';
 
 const items = ref([]);
 const error = ref('');
@@ -157,7 +156,6 @@ onMounted(() => Promise.all([loadItems(), search()]).catch((e) => { error.value 
 </script>
 
 <template>
-  <AdminNav />
   <section class="card">
     <div class="card-head">
       <h1>아이템 관리</h1>

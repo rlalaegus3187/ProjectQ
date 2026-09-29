@@ -2,10 +2,10 @@
 // 멤버란: 캐릭터 상세 (기본정보 + 캐릭터 스탯 + 프로필, 보기 전용)
 import { ref, watch } from 'vue';
 import { useRoute } from 'vue-router';
-import { api } from '../api';
-import { auth } from '../auth';
-import CharacterCard from '../components/CharacterCard.vue';
-import ProfileSection from '../components/ProfileSection.vue';
+import { api } from '../../api';
+import { auth } from '../../auth';
+import CharacterCard from '../../components/CharacterCard.vue';
+import ProfileSection from '../../components/ProfileSection.vue';
 
 const route = useRoute();
 const character = ref(null);

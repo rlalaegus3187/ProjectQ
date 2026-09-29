@@ -2,11 +2,11 @@
 // 게시글 보기 (+ Q&A: 답변, 메인 글 지정)
 import { ref, computed, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
-import { api } from '../api';
-import { auth } from '../auth';
-import { BOARDS, formatDate } from '../boards';
-import { MarkdownView } from '../markdown';
-import PostEditor from '../components/PostEditor.vue';
+import { api } from '../../api';
+import { auth } from '../../auth';
+import { BOARDS, formatDate } from '../../boards';
+import { MarkdownView } from '../../markdown';
+import PostEditor from '../../components/PostEditor.vue';
 
 const route = useRoute();
 const router = useRouter();

@@ -2,8 +2,8 @@
 // 게시판 목록 (공지 / 세계관 / 캐릭터 가이드 / Q&A)
 import { ref, computed, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
-import { api } from '../api';
-import { BOARDS, formatDate } from '../boards';
+import { api } from '../../api';
+import { BOARDS, formatDate } from '../../boards';
 
 const route = useRoute();
 const router = useRouter();

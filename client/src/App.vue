@@ -1,7 +1,8 @@
 <script setup>
 import { useRouter } from 'vue-router';
 import { auth, isAdmin, logout } from './auth';
-import { SITE_MENU } from './menu';
+import { SITE_MENU, menuLabel } from './menu';
+import { loadContentTitles } from './contents';
 import { notifications, refreshUnread } from './notifications';
 import { onMounted } from 'vue';
 import { useRoute } from 'vue-router';
@@ -20,6 +21,8 @@ onMounted(async () => {
     setSiteMusic((await api('/settings')).siteMusic);
   } catch { /* 음악 설정을 못 불러와도 사이트는 동작 */ }
 });
+// 콘텐츠 페이지 제목 (메뉴 이름)
+onMounted(() => loadContentTitles().catch(() => { /* 실패하면 기본 이름 */ }));
 
 async function onLogout() {
   await logout();
@@ -33,7 +36,7 @@ async function onLogout() {
     <div class="nav-left">
       <RouterLink to="/" class="brand">ProjectQ</RouterLink>
       <nav class="board-links">
-        <RouterLink v-for="m in SITE_MENU" :key="m.to" :to="m.to">{{ m.label }}</RouterLink>
+        <RouterLink v-for="m in SITE_MENU" :key="m.to" :to="m.to">{{ menuLabel(m) }}</RouterLink>
       </nav>
     </div>
     <nav>

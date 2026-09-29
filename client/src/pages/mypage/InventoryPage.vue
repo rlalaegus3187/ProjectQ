@@ -1,11 +1,11 @@
 <script setup>
 // 내 캐릭터 인벤토리 (인벤토리는 캐릭터에 귀속)
 import { ref, onMounted } from 'vue';
-import { api } from '../api';
-import { formatMoney } from '../items';
-import ItemDetail from '../components/ItemDetail.vue';
-import MoneyLogList from '../components/MoneyLogList.vue';
-import ModalDialog from '../components/ModalDialog.vue';
+import { api } from '../../api';
+import { formatMoney } from '../../items';
+import ItemDetail from '../../components/ItemDetail.vue';
+import MoneyLogList from '../../components/MoneyLogList.vue';
+import ModalDialog from '../../components/ModalDialog.vue';
 
 const inventory = ref(null);
 const money = ref(0);

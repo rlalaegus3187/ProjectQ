@@ -1,9 +1,9 @@
 <script setup>
 import { ref, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
-import { signup } from '../auth';
-import { fetchAttributes, toCharacterForm } from '../character';
-import CharacterForm from '../components/CharacterForm.vue';
+import { signup } from '../../auth';
+import { fetchAttributes, toCharacterForm } from '../../character';
+import CharacterForm from '../../components/CharacterForm.vue';
 
 const router = useRouter();
 const name = ref('');

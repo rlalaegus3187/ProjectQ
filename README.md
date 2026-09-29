@@ -4,7 +4,8 @@ Vue 3 + Node.js/Express + MySQL 로 만든 SPA 로그인 샘플입니다.
 
 - 세션 기반 로그인 (HttpOnly 쿠키, 세션은 MySQL 에 저장 → 재시작해도 로그인 유지)
 - 회원가입 / 로그인 / 로그아웃
-- **콘텐츠 페이지**: 공지 · 세계관 · 시스템 · 캐릭터 가이드 — `client/src/pages/<이름>/` 폴더 + 빈 컨테이너 (내용은 직접 채움, `pages/README.md` 참고)
+- **콘텐츠 페이지**: 공지 · 세계관 · 시스템 · 캐릭터 가이드 — 내용은 DB, **관리 → 페이지 관리** 한 곳에서 마크다운으로 작성(페이지별 음악 지정 가능), 화면은 `ContentPage.vue` 하나가 표시
+- **마크다운 편집기**: 제목·굵게·기울임·취소선·**글자색·형광펜·글자 크기·정렬**·목록·인용·링크·이미지 (`client/src/markdown/README.md`)
 - **Q&A 게시판**: 회원 질문·비밀글, 관리자 답변·메인 글 (마크다운 등록툴 + 이미지)
 - **알림**: 내 Q&A 질문에 답변이 달리면 상단 `알림` 에 표시
 - **음악**: 프로필별 유튜브 음악, 사이트 전체 음악(관리 → 사이트 설정), 페이지별 음악(`usePageMusic`) — 오른쪽 아래 플레이어, 볼륨/정지는 계정별 저장 (`client/src/music/README.md`)
@@ -15,7 +16,7 @@ Vue 3 + Node.js/Express + MySQL 로 만든 SPA 로그인 샘플입니다.
 - **캐릭터 프로필 여러 개** (최대 10) — 프로필 양식 값만 프로필마다 따로, 대표 프로필 지정 (스탯·인벤토리는 캐릭터에 하나)
 - **권한 3단계: 관리자 / 멤버 / 신청자** — 가입하면 신청자(프로필 1개, 멤버란에 안 보임). 신청자는 마이페이지에서 신청서를 `작성중 ↔ 작성완료` 로 바꾸고(작성완료면 수정 잠금),
   관리자는 `관리 → 신청자 관리`에서 신청 프로필을 보고 **체크해서 한꺼번에 멤버로 전환**(신청 프로필이 대표 프로필, 멤버란 공개, 알림) 또는 **한꺼번에 삭제**
-- 관리자는 `/admin` 에서 캐릭터 스탯·프로필 양식 항목을 추가/수정/삭제
+- 관리자는 `관리 → 캐릭터 항목 관리`(`/admin/attributes`) 에서 캐릭터 스탯·프로필 양식 항목을 추가/수정/삭제
 - 항목 형식: 숫자, 짧은 텍스트, 긴 텍스트(마크다운 편집기), 링크, 이미지(업로드), 드롭다운
 - **스탯 투자 포인트**: 관리자가 초기 투자 포인트를 정하고, 캐릭터는 숫자형 스탯에 포인트를 나눠 투자 (합계 ≤ 전체 포인트)
 - EC2(m6id Instance Store) 배포 스크립트와 **`deploy.js` 한 번으로 전체 업데이트**
@@ -34,9 +35,10 @@ ProjectQ/
 │     ├─ markdown/         ★ 마크다운 모듈 (renderMarkdown, MarkdownEditor, MarkdownView) — markdown/README.md
 │     ├─ music/            ★ 음악 모듈 (MusicPlayer, usePageMusic, setSiteMusic, 볼륨/정지) — music/README.md
 │     ├─ upload.js         이미지 업로드
-│     ├─ pages/            콘텐츠 페이지 (notice, world, system, guide) — 페이지마다 폴더
-│     ├─ components/       PageContainer(페이지 틀), CharacterForm/Card, AttributeInput/Value, PostEditor
-│     └─ views/            Home, Login, Signup, MyPage, Admin, Board*/Post*(Q&A), Notifications
+│     ├─ contents.js       콘텐츠 페이지 slug 목록 + 메뉴 제목
+│     ├─ layouts/          여러 페이지 공통 바깥 틀 (AdminLayout = 관리 메뉴)
+│     ├─ pages/            주소 1개 = *Page.vue 1개, 기능별 폴더 (home, auth, mypage, members, shop, board, content, admin) — pages/README.md
+│     └─ components/       여러 페이지에서 쓰는 부품 (PageContainer, CharacterForm/Card, AttributeInput/Value, PostEditor ...)
 ├─ server/                 Express API
 │  ├─ src/
 │  │  ├─ index.js          앱 진입점 (세션, 라우트)
@@ -50,6 +52,7 @@ ProjectQ/
 │  │  ├─ routes/shop.js        /api/shop (상점 목록·구매)
 │  │  ├─ routes/adminShop.js   /api/admin/shop (상점 관리)
 │  │  ├─ routes/adminApplicants.js  /api/admin/applicants (신청자 관리)
+│  │  ├─ routes/contents.js    /api/contents, /api/admin/contents (콘텐츠 페이지)
 │  │  ├─ routes/auth.js    /api/auth/signup, login, logout, me
 │  │  ├─ routes/characters.js  /api/attributes, /api/characters
 │  │  ├─ routes/admin.js   /api/admin/attributes (관리자)
@@ -87,6 +90,8 @@ ProjectQ/
 | PUT/DELETE | `/api/characters/me/profiles/:id` | 프로필 수정 `{ name, details }` (대표는 name 없음) / 삭제 (대표는 삭제 불가) |
 | PUT | `/api/characters/me/profiles/:id/main` | 대표 프로필 지정 |
 | PUT | `/api/characters/me/application` | (신청자) 신청 상태 `{ status: draft(작성중) / submitted(작성완료) }` — 작성완료면 캐릭터·프로필 수정 불가(409), 관리자에게 알림 |
+| GET | `/api/contents`, `/api/contents/:slug` | 콘텐츠 페이지 목록(제목) / 내용 `{ slug, title, description, body(마크다운), musicVideoId }` |
+| GET/PUT | `/api/admin/contents[/:slug]` | (관리자) 콘텐츠 페이지 목록 / 저장 `{ title, description, body, music(유튜브 링크) }` |
 | GET | `/api/admin/applicants?status=&q=` | (관리자) 신청자 캐릭터 목록 + 상태별 개수 |
 | GET | `/api/admin/applicants/:id` | (관리자) 신청자 캐릭터·프로필 보기 |
 | POST | `/api/admin/applicants/accept` | (관리자) `{ characterIds: [...] }` 한꺼번에 멤버로 전환 (신청 프로필 → 대표 프로필, 알림) |

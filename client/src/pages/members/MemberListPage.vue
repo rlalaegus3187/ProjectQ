@@ -2,7 +2,7 @@
 // 멤버란: 전체 캐릭터 목록 (대표 프로필 이미지 + 이름)
 import { ref, computed, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
-import { api } from '../api';
+import { api } from '../../api';
 
 const route = useRoute();
 const router = useRouter();
