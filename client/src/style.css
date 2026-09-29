@@ -140,18 +140,7 @@ a.button.small, .row-actions a.button { padding: 6px 10px; font-size: 13px; }
 .editor-tabs > button { background: none; color: #6b7280; border-radius: 6px 6px 0 0; padding: 8px 12px; }
 .editor-tabs > button.active { color: #2563eb; border-bottom: 2px solid #2563eb; }
 .toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; }
-.toolbar button.active { background: #dbeafe; color: #1d4ed8; }
 .toolbar-sep { width: 1px; height: 18px; background: #e5e7eb; margin: 0 4px; }
-.toolbar-menu { position: relative; }
-.swatch-a { font-weight: 700; color: #dc2626; text-decoration: underline; }
-.swatch-hl { background: #fef08a; padding: 0 3px; }
-.palette { position: absolute; top: calc(100% + 4px); left: 0; z-index: 20; display: grid; grid-template-columns: repeat(6, 26px); gap: 6px; padding: 8px; background: #fff; border: 1px solid #e5e7eb; border-radius: 8px; box-shadow: 0 8px 20px rgba(0,0,0,.12); }
-.palette .swatch { width: 26px; height: 26px; padding: 0; border-radius: 6px; border: 1px solid rgba(0,0,0,.1); cursor: pointer; }
-.palette .swatch.custom { position: relative; display: flex; align-items: center; justify-content: center; background: #f3f4f6; color: #374151; font-size: 16px; }
-.palette .swatch.custom input { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
-.palette.sizes { grid-template-columns: 1fr; min-width: 130px; }
-.palette.sizes button { background: none; text-align: left; padding: 4px 8px; line-height: 1.3; white-space: nowrap; }
-.palette.sizes button:hover { background: #f3f4f6; }
 .toolbar button, .toolbar-file { background: #f3f4f6; color: #374151; padding: 4px 10px; font-size: 13px; border-radius: 4px; cursor: pointer; }
 .toolbar-file { position: relative; overflow: hidden; display: inline-flex; align-items: center; }
 .toolbar-file input { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
