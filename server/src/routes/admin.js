@@ -5,7 +5,9 @@ const requireAdmin = require('../middleware/requireAdmin');
 const {
   VALUE_TYPES, HttpError, getDefinitions, groupDefinitions, withTransaction, getStatPoints, setStatPoints,
 } = require('../characters');
-const { getSetting, setSetting } = require('../settings');
+const {
+  setSetting, parseSiteName, parseSiteIcon, getSiteSettings,
+} = require('../settings');
 const { parseYouTubeId } = require('../youtube');
 
 const router = express.Router();
@@ -43,25 +45,34 @@ function parseOptions(value) {
   return unique;
 }
 
-// 전역 설정: 초기 투자 포인트, 사이트 전체 음악(유튜브 영상 ID)
+// 전역 설정: 초기 투자 포인트, 사이트 이름·아이콘, 사이트 전체 음악(유튜브 영상 ID)
 async function currentSettings() {
-  return { statPoints: await getStatPoints(), siteMusic: await getSetting('site_music') };
+  return { statPoints: await getStatPoints(), ...(await getSiteSettings()) };
 }
 
 router.get('/settings', async (req, res) => {
   res.json(await currentSettings());
 });
 
-// 보낸 값만 변경: { statPoints?, siteMusic?(유튜브 링크, 빈 값이면 끔) }
+// 보낸 값만 변경: { statPoints?, siteName?, siteIcon?(이모지 또는 업로드 이미지, 빈 값이면 없음), siteMusic?(유튜브 링크, 빈 값이면 끔) }
 router.put('/settings', async (req, res) => {
-  if (req.body?.statPoints !== undefined) {
-    const n = Number(req.body.statPoints);
-    if (!Number.isInteger(n) || n < 0 || n > 1000000) throw new HttpError(400, '투자 포인트는 0 ~ 1,000,000 사이의 정수로 입력해주세요.');
-    await setStatPoints(n);
+  const body = req.body ?? {};
+  // 검증을 먼저 모두 한 뒤 저장 (하나라도 틀리면 아무것도 바꾸지 않음)
+  let statPoints;
+  if (body.statPoints !== undefined) {
+    statPoints = Number(body.statPoints);
+    if (!Number.isInteger(statPoints) || statPoints < 0 || statPoints > 1000000) {
+      throw new HttpError(400, '투자 포인트는 0 ~ 1,000,000 사이의 정수로 입력해주세요.');
+    }
   }
-  if (req.body?.siteMusic !== undefined) {
-    await setSetting('site_music', parseYouTubeId(req.body.siteMusic, '사이트 음악'));
-  }
+  const siteName = body.siteName !== undefined ? parseSiteName(body.siteName) : undefined;
+  const siteIcon = body.siteIcon !== undefined ? parseSiteIcon(body.siteIcon) : undefined;
+  const siteMusic = body.siteMusic !== undefined ? parseYouTubeId(body.siteMusic, '사이트 음악') : undefined;
+
+  if (statPoints !== undefined) await setStatPoints(statPoints);
+  if (siteName !== undefined) await setSetting('site_name', siteName);
+  if (siteIcon !== undefined) await setSetting('site_icon', siteIcon);
+  if (siteMusic !== undefined) await setSetting('site_music', siteMusic);
   res.json(await currentSettings());
 });
 

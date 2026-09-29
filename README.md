@@ -19,6 +19,7 @@ Vue 3 + Node.js/Express + MySQL 로 만든 SPA 로그인 샘플입니다.
 - 관리자는 `관리 → 캐릭터 항목 관리`(`/admin/attributes`) 에서 캐릭터 스탯·프로필 양식 항목을 추가/수정/삭제
 - 항목 형식: 숫자, 짧은 텍스트, 긴 텍스트(마크다운 편집기), 링크, 이미지(업로드), 드롭다운
 - **스탯 투자 포인트**: 관리자가 초기 투자 포인트를 정하고, 캐릭터는 숫자형 스탯에 포인트를 나눠 투자 (합계 ≤ 전체 포인트)
+- **사이트 이름 · 아이콘**: 관리 → 사이트 설정에서 이름과 아이콘(이모지 또는 이미지)을 정하면 상단 로고와 브라우저 탭(제목·아이콘)에 표시
 - EC2(m6id Instance Store) 배포 스크립트와 **`deploy.js` 한 번으로 전체 업데이트**
 
 ## 폴더 구조
@@ -36,6 +37,7 @@ ProjectQ/
 │     ├─ music/            ★ 음악 모듈 (MusicPlayer, usePageMusic, setSiteMusic, 볼륨/정지) — music/README.md
 │     ├─ upload.js         이미지 업로드
 │     ├─ contents.js       콘텐츠 페이지 slug 목록 + 메뉴 제목
+│     ├─ site.js           사이트 이름·아이콘 (상단 로고, 브라우저 탭)
 │     ├─ layouts/          여러 페이지 공통 바깥 틀 (AdminLayout = 관리 메뉴)
 │     ├─ pages/            주소 1개 = *Page.vue 1개, 기능별 폴더 (home, auth, mypage, members, shop, board, content, admin) — pages/README.md
 │     └─ components/       여러 페이지에서 쓰는 부품 (PageContainer, CharacterForm/Card, AttributeInput/Value, PostEditor ...)
@@ -80,7 +82,7 @@ ProjectQ/
 | POST | `/api/auth/login` | `{ email, password }` |
 | POST | `/api/auth/logout` | 세션 삭제 |
 | PUT | `/api/auth/me/preferences` | 계정 음악 설정 `{ musicVolume(0~100), musicEnabled }` |
-| GET | `/api/settings` | 공개 설정 `{ siteMusic }` (사이트 전체 음악 영상 ID) |
+| GET | `/api/settings` | 공개 설정 `{ siteName, siteIcon, siteMusic }` (사이트 이름·아이콘, 사이트 전체 음악 영상 ID) |
 | GET | `/api/auth/me` | 현재 로그인 사용자 `{ id, email, name, role }` (401 이면 비로그인) |
 | GET | `/api/attributes` | 현재 입력받는 항목 + 투자 포인트 `{ stats, details, statPoints }` |
 | GET | `/api/characters/me` | 내 캐릭터 (없으면 `character: null`) |
@@ -96,7 +98,7 @@ ProjectQ/
 | GET | `/api/admin/applicants/:id` | (관리자) 신청자 캐릭터·프로필 보기 |
 | POST | `/api/admin/applicants/accept` | (관리자) `{ characterIds: [...] }` 한꺼번에 멤버로 전환 (신청 프로필 → 대표 프로필, 알림) |
 | POST | `/api/admin/applicants/delete` | (관리자) `{ characterIds: [...] }` 한꺼번에 캐릭터+프로필 삭제 (계정은 남음, 신청자만 처리) |
-| GET/PUT | `/api/admin/settings` | (관리자) `{ statPoints, siteMusic(유튜브 링크, 빈 값=끔) }` 조회/변경 (보낸 값만) |
+| GET/PUT | `/api/admin/settings` | (관리자) `{ statPoints, siteName, siteIcon(이모지 또는 업로드 이미지, 빈 값=없음), siteMusic(유튜브 링크, 빈 값=끔) }` 조회/변경 (보낸 값만) |
 | GET | `/api/admin/attributes` | (관리자) 전체 항목, 비활성 포함 |
 | POST | `/api/admin/attributes` | (관리자) `{ category: stat/detail, code, label, valueType, options, isRequired, sortOrder }` 항목 추가 |
 | PATCH | `/api/admin/attributes/:id` | (관리자) `{ label, valueType, options, isRequired, sortOrder, isActive }` 수정 |
