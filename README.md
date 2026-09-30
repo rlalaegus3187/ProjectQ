@@ -7,6 +7,8 @@ Vue 3 + Node.js/Express + MySQL 로 만든 SPA 로그인 샘플입니다.
 - **콘텐츠 페이지**: 공지 · 세계관 · 시스템 · 캐릭터 가이드 — 내용은 DB, **관리 → 페이지 관리** 한 곳에서 마크다운으로 작성(페이지별 음악 지정 가능), 화면은 `ContentPage.vue` 하나가 표시
 - **마크다운 편집기**: 제목·굵게·기울임·취소선·목록·인용·링크·이미지 (`client/src/markdown/README.md`)
 - **Q&A 게시판**: 회원 질문·비밀글, 관리자 답변·메인 글 (마크다운 등록툴 + 이미지)
+  - **비회원 질문**: 관리 → 사이트 설정의 스위치로 켜고 끔. 비회원은 이름 + 비밀번호로 작성(공개/비밀글), 비밀번호로 비밀글 보기·수정·삭제
+  - **글 비밀번호**: 회원 비밀글에도 선택으로 걸 수 있음 → 비밀번호를 아는 사람은 로그인 없이 볼 수 있음
 - **알림**: 내 Q&A 질문에 답변이 달리면 상단 `알림` 에 표시
 - **음악**: 프로필별 유튜브 음악, 사이트 전체 음악(관리 → 사이트 설정), 페이지별 음악(`usePageMusic`) — 오른쪽 아래 플레이어, 볼륨/정지는 계정별 저장 (`client/src/music/README.md`)
 - **소지금 / 상점**: 캐릭터 소지금(내역 기록), 관리자가 소지금 지급·회수, `상점 관리`에서 등록된 아이템을 골라 가격·재고 설정, 회원은 `상점`에서 구매
@@ -82,7 +84,7 @@ ProjectQ/
 | POST | `/api/auth/login` | `{ email, password }` |
 | POST | `/api/auth/logout` | 세션 삭제 |
 | PUT | `/api/auth/me/preferences` | 계정 음악 설정 `{ musicVolume(0~100), musicEnabled }` |
-| GET | `/api/settings` | 공개 설정 `{ siteName, siteFavicon, siteMusic }` (사이트 이름·파비콘, 사이트 전체 음악 영상 ID) |
+| GET | `/api/settings` | 공개 설정 `{ siteName, siteFavicon, siteMusic, qnaGuestWrite }` (사이트 이름·파비콘, 사이트 전체 음악 영상 ID) |
 | GET | `/api/auth/me` | 현재 로그인 사용자 `{ id, email, name, role }` (401 이면 비로그인) |
 | GET | `/api/attributes` | 현재 입력받는 항목 + 투자 포인트 `{ stats, details, statPoints }` |
 | GET | `/api/characters/me` | 내 캐릭터 (없으면 `character: null`) |
@@ -98,7 +100,7 @@ ProjectQ/
 | GET | `/api/admin/applicants/:id` | (관리자) 신청자 캐릭터·프로필 보기 |
 | POST | `/api/admin/applicants/accept` | (관리자) `{ characterIds: [...] }` 한꺼번에 멤버로 전환 (신청 프로필 → 대표 프로필, 알림) |
 | POST | `/api/admin/applicants/delete` | (관리자) `{ characterIds: [...] }` 한꺼번에 캐릭터+프로필 삭제 (계정은 남음, 신청자만 처리) |
-| GET/PUT | `/api/admin/settings` | (관리자) `{ statPoints, siteName, siteFavicon(업로드한 이미지 경로 — ico/png 등, 빈 값=없음), siteMusic(유튜브 링크, 빈 값=끔) }` 조회/변경 (보낸 값만) |
+| GET/PUT | `/api/admin/settings` | (관리자) `{ statPoints, siteName, siteFavicon(업로드한 이미지 경로 — ico/png 등, 빈 값=없음), qnaGuestWrite(Q&A 비회원 글쓰기), siteMusic(유튜브 링크, 빈 값=끔) }` 조회/변경 (보낸 값만) |
 | GET | `/api/admin/attributes` | (관리자) 전체 항목, 비활성 포함 |
 | POST | `/api/admin/attributes` | (관리자) `{ category: stat/detail, code, label, valueType, options, isRequired, sortOrder }` 항목 추가 |
 | PATCH | `/api/admin/attributes/:id` | (관리자) `{ label, valueType, options, isRequired, sortOrder, isActive }` 수정 |
@@ -106,7 +108,9 @@ ProjectQ/
 | POST | `/api/uploads` | 이미지 업로드 (multipart `file`, png/jpg/gif/webp, 5MB) → `{ url }` |
 | GET | `/api/boards/:board/posts?page=` | 목록 (board: qna). `pinned`(메인 글) 포함, 비밀글은 가려짐 |
 | GET | `/api/boards/:board/posts/:id` | 글 보기 (+ Q&A 답변) |
-| POST/PUT/DELETE | `/api/boards/:board/posts[/:id]` | `{ title, body, isHidden }` — 작성자(또는 관리자) |
+| GET | `/api/boards/:board/write-access` | 지금 글을 쓸 수 있는지 `{ canWrite, guestWrite(비회원으로 쓰는지) }` |
+| POST/PUT/DELETE | `/api/boards/:board/posts[/:id]` | `{ title, body, isHidden, password?, guestName?(비회원), removePassword?(수정) }` — 회원 작성자 / 비회원 글은 비밀번호 확인한 사람 / 관리자 |
+| POST | `/api/boards/:board/posts/:id/verify` | 글 비밀번호 확인 `{ password }` → 이 세션에서 비밀글 보기 · 비회원 글 수정·삭제 가능 |
 | PUT | `/api/boards/qna/posts/:id/pin` | (관리자) `{ isPinned }` 메인 글 지정/해제 |
 | POST | `/api/boards/qna/posts/:id/replies` | (관리자) 답변 → 질문자에게 알림 |
 | PUT/DELETE | `/api/boards/qna/replies/:id` | (관리자) 답변 수정/삭제 |

@@ -39,15 +39,21 @@ function parseFavicon(value) {
   return url;
 }
 
+// Q&A 비회원 글쓰기 허용 여부 (settings.qna_guest_write = '1' 이면 허용, 기본은 막음)
+async function isGuestWriteAllowed(conn = pool) {
+  return (await getSetting('qna_guest_write', conn)) === '1';
+}
+
 // 공개 설정 (로그인 없이 GET /api/settings, 관리자 설정 화면)
 async function getSiteSettings(conn = pool) {
   return {
     siteName: (await getSetting('site_name', conn)) || DEFAULT_SITE_NAME,
     siteFavicon: await getSetting('site_favicon', conn),
     siteMusic: await getSetting('site_music', conn),
+    qnaGuestWrite: await isGuestWriteAllowed(conn),
   };
 }
 
 module.exports = {
-  getSetting, setSetting, parseSiteName, parseFavicon, getSiteSettings, DEFAULT_SITE_NAME,
+  getSetting, setSetting, parseSiteName, parseFavicon, getSiteSettings, isGuestWriteAllowed, DEFAULT_SITE_NAME,
 };

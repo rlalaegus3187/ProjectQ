@@ -40,7 +40,8 @@ PK(character_id, definition_id)    character_details (프로필 양식 값, 프�
 settings  (전역 설정 키-값)  stat_initial_points = 초기 투자 포인트
 posts          게시글  board: qna(Q&A) — 화면에서 쓰는 게시판은 Q&A 뿐
                (notice/world/guide/free 는 이전 버전 데이터용으로 남아 있음, 화면에 표시 안 함)
-               is_hidden(Q&A 비밀글), is_pinned(Q&A 메인 글), user_id FK → users.id
+               is_hidden(Q&A 비밀글), is_pinned(Q&A 메인 글), user_id FK → users.id (비회원 글이면 NULL)
+               guest_name(비회원 이름), password_hash(글 비밀번호, scrypt — 비회원 글 필수, 회원 비밀글 선택)
 post_replies   Q&A 답변 (관리자)  post_id FK → posts.id (글 삭제 시 함께 삭제)
 notifications  계정별 알림  user_id, type, post_id, link(이동 주소), message, is_read
                → 추가는 server/src/notify.js 의 notify()/notifyUsers()/notifyAdmins() 사용
@@ -52,6 +53,7 @@ character_profiles.music_video_id  프로필 음악 (유튜브 영상 ID, NULL =
 users.music_volume / music_enabled  계정별 음악 볼륨(0~100) / 재생 여부
 settings.site_music                 사이트 전체 음악 (유튜브 영상 ID)
 settings.site_name                  사이트 이름 (없으면 ProjectQ)
+settings.qna_guest_write            Q&A 비회원 글쓰기 허용 ('1' 허용, 없거나 '0' 막음)
 settings.site_favicon               파비콘(브라우저 탭 아이콘): 업로드 이미지 경로 ico/png 등 (없으면 없음)
 characters.money  소지금 (캐릭터 귀속)
 content_pages  콘텐츠 페이지  slug(PK: notice/world/system/guide), title, description, body(마크다운), music_video_id

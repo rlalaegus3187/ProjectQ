@@ -129,7 +129,7 @@ onBeforeUnmount(() => {
 
     <div v-if="currentTrack" class="music-bar">
       <!-- 자동 재생이 막혔거나(blocked) 정지 상태면 ▶, 재생 중이면 ❚❚. 재생 못 하는 영상이면 버튼에 마우스를 올려 이유 확인 -->
-      <button type="button" class="music-btn" :class="{ error: music.error }"
+      <button type="button" class="music-btn" :class="{ failed: music.error }"
         :title="music.error || (music.enabled && !music.blocked ? '정지' : '재생')"
         :aria-label="music.enabled && !music.blocked ? '음악 정지' : '음악 재생'"
         @click="music.blocked && music.enabled ? play() : toggleMusic()">

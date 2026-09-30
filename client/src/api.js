@@ -12,6 +12,7 @@ export async function api(path, { method = 'GET', body } = {}) {
   if (!res.ok) {
     const error = new Error(data?.message || `요청 실패 (${res.status})`);
     error.status = res.status;
+    error.data = data;   // 서버가 보낸 추가 정보 (예: 비밀번호로 열 수 있는 비밀글)
     throw error;
   }
   return data;

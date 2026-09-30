@@ -54,9 +54,10 @@ const router = createRouter({
     // 콘텐츠 페이지 — 파일 하나(ContentPage)가 주소의 slug 로 DB 내용을 불러와 표시
     { path: `/${CONTENT}`, component: () => import('./pages/content/ContentPage.vue') },
     { path: `/${BOARD}`, component: BoardListPage },
-    { path: `/${BOARD}/write`, component: PostEditPage, meta: { requiresAuth: true, write: true } },
+    // 글쓰기·수정: 비회원도 들어올 수 있음 (Q&A 비회원 글쓰기 허용 / 비밀번호로 수정) — 권한은 서버가 판단
+    { path: `/${BOARD}/write`, component: PostEditPage, meta: { write: true } },
     { path: `/${BOARD}/:id(\\d+)`, component: PostDetailPage },
-    { path: `/${BOARD}/:id(\\d+)/edit`, component: PostEditPage, meta: { requiresAuth: true } },
+    { path: `/${BOARD}/:id(\\d+)/edit`, component: PostEditPage },
     { path: '/:pathMatch(.*)*', redirect: '/' },
   ],
   scrollBehavior: () => ({ top: 0 }),
@@ -70,7 +71,7 @@ router.beforeEach(async (to) => {
   }
   if (to.meta.requiresAdmin && user.role !== 'admin') return '/mypage';
   // 관리자 전용 게시판의 글쓰기는 관리자만
-  if (to.meta.write && BOARDS[to.params.board]?.adminOnly && user.role !== 'admin') return `/${to.params.board}`;
+  if (to.meta.write && BOARDS[to.params.board]?.adminOnly && user?.role !== 'admin') return `/${to.params.board}`;
   if (to.meta.guestOnly && user) return '/mypage';
 });
 

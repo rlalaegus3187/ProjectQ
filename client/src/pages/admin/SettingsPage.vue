@@ -1,19 +1,21 @@
 <script setup>
-// 관리자: 사이트 설정 — 사이트 이름(상단 로고, 브라우저 탭 제목), 파비콘(브라우저 탭 아이콘), 사이트 전체 음악
+// 관리자: 사이트 설정 — 사이트 이름(상단 로고, 브라우저 탭 제목), 파비콘(브라우저 탭 아이콘), Q&A 비회원 글쓰기, 사이트 전체 음악
 import { ref, computed, onMounted } from 'vue';
 import { api } from '../../api';
 import { parseYouTubeId, setSiteMusic, youtubeUrl } from '../../music';
 import { setSite } from '../../site';
 import ImageField from '../../components/ImageField.vue';
 
-const form = ref(null);   // { siteName, siteFavicon, siteMusic }
+const form = ref(null);   // { siteName, siteFavicon, qnaGuestWrite, siteMusic }
 const error = ref('');
 const message = ref('');
 const saving = ref(false);
 
 const musicInvalid = computed(() => !!form.value?.siteMusic && !parseYouTubeId(form.value.siteMusic));
 
-const toForm = (s) => ({ siteName: s.siteName, siteFavicon: s.siteFavicon || '', siteMusic: youtubeUrl(s.siteMusic) });
+const toForm = (s) => ({
+  siteName: s.siteName, siteFavicon: s.siteFavicon || '', qnaGuestWrite: !!s.qnaGuestWrite, siteMusic: youtubeUrl(s.siteMusic),
+});
 
 async function save() {
   error.value = '';
@@ -67,6 +69,20 @@ onMounted(async () => {
             {{ form.siteName || '사이트 이름' }}
           </span>
         </div>
+      </fieldset>
+
+      <fieldset class="fieldset stack">
+        <legend>Q&amp;A</legend>
+        <label class="switch-row">
+          <span class="switch">
+            <input v-model="form.qnaGuestWrite" type="checkbox" role="switch" :aria-checked="form.qnaGuestWrite" />
+            <span class="slider" />
+          </span>
+          <span>
+            비회원 글쓰기 <strong :class="form.qnaGuestWrite ? 'on' : 'off'">{{ form.qnaGuestWrite ? '켜짐' : '꺼짐' }}</strong>
+            <span class="muted">— 켜면 로그인하지 않아도 이름·비밀번호로 Q&amp;A 질문을 남길 수 있습니다. 끄면 새 글만 막히고, 이미 쓴 비회원 글은 비밀번호로 계속 보기·수정·삭제할 수 있습니다.</span>
+          </span>
+        </label>
       </fieldset>
 
       <fieldset class="fieldset stack">

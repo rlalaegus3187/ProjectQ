@@ -40,7 +40,7 @@ watch([boardKey, page], load, { immediate: true });
       </RouterLink>
     </div>
     <p v-if="boardKey === 'qna'" class="muted">
-      궁금한 점을 남겨주세요. 관리자가 답변하면 알림으로 알려드립니다. 비밀글은 작성자와 관리자만 볼 수 있습니다.
+      궁금한 점을 남겨주세요. 관리자가 답변하면 알림으로 알려드립니다(회원). 비밀글은 작성자와 관리자, 비밀번호가 걸린 글은 비밀번호를 아는 사람만 볼 수 있습니다.
     </p>
     <p v-if="error" class="error">{{ error }}</p>
 
@@ -49,14 +49,14 @@ watch([boardKey, page], load, { immediate: true });
         <h2 class="pinned-title">메인 글</h2>
         <ul class="post-list">
           <li v-for="post in data.pinned" :key="post.id">
-            <component :is="post.locked ? 'div' : 'RouterLink'" :to="post.locked ? undefined : `/${boardKey}/${post.id}`"
+            <component :is="post.locked && !post.hasPassword ? 'div' : 'RouterLink'" :to="post.locked && !post.hasPassword ? undefined : `/${boardKey}/${post.id}`"
               class="post-link" :class="{ locked: post.locked }">
               <span class="post-title">
                 <span class="badge pin">메인</span><span v-if="post.isHidden" class="badge lock">비밀</span>{{ post.title }}
               </span>
               <span class="post-meta">
                 <span class="badge" :class="post.replyCount ? 'answered' : 'waiting'">{{ post.replyCount ? '답변완료' : '답변대기' }}</span>
-                {{ post.author }} · {{ formatDate(post.createdAt) }}
+                {{ post.author }}<span v-if="post.isGuest" class="badge guest">비회원</span> · {{ formatDate(post.createdAt) }}
               </span>
             </component>
           </li>
@@ -66,18 +66,19 @@ watch([boardKey, page], load, { immediate: true });
       <p v-if="!data.posts.length" class="muted">아직 글이 없습니다.</p>
       <ul v-else class="post-list">
         <li v-for="post in data.posts" :key="post.id">
-          <RouterLink v-if="!post.locked" :to="`/${boardKey}/${post.id}`" class="post-link">
-            <span class="post-title"><span v-if="post.isHidden" class="badge lock">비밀</span>{{ post.title }}</span>
+          <!-- 잠긴 비밀글이라도 비밀번호가 걸려 있으면 들어가서 비밀번호 입력 -->
+          <RouterLink v-if="!post.locked || post.hasPassword" :to="`/${boardKey}/${post.id}`" class="post-link" :class="{ locked: post.locked }">
+            <span class="post-title"><span v-if="post.isHidden" class="badge lock">{{ post.hasPassword ? '비밀 🔑' : '비밀' }}</span>{{ post.title }}</span>
             <span class="post-meta">
               <span v-if="boardKey === 'qna'" class="badge" :class="post.replyCount ? 'answered' : 'waiting'">{{ post.replyCount ? '답변완료' : '답변대기' }}</span>
-              {{ post.author }} · {{ formatDate(post.createdAt) }}
+              {{ post.author }}<span v-if="post.isGuest" class="badge guest">비회원</span> · {{ formatDate(post.createdAt) }}
             </span>
           </RouterLink>
           <div v-else class="post-link locked">
             <span class="post-title"><span class="badge lock">비밀</span>{{ post.title }}</span>
             <span class="post-meta">
               <span class="badge" :class="post.replyCount ? 'answered' : 'waiting'">{{ post.replyCount ? '답변완료' : '답변대기' }}</span>
-              {{ post.author }} · {{ formatDate(post.createdAt) }}
+              {{ post.author }}<span v-if="post.isGuest" class="badge guest">비회원</span> · {{ formatDate(post.createdAt) }}
             </span>
           </div>
         </li>

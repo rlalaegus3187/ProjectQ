@@ -54,7 +54,7 @@ app.use('/api', (req, res) => res.status(404).json({ message: 'Not Found' }));
 app.use((err, req, res, next) => {
   // 검증 오류(HttpError), 잘못된 JSON 등 클라이언트에 보여줘도 되는 오류
   if (err.expose && err.status >= 400 && err.status < 500) {
-    return res.status(err.status).json({ message: err.message });
+    return res.status(err.status).json({ ...(err.data || {}), message: err.message });
   }
   if (err.name === 'MulterError') {
     const message = err.code === 'LIMIT_FILE_SIZE' ? '파일은 5MB 이하만 올릴 수 있습니다.' : '업로드 요청이 올바르지 않습니다.';
