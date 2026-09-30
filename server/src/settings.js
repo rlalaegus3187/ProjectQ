@@ -44,6 +44,17 @@ async function isGuestWriteAllowed(conn = pool) {
   return (await getSetting('qna_guest_write', conn)) === '1';
 }
 
+// 회원 전용 모드 (settings.site_private = '1' 이면 로그인해야 사이트 이용 가능)
+// 요청마다 확인하므로 짧게 캐시 (설정을 바꾸면 바로 지움)
+let privateCache = null;
+async function isSitePrivate(conn = pool) {
+  if (privateCache && privateCache.until > Date.now()) return privateCache.value;
+  const value = (await getSetting('site_private', conn)) === '1';
+  privateCache = { value, until: Date.now() + 5000 };
+  return value;
+}
+const clearSitePrivateCache = () => { privateCache = null; };
+
 // 공개 설정 (로그인 없이 GET /api/settings, 관리자 설정 화면)
 async function getSiteSettings(conn = pool) {
   return {
@@ -51,9 +62,11 @@ async function getSiteSettings(conn = pool) {
     siteFavicon: await getSetting('site_favicon', conn),
     siteMusic: await getSetting('site_music', conn),
     qnaGuestWrite: await isGuestWriteAllowed(conn),
+    sitePrivate: await isSitePrivate(conn),
   };
 }
 
 module.exports = {
-  getSetting, setSetting, parseSiteName, parseFavicon, getSiteSettings, isGuestWriteAllowed, DEFAULT_SITE_NAME,
+  getSetting, setSetting, parseSiteName, parseFavicon, getSiteSettings, isGuestWriteAllowed, isSitePrivate, clearSitePrivateCache,
+  DEFAULT_SITE_NAME,
 };

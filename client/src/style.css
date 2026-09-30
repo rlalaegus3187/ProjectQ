@@ -277,3 +277,11 @@ input.invalid { border-color: #dc2626; }
 .switch input:focus-visible + .slider { outline: 2px solid #93c5fd; outline-offset: 2px; }
 strong.on { color: #2563eb; }
 strong.off { color: #6b7280; }
+
+/* 회원 전용 모드 입장 화면 (로그인 전: 상단 메뉴 없음) */
+.container.gate { max-width: 440px; padding-top: 10vh; }
+.gate-head { text-align: center; margin-bottom: 20px; }
+.gate-head h1 { margin: 8px 0 4px; font-size: 28px; }
+.gate-head .muted { margin: 0; }
+.gate-icon { width: 48px; height: 48px; object-fit: contain; }
+.container.gate:has(.fieldset) { max-width: 760px; padding-top: 32px; }   /* 회원가입 폼은 넓게 */

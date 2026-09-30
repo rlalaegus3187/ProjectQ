@@ -3,11 +3,10 @@ import { useRouter } from 'vue-router';
 import { auth, isAdmin, logout } from './auth';
 import { SITE_MENU, menuLabel } from './menu';
 import { loadContentTitles } from './contents';
-import { site, setSite } from './site';
+import { site, loadSite } from './site';
 import { notifications, refreshUnread } from './notifications';
-import { onMounted } from 'vue';
+import { computed, onMounted, watch } from 'vue';
 import { useRoute } from 'vue-router';
-import { api } from './api';
 import { MusicPlayer, setSiteMusic, usePageMusic } from './music';
 
 const router = useRouter();
@@ -16,16 +15,17 @@ const route = useRoute();
 // 라우트별 음악: router.js 에서 { path, component, meta: { music: '영상ID' } } 로 지정 가능
 usePageMusic(() => route.meta.music);
 
-// 사이트 이름·파비콘, 사이트 전체 음악 (관리 → 사이트 설정)
+// 사이트 이름·파비콘·회원 전용 여부, 사이트 전체 음악 (관리 → 사이트 설정)
 onMounted(async () => {
-  try {
-    const settings = await api('/settings');
-    setSite(settings);
-    setSiteMusic(settings.siteMusic);
-  } catch { /* 음악 설정을 못 불러와도 사이트는 동작 */ }
+  await loadSite();
+  setSiteMusic(site.music);
 });
-// 콘텐츠 페이지 제목 (메뉴 이름)
-onMounted(() => loadContentTitles().catch(() => { /* 실패하면 기본 이름 */ }));
+
+// 회원 전용 모드에서 로그인 전: 상단 메뉴 없이 로그인/회원가입 화면만 (layouts 대신 App 에서 처리)
+const gate = computed(() => site.private && !auth.user);
+
+// 콘텐츠 페이지 제목 (메뉴 이름) — 회원 전용이면 로그인한 뒤에 불러와짐
+watch(() => auth.user?.id, () => loadContentTitles().catch(() => { /* 실패하면 기본 이름 */ }), { immediate: true });
 
 async function onLogout() {
   await logout();
@@ -35,7 +35,7 @@ async function onLogout() {
 </script>
 
 <template>
-  <header class="nav">
+  <header v-if="!gate" class="nav">
     <div class="nav-left">
       <RouterLink to="/" class="brand">{{ site.name }}</RouterLink>
       <nav class="board-links">
@@ -58,7 +58,7 @@ async function onLogout() {
       </template>
     </nav>
   </header>
-  <main class="container">
+  <main class="container" :class="{ gate }">
     <RouterView />
   </main>
   <MusicPlayer />

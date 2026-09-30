@@ -1,5 +1,6 @@
 import { createRouter, createWebHistory } from 'vue-router';
 import { loadUser } from './auth';
+import { site, loadSite } from './site';
 import { BOARDS } from './boards';
 import { refreshUnread } from './notifications';
 import HomePage from './pages/home/HomePage.vue';
@@ -65,7 +66,11 @@ const router = createRouter({
 
 // 라우트 가드: 로그인/관리자 필요한 페이지 보호, 로그인 상태면 로그인/가입 페이지 건너뜀
 router.beforeEach(async (to) => {
-  const user = await loadUser();
+  const [user] = await Promise.all([loadUser(), loadSite()]);
+  // 회원 전용 모드(관리 → 사이트 설정): 로그인하지 않으면 로그인/회원가입 화면만
+  if (site.private && !user && !to.meta.guestOnly) {
+    return { path: '/login', query: to.fullPath !== '/' ? { redirect: to.fullPath } : {} };
+  }
   if (to.meta.requiresAuth && !user) {
     return { path: '/login', query: { redirect: to.fullPath } };
   }

@@ -1,12 +1,12 @@
 <script setup>
-// 관리자: 사이트 설정 — 사이트 이름(상단 로고, 브라우저 탭 제목), 파비콘(브라우저 탭 아이콘), Q&A 비회원 글쓰기, 사이트 전체 음악
+// 관리자: 사이트 설정 — 사이트 공개 상태(회원 전용), 사이트 이름(상단 로고, 브라우저 탭 제목), 파비콘(브라우저 탭 아이콘), Q&A 비회원 글쓰기, 사이트 전체 음악
 import { ref, computed, onMounted } from 'vue';
 import { api } from '../../api';
 import { parseYouTubeId, setSiteMusic, youtubeUrl } from '../../music';
 import { setSite } from '../../site';
 import ImageField from '../../components/ImageField.vue';
 
-const form = ref(null);   // { siteName, siteFavicon, qnaGuestWrite, siteMusic }
+const form = ref(null);   // { sitePrivate, siteName, siteFavicon, qnaGuestWrite, siteMusic }
 const error = ref('');
 const message = ref('');
 const saving = ref(false);
@@ -14,6 +14,7 @@ const saving = ref(false);
 const musicInvalid = computed(() => !!form.value?.siteMusic && !parseYouTubeId(form.value.siteMusic));
 
 const toForm = (s) => ({
+  sitePrivate: !!s.sitePrivate,
   siteName: s.siteName, siteFavicon: s.siteFavicon || '', qnaGuestWrite: !!s.qnaGuestWrite, siteMusic: youtubeUrl(s.siteMusic),
 });
 
@@ -48,6 +49,21 @@ onMounted(async () => {
     <h1>사이트 설정</h1>
     <p v-if="!form && !error" class="muted">불러오는 중…</p>
     <form v-else-if="form" class="form" @submit.prevent="save">
+      <fieldset class="fieldset stack">
+        <legend>사이트 공개 상태</legend>
+        <label class="switch-row">
+          <span class="switch">
+            <input v-model="form.sitePrivate" type="checkbox" role="switch" :aria-checked="form.sitePrivate" />
+            <span class="slider" />
+          </span>
+          <span>
+            회원 전용 <strong :class="form.sitePrivate ? 'on' : 'off'">{{ form.sitePrivate ? '켜짐 (클로즈)' : '꺼짐 (오픈)' }}</strong>
+            <span class="muted">— 켜면 로그인해야 메인 페이지를 포함한 모든 화면을 볼 수 있고, 로그인하지 않은 방문자에게는 로그인 화면만 보입니다.
+              회원가입은 계속 할 수 있습니다(가입하면 신청자). Q&amp;A 비회원 글쓰기도 함께 막힙니다.</span>
+          </span>
+        </label>
+      </fieldset>
+
       <fieldset class="fieldset stack">
         <legend>사이트 이름 · 파비콘</legend>
         <label class="field">

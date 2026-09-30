@@ -4,6 +4,7 @@ import { useRouter } from 'vue-router';
 import { signup } from '../../auth';
 import { fetchAttributes, toCharacterForm } from '../../character';
 import CharacterForm from '../../components/CharacterForm.vue';
+import { site } from '../../site';
 
 const router = useRouter();
 const name = ref('');
@@ -39,6 +40,7 @@ async function submit() {
 
 <template>
   <section class="card">
+    <RouterLink v-if="site.private" to="/login" class="muted">← 로그인으로</RouterLink>
     <h1>회원가입</h1>
     <form class="form" @submit.prevent="submit">
       <fieldset class="fieldset">

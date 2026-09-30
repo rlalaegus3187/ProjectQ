@@ -29,6 +29,9 @@ app.use(session({
   },
 }));
 
+// 회원 전용 모드면 로그인 안 한 요청을 막음 (로그인·가입 등 일부 제외)
+app.use('/api', require('./middleware/sitePrivate'));
+
 app.get('/api/health', async (req, res) => {
   await pool.query('SELECT 1');
   res.json({ ok: true });

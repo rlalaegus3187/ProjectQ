@@ -21,6 +21,7 @@ Vue 3 + Node.js/Express + MySQL 로 만든 SPA 로그인 샘플입니다.
 - 관리자는 `관리 → 캐릭터 항목 관리`(`/admin/attributes`) 에서 캐릭터 스탯·프로필 양식 항목을 추가/수정/삭제
 - 항목 형식: 숫자, 짧은 텍스트, 긴 텍스트(마크다운 편집기), 링크, 이미지(업로드), 드롭다운
 - **스탯 투자 포인트**: 관리자가 초기 투자 포인트를 정하고, 캐릭터는 숫자형 스탯에 포인트를 나눠 투자 (합계 ≤ 전체 포인트)
+- **사이트 오픈 / 클로즈 (회원 전용)**: 관리 → 사이트 설정의 스위치. 켜면 로그인하지 않은 방문자는 메뉴 없는 입장(로그인) 화면만 보고, 서버 API 도 로그인·회원가입 등 일부만 허용
 - **사이트 이름 · 파비콘**: 관리 → 사이트 설정에서 이름(상단 로고·탭 제목)과 파비콘(ico/png 업로드, 브라우저 탭 아이콘)을 설정
 - EC2(m6id Instance Store) 배포 스크립트와 **`deploy.js` 한 번으로 전체 업데이트**
 
@@ -46,6 +47,7 @@ ProjectQ/
 ├─ server/                 Express API
 │  ├─ src/
 │  │  ├─ index.js          앱 진입점 (세션, 라우트)
+│  │  ├─ middleware/sitePrivate.js  회원 전용 모드: 로그인 안 한 API 요청 차단 (허용 목록 제외)
 │  │  ├─ characters.js     캐릭터/항목 정의 검증·저장 로직
 │  │  ├─ notify.js         ★ 알림 보내기 공용 함수 (notify / notifyUsers / notifyAdmins)
 │  │  ├─ inventory.js      ★ 아이템/인벤토리 공용 함수 (giveItem / takeItem / getInventory)
@@ -84,7 +86,7 @@ ProjectQ/
 | POST | `/api/auth/login` | `{ email, password }` |
 | POST | `/api/auth/logout` | 세션 삭제 |
 | PUT | `/api/auth/me/preferences` | 계정 음악 설정 `{ musicVolume(0~100), musicEnabled }` |
-| GET | `/api/settings` | 공개 설정 `{ siteName, siteFavicon, siteMusic, qnaGuestWrite }` (사이트 이름·파비콘, 사이트 전체 음악 영상 ID) |
+| GET | `/api/settings` | 공개 설정 `{ siteName, siteFavicon, siteMusic, qnaGuestWrite, sitePrivate }` (회원 전용 모드에서도 로그인 없이 조회 가능) (사이트 이름·파비콘, 사이트 전체 음악 영상 ID) |
 | GET | `/api/auth/me` | 현재 로그인 사용자 `{ id, email, name, role }` (401 이면 비로그인) |
 | GET | `/api/attributes` | 현재 입력받는 항목 + 투자 포인트 `{ stats, details, statPoints }` |
 | GET | `/api/characters/me` | 내 캐릭터 (없으면 `character: null`) |
@@ -100,7 +102,7 @@ ProjectQ/
 | GET | `/api/admin/applicants/:id` | (관리자) 신청자 캐릭터·프로필 보기 |
 | POST | `/api/admin/applicants/accept` | (관리자) `{ characterIds: [...] }` 한꺼번에 멤버로 전환 (신청 프로필 → 대표 프로필, 알림) |
 | POST | `/api/admin/applicants/delete` | (관리자) `{ characterIds: [...] }` 한꺼번에 캐릭터+프로필 삭제 (계정은 남음, 신청자만 처리) |
-| GET/PUT | `/api/admin/settings` | (관리자) `{ statPoints, siteName, siteFavicon(업로드한 이미지 경로 — ico/png 등, 빈 값=없음), qnaGuestWrite(Q&A 비회원 글쓰기), siteMusic(유튜브 링크, 빈 값=끔) }` 조회/변경 (보낸 값만) |
+| GET/PUT | `/api/admin/settings` | (관리자) `{ statPoints, siteName, siteFavicon(업로드한 이미지 경로 — ico/png 등, 빈 값=없음), qnaGuestWrite(Q&A 비회원 글쓰기), sitePrivate(회원 전용), siteMusic(유튜브 링크, 빈 값=끔) }` 조회/변경 (보낸 값만) |
 | GET | `/api/admin/attributes` | (관리자) 전체 항목, 비활성 포함 |
 | POST | `/api/admin/attributes` | (관리자) `{ category: stat/detail, code, label, valueType, options, isRequired, sortOrder }` 항목 추가 |
 | PATCH | `/api/admin/attributes/:id` | (관리자) `{ label, valueType, options, isRequired, sortOrder, isActive }` 수정 |
