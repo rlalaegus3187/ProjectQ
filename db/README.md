@@ -91,3 +91,5 @@ sessions  (express-mysql-session 로그인 세션)
 - 실행된 파일 이름은 `schema_migrations` 테이블에 기록되어 **한 번만** 실행됩니다.
 - 이미 적용된 파일은 수정하지 말고, 변경사항은 `004_add_xxx.sql` 처럼 다음 번호의 새 파일로 추가하세요.
 - 실행: `cd server && npm run migrate` (배포 스크립트 `deploy/deploy.js` 가 자동으로 실행)
+- **phpMyAdmin 등에서 테이블을 직접 삭제(DROP)하지 마세요.** 마이그레이션은 다시 실행되지 않아서 테이블이 저절로 생기지 않고, 그 기능은 서버 오류가 납니다.
+  `migrate.js` 는 끝날 때 필요한 테이블이 다 있는지 확인해서 빠진 테이블을 경고합니다. (내용만 비우려면 DROP 대신 `TRUNCATE`)

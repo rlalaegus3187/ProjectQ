@@ -66,7 +66,7 @@ ProjectQ/
 │  │  ├─ routes/uploads.js /api/uploads (이미지 업로드/제공)
 │  │  ├─ routes/boards.js  /api/boards (Q&A)
 │  │  └─ routes/notifications.js  /api/notifications
-│  ├─ scripts/migrate.js   DB 마이그레이션
+│  ├─ scripts/migrate.js   DB 마이그레이션 (끝나면 필요한 테이블이 다 있는지 확인)
 │  └─ scripts/seed.js      샘플 계정 생성
 ├─ db/                    MySQL 스키마 (구조 설명: db/README.md)
 │  └─ migrations/          001_init.sql … 010_music.sql
