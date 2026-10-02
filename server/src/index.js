@@ -63,7 +63,7 @@ app.use((err, req, res, next) => {
     const message = err.code === 'LIMIT_FILE_SIZE' ? '파일은 5MB 이하만 올릴 수 있습니다.' : '업로드 요청이 올바르지 않습니다.';
     return res.status(400).json({ message });
   }
-  console.error(err);
+  console.error(`[${new Date().toISOString()}] ${req.method} ${req.originalUrl}`, err);   // pm2 logs projectq-api 에서 확인
   res.status(500).json({ message: '서버 오류가 발생했습니다.' });
 });
 

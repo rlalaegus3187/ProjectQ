@@ -13,6 +13,7 @@ Vue 3 + Node.js/Express + MySQL 로 만든 SPA 로그인 샘플입니다.
 - **음악**: 프로필별 유튜브 음악, 사이트 전체 음악(관리 → 사이트 설정), 페이지별 음악(`usePageMusic`) — 오른쪽 아래 플레이어, 볼륨/정지는 계정별 저장 (`client/src/music/README.md`)
 - **소지금 / 상점**: 캐릭터 소지금(내역 기록), 관리자가 소지금 지급·회수, `상점 관리`에서 등록된 아이템을 골라 가격·재고 설정, 회원은 `상점`에서 구매
 - **아이템 / 인벤토리**: 관리자가 아이템 등록(이미지·효과·귀속·판매가능) 후 캐릭터에게 지급/회수, 회원은 `인벤토리` 에서 확인·버리기
+  - **습득 기록**: 모든 습득·사용이 `item_logs` 에 언제·어디서(관리자 지급/상점 구매/버림 ...)·메모·처리한 사람과 함께 남음. 관리자 지급 때 획득처(예: 이벤트 보상) 입력
 - **계정당 캐릭터 1개** — 가입할 때 함께 등록, 마이페이지에서 기본정보·캐릭터 스탯 표시·수정
 - **멤버란** (`/members`): 전체 캐릭터 목록(대표 프로필 이미지·검색) + 캐릭터 상세(기본정보·스탯·프로필, 보기 전용, 로그인 없이 공개)
 - **캐릭터 프로필 여러 개** (최대 10) — 프로필 양식 값만 프로필마다 따로, 대표 프로필 지정 (스탯·인벤토리는 캐릭터에 하나)
@@ -118,8 +119,9 @@ ProjectQ/
 | PUT/DELETE | `/api/boards/qna/replies/:id` | (관리자) 답변 수정/삭제 |
 | GET/POST/PUT/DELETE | `/api/admin/items[/:id]` | (관리자) 아이템 목록/등록/수정/삭제 |
 | GET | `/api/admin/characters?q=` | (관리자) 캐릭터 검색 |
-| GET/POST | `/api/admin/characters/:id/inventory` | (관리자) 인벤토리 조회 / 지급 `{ itemId, quantity }` (알림 발송) |
-| DELETE | `/api/admin/characters/:id/inventory/:itemId?quantity=` | (관리자) 회수 |
+| GET/POST | `/api/admin/characters/:id/inventory` | (관리자) 인벤토리 조회 / 지급 `{ itemId, quantity, memo(획득처) }` (알림 발송, 조회 응답에 itemLogs 포함) |
+| DELETE | `/api/admin/characters/:id/inventory/:itemId?quantity=&memo=` | (관리자) 회수 (memo: 사유) |
+| GET | `/api/inventory/:itemId/logs` | 내 아이템 하나의 습득/사용 기록 |
 | GET | `/api/members?q=&page=` | 멤버란 목록 (캐릭터 이름 검색, 24개씩) |
 | GET | `/api/members/:id` | 캐릭터 상세 (기본정보·스탯·프로필, 계정 정보·인벤토리 제외) |
 | GET | `/api/shop` | 판매 중인 상품 (+ 로그인 시 내 `money`) |

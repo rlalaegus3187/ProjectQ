@@ -16,6 +16,17 @@ export function formatEffectValues(values) {
 // 소지금 표시: 12345 → "12,345"
 export const formatMoney = (n) => Number(n ?? 0).toLocaleString('ko-KR');
 
+// 아이템 습득/사용 기록의 획득처·사유 (서버 item_logs.source) — 새 획득처를 만들면 여기에 이름 추가
+const ITEM_SOURCES = {
+  admin: '관리자 지급',
+  shop: '상점 구매',
+  admin_take: '관리자 회수',
+  discard: '버림',
+  legacy: '이전부터 보유',
+  system: '시스템',
+};
+export const itemSourceLabel = (source) => ITEM_SOURCES[source] ?? source;
+
 // 소지금 내역 사유
 const MONEY_REASONS = { admin: '관리자', shop_buy: '상점 구매' };
 export const moneyReasonLabel = (reason) => MONEY_REASONS[reason] ?? reason;

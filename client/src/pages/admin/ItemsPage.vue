@@ -2,11 +2,12 @@
 // 관리자: 아이템 등록/수정/삭제 + 캐릭터 인벤토리 지급/회수
 import { ref, onMounted } from 'vue';
 import { api } from '../../api';
-import { EFFECTS, effectLabel, formatEffectValues } from '../../items';
+import { EFFECTS, effectLabel, formatEffectValues, itemSourceLabel } from '../../items';
 import { MarkdownEditor } from '../../markdown';
 import ImageField from '../../components/ImageField.vue';
 import ModalDialog from '../../components/ModalDialog.vue';
 import MoneyLogList from '../../components/MoneyLogList.vue';
+import ItemLogList from '../../components/ItemLogList.vue';
 import { formatMoney } from '../../items';
 
 const items = ref([]);
@@ -92,8 +93,9 @@ const target = ref(null);          // 선택한 캐릭터
 const targetInventory = ref([]);
 const targetMoney = ref(0);
 const targetMoneyLogs = ref([]);
+const targetItemLogs = ref([]);
 const moneyForm = ref({ amount: '', memo: '' });
-const give = ref({ itemId: '', quantity: 1 });
+const give = ref({ itemId: '', quantity: 1, memo: '' });
 const giveError = ref('');
 
 async function search() {
@@ -111,6 +113,7 @@ async function loadTargetInventory() {
   targetInventory.value = data.inventory;
   targetMoney.value = data.money;
   targetMoneyLogs.value = data.moneyLogs;
+  targetItemLogs.value = data.itemLogs;
 }
 
 async function giveItem() {
@@ -119,7 +122,7 @@ async function giveItem() {
     await api(`/admin/characters/${target.value.id}/inventory`, { method: 'POST', body: give.value });
     const item = items.value.find((i) => i.id === give.value.itemId);
     flash(`${target.value.name}에게 '${item?.name}' ${give.value.quantity}개를 지급했습니다. (알림 발송)`);
-    give.value = { itemId: give.value.itemId, quantity: 1 };
+    give.value = { itemId: give.value.itemId, quantity: 1, memo: give.value.memo };
     await Promise.all([loadTargetInventory(), loadItems()]);
   } catch (e) {
     giveError.value = e.message;
@@ -143,8 +146,9 @@ async function changeMoney(sign) {
 async function takeBack(entry) {
   const input = prompt(`'${entry.item.name}' 몇 개를 회수할까요? (보유 ${entry.quantity}개)`, String(entry.quantity));
   if (input === null) return;
+  const memo = prompt('회수 사유 (선택, 기록에 남음)', '') ?? '';
   try {
-    await api(`/admin/characters/${target.value.id}/inventory/${entry.item.id}?quantity=${encodeURIComponent(input)}`, { method: 'DELETE' });
+    await api(`/admin/characters/${target.value.id}/inventory/${entry.item.id}?quantity=${encodeURIComponent(input)}&memo=${encodeURIComponent(memo)}`, { method: 'DELETE' });
     flash(`'${entry.item.name}' ${input}개를 회수했습니다.`);
     await Promise.all([loadTargetInventory(), loadItems()]);
   } catch (e) {
@@ -221,6 +225,7 @@ onMounted(() => Promise.all([loadItems(), search()]).catch((e) => { error.value 
           <option v-for="item in items" :key="item.id" :value="item.id">[{{ item.id }}] {{ item.name }}</option>
         </select>
         <input v-model.number="give.quantity" class="narrow" type="number" min="1" max="99999" step="1" required title="수량" />
+        <input v-model="give.memo" maxlength="100" placeholder="획득처 (예: 1차 이벤트 보상)" title="어디서 얻었는지 — 기록과 알림에 표시" />
         <button type="submit">지급</button>
       </form>
       <p v-if="giveError" class="error">{{ giveError }}</p>
@@ -228,10 +233,16 @@ onMounted(() => Promise.all([loadItems(), search()]).catch((e) => { error.value 
       <ul v-else class="post-list">
         <li v-for="entry in targetInventory" :key="entry.item.id" class="inv-row">
           <img v-if="entry.item.smallImage" :src="entry.item.smallImage" :alt="entry.item.name" class="item-icon" />
-          <span class="post-title">{{ entry.item.name }} <span class="muted">x {{ entry.quantity }}</span></span>
+          <span class="post-title">{{ entry.item.name }} <span class="muted">x {{ entry.quantity }}</span>
+            <span class="muted inv-acquired">최근 습득 {{ new Date(entry.lastAcquiredAt).toLocaleString('ko-KR') }} · {{ itemSourceLabel(entry.lastSource) }}<template v-if="entry.lastMemo"> ({{ entry.lastMemo }})</template></span>
+          </span>
           <button type="button" class="danger small" @click="takeBack(entry)">회수</button>
         </li>
       </ul>
+      <details class="money-details" open>
+        <summary>아이템 습득 · 사용 기록 (최근 30개)</summary>
+        <ItemLogList :logs="targetItemLogs" show-actor />
+      </details>
     </div>
   </section>
 

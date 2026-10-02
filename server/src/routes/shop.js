@@ -73,7 +73,10 @@ router.post('/:id/buy', async (req, res) => {
       stock -= quantity;
       await conn.execute('UPDATE shop_items SET stock = ? WHERE id = ?', [stock, listing.id]);
     }
-    const owned = await giveItem({ characterId, itemId: listing.item_id, quantity }, conn);
+    const owned = await giveItem({
+      characterId, itemId: listing.item_id, quantity, source: 'shop',
+      memo: `개당 ${Number(listing.price).toLocaleString()} · ${quantity}개`, actorUserId: req.session.userId,
+    }, conn);
     return { money, stock, owned, total, itemName: listing.name };
   });
 

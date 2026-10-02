@@ -285,3 +285,5 @@ strong.off { color: #6b7280; }
 .gate-head .muted { margin: 0; }
 .gate-icon { width: 48px; height: 48px; object-fit: contain; }
 .container.gate:has(.fieldset) { max-width: 760px; padding-top: 32px; }   /* 회원가입 폼은 넓게 */
+.inv-acquired { display: block; font-size: 12px; font-weight: 400; }
+.item-logs li { grid-template-columns: 56px 1fr auto; }

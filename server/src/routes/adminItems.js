@@ -4,7 +4,7 @@ const pool = require('../db');
 const requireAdmin = require('../middleware/requireAdmin');
 const { HttpError } = require('../characters');
 const {
-  toItem, getItem, validateItemInput, parseQuantity, giveItem, takeItem, getInventory, ITEM_COLUMNS,
+  toItem, getItem, validateItemInput, parseQuantity, giveItem, takeItem, getInventory, getItemLogs, parseId, ITEM_COLUMNS,
 } = require('../inventory');
 const { getMoney, changeMoney, getMoneyLogs } = require('../money');
 const { notify } = require('../notify');
@@ -63,12 +63,13 @@ router.get('/characters', async (req, res) => {
   res.json({ characters: rows.map((r) => ({ id: r.id, name: r.name, userName: r.user_name, email: r.email })) });
 });
 
-// 인벤토리 + 소지금 + 최근 소지금 내역
+// 인벤토리 + 아이템 습득/사용 기록 + 소지금 + 최근 소지금 내역
 router.get('/characters/:id/inventory', async (req, res) => {
-  const [inventory, money, moneyLogs] = await Promise.all([
-    getInventory(req.params.id), getMoney(req.params.id), getMoneyLogs(req.params.id, 10),
+  const characterId = parseId(req.params.id, '캐릭터를');
+  const [inventory, itemLogs, money, moneyLogs] = await Promise.all([
+    getInventory(characterId), getItemLogs(characterId, { limit: 30 }), getMoney(characterId), getMoneyLogs(characterId, 10),
   ]);
-  res.json({ inventory, money, moneyLogs });
+  res.json({ inventory, itemLogs, money, moneyLogs });
 });
 
 // 소지금 지급(+)/회수(-): { amount, memo } → 받은 회원에게 알림
@@ -86,20 +87,30 @@ router.post('/characters/:id/money', async (req, res) => {
   res.json({ money });
 });
 
-// 지급 (받은 회원에게 알림)
+// 지급 { itemId, quantity, memo?(획득처 상세, 예: '1차 이벤트 보상') } → 받은 회원에게 알림
 router.post('/characters/:id/inventory', async (req, res) => {
   const quantity = await giveItem({
     characterId: req.params.id,
     itemId: req.body?.itemId,
     quantity: parseQuantity(req.body?.quantity),
+    source: 'admin',
+    memo: req.body?.memo,
+    actorUserId: req.session.userId,
     notifyUser: true,
   });
   res.status(201).json({ quantity });
 });
 
-// 회수
+// 회수 ?quantity=&memo=
 router.delete('/characters/:id/inventory/:itemId', async (req, res) => {
-  const left = await takeItem({ characterId: req.params.id, itemId: req.params.itemId, quantity: parseQuantity(req.query.quantity) });
+  const left = await takeItem({
+    characterId: req.params.id,
+    itemId: req.params.itemId,
+    quantity: parseQuantity(req.query.quantity),
+    source: 'admin_take',
+    memo: req.query.memo,
+    actorUserId: req.session.userId,
+  });
   res.json({ quantity: left });
 });
 

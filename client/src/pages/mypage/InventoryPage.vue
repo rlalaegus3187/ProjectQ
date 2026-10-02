@@ -4,12 +4,15 @@ import { ref, onMounted } from 'vue';
 import { api } from '../../api';
 import { formatMoney } from '../../items';
 import ItemDetail from '../../components/ItemDetail.vue';
+import ItemLogList from '../../components/ItemLogList.vue';
 import MoneyLogList from '../../components/MoneyLogList.vue';
 import ModalDialog from '../../components/ModalDialog.vue';
 
 const inventory = ref(null);
 const money = ref(0);
 const moneyLogs = ref([]);
+const itemLogs = ref([]);
+const selectedLogs = ref(null);   // 고른 아이템의 습득/사용 기록
 const error = ref('');
 const selected = ref(null);   // { item, quantity }
 const discardQty = ref(1);
@@ -22,14 +25,25 @@ async function load() {
     inventory.value = data.inventory;
     money.value = data.money;
     moneyLogs.value = data.moneyLogs;
+    itemLogs.value = data.itemLogs;
   } catch (e) {
     error.value = e.message;
+  }
+}
+
+async function loadSelectedLogs() {
+  selectedLogs.value = null;
+  try {
+    selectedLogs.value = (await api(`/inventory/${selected.value.item.id}/logs`)).logs;
+  } catch {
+    selectedLogs.value = [];
   }
 }
 
 function open(entry) {
   selected.value = entry;
   discardQty.value = 1;
+  loadSelectedLogs();
 }
 
 async function discard() {
@@ -38,8 +52,9 @@ async function discard() {
   busy.value = true;
   try {
     const { quantity } = await api(`/inventory/${item.id}/discard`, { method: 'POST', body: { quantity: discardQty.value } });
-    selected.value = quantity > 0 ? { ...selected.value, quantity } : null;
     await load();
+    selected.value = quantity > 0 ? inventory.value.find((e) => e.item.id === item.id) ?? null : null;
+    if (selected.value) loadSelectedLogs();
   } catch (e) {
     alert(e.message);
   } finally {
@@ -73,6 +88,12 @@ onMounted(load);
   </section>
 
   <section v-if="inventory" class="card">
+    <h2>아이템 기록</h2>
+    <p class="muted">아이템을 언제, 어디서 얻고 썼는지 최근 20개를 보여줍니다. 아이템을 누르면 그 아이템의 기록만 볼 수 있습니다.</p>
+    <ItemLogList :logs="itemLogs" />
+  </section>
+
+  <section v-if="inventory" class="card">
     <div class="card-head">
       <h2>소지금 내역</h2>
       <RouterLink to="/shop" class="button secondary">상점 가기</RouterLink>
@@ -81,7 +102,10 @@ onMounted(load);
   </section>
 
   <ModalDialog v-if="selected" :title="selected.item.name" @close="selected = null">
-    <ItemDetail :item="selected.item" :quantity="selected.quantity" />
+    <ItemDetail :item="selected.item" :quantity="selected.quantity" :entry="selected" />
+    <h3 class="section-title">습득 · 사용 기록</h3>
+    <p v-if="!selectedLogs" class="muted">불러오는 중…</p>
+    <ItemLogList v-else :logs="selectedLogs" hide-item />
     <form class="discard-row" @submit.prevent="discard">
       <input v-model.number="discardQty" class="narrow" type="number" min="1" :max="selected.quantity" step="1" required />
       <button type="submit" class="danger" :disabled="busy">버리기</button>

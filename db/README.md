@@ -58,6 +58,9 @@ settings.qna_guest_write            Q&A 비회원 글쓰기 허용 ('1' 허용, 
 settings.site_favicon               파비콘(브라우저 탭 아이콘): 업로드 이미지 경로 ico/png 등 (없으면 없음)
 characters.money  소지금 (캐릭터 귀속)
 content_pages  콘텐츠 페이지  slug(PK: notice/world/system/guide), title, description, body(마크다운), music_video_id
+item_logs      아이템 습득/사용 기록  character_id, item_id, amount(+/-), quantity_after, source(admin/shop/admin_take/discard/legacy ...),
+               memo(획득처 상세), actor_user_id(처리한 사람), created_at(언제)
+               inventory 는 현재 보유(아이템별 한 줄: acquired_at 처음 / last_acquired_at 마지막 습득)
 money_logs     소지금 내역  character_id, amount(+/-), balance(변화 후 잔액), reason(admin/shop_buy/...), memo
                → 변경은 server/src/money.js 의 changeMoney() 사용 (잔액 확인 + 내역 기록 + 행 잠금)
 shop_items     상점 상품  item_id(UNIQUE, FK → items), price, stock(NULL=무제한), is_active, sort_order
