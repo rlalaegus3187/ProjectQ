@@ -6,6 +6,8 @@ import { api } from '../api';
 import ModalDialog from './ModalDialog.vue';
 import ProfileFormModal from './ProfileFormModal.vue';
 import ProfileView from './ProfileView.vue';
+import { isAdmin } from '../auth';
+import { site } from '../site';
 
 const props = defineProps({
   character: { type: Object, required: true },
@@ -21,6 +23,9 @@ const busy = ref(false);
 const error = ref('');
 
 const profiles = computed(() => props.character.profiles);
+// 관리 → 사이트 설정의 '프로필 추가 / 수정 허용' (관리자는 항상 가능)
+const canAdd = computed(() => !props.readonly && (site.profileAddOpen || isAdmin()));
+const canEdit = computed(() => !props.readonly && (site.profileEditOpen || isAdmin()));
 const maxProfiles = computed(() => props.character.maxProfiles ?? 10);
 const label = (p) => (p.isMain ? props.character.name : p.name);
 const fieldCount = (p) => p.details.filter((d) => d.value !== null && d.value !== '').length;
@@ -52,8 +57,11 @@ const remove = (p) => confirm(`'${label(p)}' 프로필을 삭제할까요? 되�
   <section class="card">
     <div class="card-head">
       <h2>내 프로필 <span class="muted">{{ profiles.length }} / {{ maxProfiles }}</span></h2>
-      <button v-if="!readonly && profiles.length < maxProfiles" type="button" class="secondary" @click="editing = null">+ 새 프로필</button>
+      <button v-if="canAdd && profiles.length < maxProfiles" type="button" class="secondary" @click="editing = null">+ 새 프로필</button>
     </div>
+    <p v-if="!readonly && (!canAdd || !canEdit)" class="notice-closed">
+      지금은 프로필 {{ !canAdd && !canEdit ? '추가·수정을' : !canAdd ? '추가를' : '수정을' }} 할 수 없습니다. (운영진 설정)
+    </p>
     <p class="muted">
       <strong>대표 프로필</strong>이 캐릭터 페이지에 먼저 보이고, 다른 프로필은 캐릭터 페이지 위쪽 목록에서 골라 볼 수 있습니다. 프로필마다 음악을 따로 정할 수 있습니다.
     </p>
@@ -67,7 +75,7 @@ const remove = (p) => confirm(`'${label(p)}' 프로필을 삭제할까요? 되�
         <div class="actions">
           <RouterLink v-if="publicPage" :to="{ path: `/members/${character.id}`, query: p.isMain ? {} : { profile: p.id } }" class="button secondary small">보기</RouterLink>
           <button v-else type="button" class="secondary small" @click="viewing = p">보기</button>
-          <template v-if="!readonly">
+          <template v-if="canEdit">
             <button type="button" class="secondary small" @click="editing = p">수정</button>
             <button v-if="!p.isMain" type="button" class="secondary small" :disabled="busy" @click="makeMain(p)">대표로</button>
             <button v-if="!p.isMain" type="button" class="danger small" :disabled="busy" @click="remove(p)">삭제</button>

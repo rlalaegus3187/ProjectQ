@@ -5,7 +5,8 @@
 import { ref, computed, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { api } from '../../api';
-import { auth } from '../../auth';
+import { auth, isAdmin } from '../../auth';
+import { site } from '../../site';
 import { fetchAttributes } from '../../character';
 import CharacterCard from '../../components/CharacterCard.vue';
 import ProfileSection from '../../components/ProfileSection.vue';
@@ -84,7 +85,7 @@ watch(() => route.params.id, () => load(), { immediate: true });
 
   <ProfileSection v-if="character" :key="character.id" v-model:selected="selectedId" :character="character">
     <template #actions="{ profile }">
-      <button v-if="isMine && !locked && profile" type="button" class="secondary" @click="startEdit(profile)">이 프로필 수정</button>
+      <button v-if="isMine && !locked && profile && (site.profileEditOpen || isAdmin())" type="button" class="secondary" @click="startEdit(profile)">이 프로필 수정</button>
     </template>
   </ProfileSection>
 

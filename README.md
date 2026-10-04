@@ -30,6 +30,8 @@ Vue 3 + Node.js/Express + MySQL 로 만든 SPA 로그인 샘플입니다.
 - 관리자는 `관리 → 캐릭터 항목 관리`(`/admin/attributes`) 에서 캐릭터 스탯·프로필 양식 항목을 추가/수정/삭제
 - 항목 형식: 숫자, 짧은 텍스트, 긴 텍스트(마크다운 편집기), 링크, 이미지(업로드), 드롭다운
 - **스탯 투자 포인트**: 관리자가 초기 투자 포인트를 정하고, 캐릭터는 숫자형 스탯에 포인트를 나눠 투자 (합계 ≤ 전체 포인트)
+- **프로필 추가 / 수정 허용**: 관리 → 사이트 설정의 스위치 두 개. 막으면 회원은 새 프로필 추가(또는 수정·삭제·대표 변경)를 못 함 — 서버도 거부, 관리자는 항상 가능
+- **콘텐츠 페이지 공개 / 비공개**: 관리 → 페이지 관리에서 페이지마다. 비공개면 관리자만 볼 수 있음 (멤버도 404, 메뉴에서 숨김 / 관리자 메뉴엔 🔒)
 - **회원가입 허용 / 막음**: 관리 → 사이트 설정의 스위치. 막으면 가입 화면에 안내만 보이고 가입 링크가 사라지며 서버도 가입을 거부 (기존 회원 로그인은 그대로)
 - **사이트 오픈 / 클로즈 (회원 전용)**: 관리 → 사이트 설정의 스위치. 켜면 로그인하지 않은 방문자는 메뉴 없는 입장(로그인) 화면만 보고, 서버 API 도 로그인·회원가입 등 일부만 허용
 - **사이트 이름 · 파비콘**: 관리 → 사이트 설정에서 이름(상단 로고·탭 제목)과 파비콘(ico/png 업로드, 브라우저 탭 아이콘)을 설정
@@ -118,8 +120,8 @@ ProjectQ/
 | PUT/DELETE | `/api/characters/me/profiles/:id` | 프로필 수정 `{ name, details }` (대표는 name 없음) / 삭제 (대표는 삭제 불가) |
 | PUT | `/api/characters/me/profiles/:id/main` | 대표 프로필 지정 |
 | PUT | `/api/characters/me/application` | (신청자) 신청 상태 `{ status: draft(작성중) / submitted(작성완료) }` — 작성완료면 캐릭터·프로필 수정 불가(409), 관리자에게 알림 |
-| GET | `/api/contents`, `/api/contents/:slug` | 콘텐츠 페이지 목록(제목) / 내용 `{ slug, title, description, body(마크다운), musicVideoId }` |
-| GET/PUT | `/api/admin/contents[/:slug]` | (관리자) 콘텐츠 페이지 목록 / 저장 `{ title, description, body, music(유튜브 링크) }` |
+| GET | `/api/contents`, `/api/contents/:slug` | 콘텐츠 페이지 목록(제목) / 내용 `{ slug, title, description, body(마크다운), musicVideoId, isPublic }` — 비공개는 관리자만 |
+| GET/PUT | `/api/admin/contents[/:slug]` | (관리자) 콘텐츠 페이지 목록 / 저장 `{ title, description, body, music(유튜브 링크), isPublic }` |
 | GET | `/api/admin/applicants?status=&q=` | (관리자) 신청자 캐릭터 목록 + 상태별 개수 |
 | GET | `/api/admin/applicants/:id` | (관리자) 신청자 캐릭터·프로필 보기 |
 | POST | `/api/admin/applicants/accept` | (관리자) `{ characterIds: [...] }` 한꺼번에 멤버로 전환 (신청 프로필 → 대표 프로필, 알림) |
@@ -129,7 +131,7 @@ ProjectQ/
 | PATCH | `/api/admin/items/bulk` | (관리자) `{ ids, isBound?, isSellable? }` |
 | PUT/PATCH | `/api/admin/shop/bulk` | (관리자) 일괄 저장 `{ items: [{ id, price, stock, isActive, sortOrder }] }` / 판매 켜기·끄기 `{ ids, isActive }` |
 | GET | `/api/admin/themes` | (관리자) CSS 테마 목록 `{ themes: [{ id, name, description, author, css, preview }], active }` — 적용은 settings 의 `siteTheme` |
-| GET/PUT | `/api/admin/settings` | (관리자) `{ statPoints, siteName, siteFavicon(업로드한 이미지 경로 — ico/png 등, 빈 값=없음), qnaGuestWrite(Q&A 비회원 글쓰기), sitePrivate(회원 전용), signupOpen(회원가입 허용), siteMusic(유튜브 링크, 빈 값=끔) }` 조회/변경 (보낸 값만) |
+| GET/PUT | `/api/admin/settings` | (관리자) `{ statPoints, siteName, siteFavicon(업로드한 이미지 경로 — ico/png 등, 빈 값=없음), qnaGuestWrite(Q&A 비회원 글쓰기), sitePrivate(회원 전용), signupOpen(회원가입 허용), profileAddOpen, profileEditOpen(프로필 추가/수정 허용), siteMusic(유튜브 링크, 빈 값=끔) }` 조회/변경 (보낸 값만) |
 | GET | `/api/admin/attributes` | (관리자) 전체 항목, 비활성 포함 |
 | POST | `/api/admin/attributes` | (관리자) `{ category: stat/detail, code, label, valueType, options, isRequired, sortOrder }` 항목 추가 |
 | PATCH | `/api/admin/attributes/:id` | (관리자) `{ label, valueType, options, isRequired, sortOrder, isActive }` 수정 |

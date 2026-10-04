@@ -1,6 +1,6 @@
 <script setup>
 import { auth } from '../../auth';
-import { SITE_MENU, menuLabel } from '../../menu';
+import { visibleMenu, menuLabel } from '../../menu';
 import { site } from '../../site';
 </script>
 
@@ -13,7 +13,7 @@ import { site } from '../../site';
   </section>
 
   <section class="board-cards">
-    <RouterLink v-for="m in SITE_MENU" :key="m.to" :to="m.to" class="card board-card">
+    <RouterLink v-for="m in visibleMenu()" :key="m.to" :to="m.to" class="card board-card">
       <strong>{{ menuLabel(m) }}</strong>
     </RouterLink>
   </section>

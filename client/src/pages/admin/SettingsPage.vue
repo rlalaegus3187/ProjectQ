@@ -17,6 +17,8 @@ const musicInvalid = computed(() => !!form.value?.siteMusic && !parseYouTubeId(f
 const toForm = (s) => ({
   sitePrivate: !!s.sitePrivate,
   signupOpen: s.signupOpen !== false,
+  profileAddOpen: s.profileAddOpen !== false,
+  profileEditOpen: s.profileEditOpen !== false,
   signupNotice: s.signupNotice || '',
   siteName: s.siteName, siteFavicon: s.siteFavicon || '', qnaGuestWrite: !!s.qnaGuestWrite, siteMusic: youtubeUrl(s.siteMusic),
 });
@@ -98,6 +100,30 @@ onMounted(async () => {
             {{ form.siteName || '사이트 이름' }}
           </span>
         </div>
+      </fieldset>
+
+      <fieldset class="fieldset stack">
+        <legend>프로필</legend>
+        <label class="switch-row">
+          <span class="switch">
+            <input v-model="form.profileAddOpen" type="checkbox" role="switch" :aria-checked="form.profileAddOpen" />
+            <span class="slider" />
+          </span>
+          <span>
+            프로필 추가 <strong :class="form.profileAddOpen ? 'on' : 'off'">{{ form.profileAddOpen ? '허용' : '막음' }}</strong>
+            <span class="muted">— 끄면 회원이 새 프로필을 만들 수 없습니다. (신청자의 캐릭터·신청서 작성은 막지 않음)</span>
+          </span>
+        </label>
+        <label class="switch-row">
+          <span class="switch">
+            <input v-model="form.profileEditOpen" type="checkbox" role="switch" :aria-checked="form.profileEditOpen" />
+            <span class="slider" />
+          </span>
+          <span>
+            프로필 수정 <strong :class="form.profileEditOpen ? 'on' : 'off'">{{ form.profileEditOpen ? '허용' : '막음' }}</strong>
+            <span class="muted">— 끄면 회원이 프로필을 수정·삭제하거나 대표 프로필을 바꿀 수 없습니다. 관리자는 항상 가능합니다.</span>
+          </span>
+        </label>
       </fieldset>
 
       <fieldset class="fieldset stack">

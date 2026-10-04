@@ -4,7 +4,7 @@ import { reactive, watchEffect } from 'vue';
 import { api } from './api';
 
 export const site = reactive({
-  name: 'ProjectQ', favicon: null, private: false, signupOpen: true, music: null, theme: { id: 'basic', css: null }, loaded: false,
+  name: 'ProjectQ', favicon: null, private: false, signupOpen: true, profileAddOpen: true, profileEditOpen: true, music: null, theme: { id: 'basic', css: null }, loaded: false,
 });
 
 // CSS 테마 적용: basic(/css/basic/style.css, index.html) 다음에 <link id="theme-css"> 로 테마 css 를 덮어씀
@@ -29,9 +29,11 @@ export function applyTheme(css, { remember = true } = {}) {
 
 // GET /api/settings 결과를 반영
 export function setSite({
-  siteName, siteFavicon, sitePrivate, signupOpen, siteMusic, siteTheme,
+  siteName, siteFavicon, sitePrivate, signupOpen, profileAddOpen, profileEditOpen, siteMusic, siteTheme,
 }) {
   if (signupOpen !== undefined) site.signupOpen = !!signupOpen;
+  if (profileAddOpen !== undefined) site.profileAddOpen = !!profileAddOpen;
+  if (profileEditOpen !== undefined) site.profileEditOpen = !!profileEditOpen;
   if (siteTheme) {
     site.theme = siteTheme;
     applyTheme(siteTheme.css);

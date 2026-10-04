@@ -386,3 +386,5 @@ strong.off { color: var(--color-muted); }
 .profile-list li:first-child { border-top: 0; }
 .profile-list li.main { background: var(--color-primary-soft); border-radius: 8px; padding: 10px 12px; }
 .profile-list-info { display: flex; flex-direction: column; gap: 2px; }
+
+.notice-closed { margin: 8px 0 0; padding: 8px 12px; border-radius: 6px; background: #fef9c3; color: #854d0e; font-size: 14px; }

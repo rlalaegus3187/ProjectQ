@@ -4,7 +4,7 @@
 import { ref, computed, watch, onMounted } from 'vue';
 import { useRoute, useRouter, onBeforeRouteLeave } from 'vue-router';
 import { api } from '../../api';
-import { contentTitles } from '../../contents';
+import { contentTitles, loadContentTitles } from '../../contents';
 import { MarkdownEditor } from '../../markdown';
 import { parseYouTubeId, youtubeUrl } from '../../music';
 import { formatDate } from '../../boards';
@@ -22,7 +22,9 @@ const current = computed(() => pages.value.find((p) => p.slug === route.params.s
 const dirty = computed(() => form.value && JSON.stringify(form.value) !== saved.value);
 const musicInvalid = computed(() => !!form.value?.music && !parseYouTubeId(form.value.music));
 
-const toForm = (p) => ({ title: p.title, description: p.description, body: p.body, music: youtubeUrl(p.musicVideoId) });
+const toForm = (p) => ({
+  title: p.title, description: p.description, body: p.body, music: youtubeUrl(p.musicVideoId), isPublic: p.isPublic,
+});
 
 function open() {
   message.value = '';
@@ -51,6 +53,7 @@ async function save() {
     const { page } = await api(`/admin/contents/${current.value.slug}`, { method: 'PUT', body: form.value });
     pages.value = pages.value.map((p) => (p.slug === page.slug ? page : p));
     contentTitles[page.slug] = page.title;   // 상단 메뉴 이름도 바로 반영
+    loadContentTitles().catch(() => {});      // 공개/비공개 표시도
     form.value = toForm(page);
     saved.value = JSON.stringify(form.value);
     message.value = `'${page.title}' 페이지를 저장했습니다.`;
@@ -84,7 +87,7 @@ onMounted(() => load().catch((e) => { error.value = e.message; }));
     <div class="tabs profile-tabs" role="tablist">
       <button v-for="p in pages" :key="p.slug" type="button" role="tab" :aria-selected="p.slug === current?.slug"
         :class="{ active: p.slug === current?.slug }" @click="selectTab(p.slug)">
-        {{ p.title }}
+        {{ p.title }}<span v-if="!p.isPublic" title="비공개"> 🔒</span>
       </button>
     </div>
 
@@ -100,6 +103,16 @@ onMounted(() => load().catch((e) => { error.value = e.message; }));
           <input v-model="form.description" maxlength="255" />
         </label>
       </div>
+      <label class="switch-row">
+        <span class="switch">
+          <input v-model="form.isPublic" type="checkbox" role="switch" :aria-checked="form.isPublic" />
+          <span class="slider" />
+        </span>
+        <span>
+          공개 <strong :class="form.isPublic ? 'on' : 'off'">{{ form.isPublic ? '공개' : '비공개' }}</strong>
+          <span class="muted">— 비공개면 관리자만 볼 수 있습니다. 멤버도 들어갈 수 없고 메뉴에서도 사라집니다.</span>
+        </span>
+      </label>
       <label class="field">
         <span>페이지 음악 <span class="muted">(유튜브 링크, 비우면 사이트 음악)</span></span>
         <input v-model="form.music" type="url" maxlength="300" placeholder="https://www.youtube.com/watch?v=…" :class="{ invalid: musicInvalid }" />

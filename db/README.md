@@ -54,12 +54,14 @@ users.music_volume / music_enabled  계정별 음악 볼륨(0~100) / 재생 여�
 settings.site_music                 사이트 전체 음악 (유튜브 영상 ID)
 settings.site_name                  사이트 이름 (없으면 ProjectQ)
 settings.site_theme                 CSS 테마 폴더 이름 (client/public/css/<이름>, 없거나 폴더가 없으면 basic)
+settings.profile_add_open           프로필 추가 허용 ('0' = 막음, 기본 허용 — 관리자는 항상 가능)
+settings.profile_edit_open          프로필 수정·삭제·대표 지정 허용 ('0' = 막음, 기본 허용)
 settings.signup_open                회원가입 허용 ('0' = 막음, 없거나 '1' = 허용)
 settings.site_private               회원 전용 모드 ('1' = 로그인해야 이용, 없거나 '0' = 공개)
 settings.qna_guest_write            Q&A 비회원 글쓰기 허용 ('1' 허용, 없거나 '0' 막음)
 settings.site_favicon               파비콘(브라우저 탭 아이콘): 업로드 이미지 경로 ico/png 등 (없으면 없음)
 characters.money  소지금 (캐릭터 귀속)
-content_pages  콘텐츠 페이지  slug(PK: notice/world/system/guide), title, description, body(마크다운), music_video_id
+content_pages  콘텐츠 페이지  slug(PK: notice/world/system/guide), title, description, body(마크다운), music_video_id, is_public(0 = 관리자만)
 item_logs      아이템 습득/사용 기록  character_id, item_id, amount(+/-), quantity_after, source(admin/shop/admin_take/discard/legacy ...),
                memo(획득처 상세), actor_user_id(처리한 사람), created_at(언제)
                inventory 는 현재 보유(아이템별 한 줄: acquired_at 처음 / last_acquired_at 마지막 습득)

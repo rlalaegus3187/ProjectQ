@@ -36,6 +36,7 @@ watch(() => route.params.slug, (slug) => { if (slug) load(slug); }, { immediate:
     <template v-if="isAdmin()" #actions>
       <RouterLink :to="`/admin/contents/${page.slug}`" class="button secondary">페이지 수정</RouterLink>
     </template>
+    <p v-if="!page.isPublic" class="applicant-note">🔒 비공개 페이지입니다. 관리자에게만 보입니다.</p>
     <MarkdownView v-if="page.body.trim()" :source="page.body" />
     <p v-else class="muted">준비 중입니다.</p>
   </PageContainer>

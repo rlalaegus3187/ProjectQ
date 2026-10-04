@@ -20,6 +20,16 @@ const {
   withTransaction,
 } = require('../characters');
 const { notifyAdmins } = require('../notify');
+const { isProfileAddOpen, isProfileEditOpen } = require('../settings');
+
+// 프로필 추가/수정이 막혀 있으면(관리 → 사이트 설정) 403 — 관리자는 항상 가능
+//   kind: 'add' (새 프로필) | 'edit' (수정·삭제·대표 지정)
+async function assertProfileAllowed(req, kind) {
+  const [[user]] = await pool.execute('SELECT role FROM users WHERE id = ?', [req.session.userId]);
+  if (user?.role === 'admin') return;
+  if (kind === 'add' && !(await isProfileAddOpen())) throw new HttpError(403, '지금은 프로필을 추가할 수 없습니다.');
+  if (kind === 'edit' && !(await isProfileEditOpen())) throw new HttpError(403, '지금은 프로필을 수정할 수 없습니다.');
+}
 
 const router = express.Router();
 
@@ -71,6 +81,7 @@ router.put('/characters/me', requireAuth, async (req, res) => {
 // ---------- 프로필 (여러 개) ----------
 // 추가: { name, music?(유튜브 링크), details }
 router.post('/characters/me/profiles', requireAuth, async (req, res) => {
+  await assertProfileAllowed(req, 'add');
   const profile = validateProfileInput(req.body, await getDefinitions());
   await editMine(req, (conn, characterId) => createProfile(conn, characterId, profile));
   await sendMine(req, res, 201);
@@ -78,6 +89,7 @@ router.post('/characters/me/profiles', requireAuth, async (req, res) => {
 
 // 수정: { name, music?, details }  (대표 프로필은 name 없이)
 router.put('/characters/me/profiles/:profileId', requireAuth, async (req, res) => {
+  await assertProfileAllowed(req, 'edit');
   const profile = validateProfileInput(req.body, await getDefinitions(), { requireName: false });
   await editMine(req, (conn, characterId) => updateProfile(conn, characterId, req.params.profileId, profile));
   await sendMine(req, res);
@@ -85,12 +97,14 @@ router.put('/characters/me/profiles/:profileId', requireAuth, async (req, res) =
 
 // 대표 프로필로 지정
 router.put('/characters/me/profiles/:profileId/main', requireAuth, async (req, res) => {
+  await assertProfileAllowed(req, 'edit');
   await editMine(req, (conn, characterId) => setMainProfile(conn, characterId, req.params.profileId));
   await sendMine(req, res);
 });
 
 // 삭제 (대표 프로필은 불가)
 router.delete('/characters/me/profiles/:profileId', requireAuth, async (req, res) => {
+  await assertProfileAllowed(req, 'edit');
   await editMine(req, (conn, characterId) => deleteProfile(conn, characterId, req.params.profileId));
   await sendMine(req, res);
 });

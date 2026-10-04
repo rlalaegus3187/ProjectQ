@@ -60,6 +60,14 @@ async function isSignupOpen(conn = pool) {
   return (await getSetting('signup_open', conn)) !== '0';
 }
 
+// 프로필 추가 / 수정 허용 (settings.profile_add_open, profile_edit_open = '0' 이면 막음, 기본 허용). 관리자는 항상 가능
+async function isProfileAddOpen(conn = pool) {
+  return (await getSetting('profile_add_open', conn)) !== '0';
+}
+async function isProfileEditOpen(conn = pool) {
+  return (await getSetting('profile_edit_open', conn)) !== '0';
+}
+
 // 공개 설정 (로그인 없이 GET /api/settings, 관리자 설정 화면)
 async function getSiteSettings(conn = pool) {
   return {
@@ -69,12 +77,15 @@ async function getSiteSettings(conn = pool) {
     qnaGuestWrite: await isGuestWriteAllowed(conn),
     sitePrivate: await isSitePrivate(conn),
     signupOpen: await isSignupOpen(conn),
+    profileAddOpen: await isProfileAddOpen(conn),
+    profileEditOpen: await isProfileEditOpen(conn),
     // 지금 적용된 CSS 테마 { id, css(덮어쓸 css 주소, basic 이면 null) }
     siteTheme: await require('./themes').getActiveTheme(conn),
   };
 }
 
 module.exports = {
-  getSetting, setSetting, parseSiteName, parseFavicon, getSiteSettings, isGuestWriteAllowed, isSitePrivate, isSignupOpen, clearSitePrivateCache,
+  getSetting, setSetting, parseSiteName, parseFavicon, getSiteSettings, isGuestWriteAllowed, isSitePrivate, isSignupOpen, isProfileAddOpen, isProfileEditOpen,
+  clearSitePrivateCache,
   DEFAULT_SITE_NAME,
 };
