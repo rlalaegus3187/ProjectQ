@@ -299,3 +299,10 @@ strong.off { color: #6b7280; }
 .badge-button { display: inline-block; padding: 2px 10px; border-radius: 999px; font-size: 12px; cursor: pointer; text-decoration: underline; text-underline-offset: 2px; }
 .badge-button.done { background: #dcfce7; color: #166534; }
 .badge-button.todo { background: #fee2e2; color: #b91c1c; }
+
+/* 계정 삭제 */
+.danger-zone { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; margin-top: 20px; padding-top: 16px; border-top: 1px solid #fee2e2; }
+.danger-zone p { margin: 2px 0 0; font-size: 13px; }
+.delete-warning { padding: 12px 16px; border: 1px solid #fecaca; border-radius: 8px; background: #fef2f2; color: #7f1d1d; font-size: 14px; }
+.delete-warning p { margin: 0 0 6px; }
+.delete-warning ul { margin: 0; padding-left: 20px; }

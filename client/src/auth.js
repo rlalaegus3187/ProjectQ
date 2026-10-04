@@ -45,6 +45,12 @@ export async function agreeNotice() {
   auth.user = user;
 }
 
+// 계정 삭제 (되돌릴 수 없음) → 로그아웃 상태가 됨
+export async function deleteAccount(password) {
+  await api('/auth/me', { method: 'DELETE', body: { password, confirm: true } });
+  auth.user = null;
+}
+
 // 비밀번호 변경 → 다른 기기의 로그인은 끊김
 export async function changePassword(currentPassword, newPassword) {
   await api('/auth/me/password', { method: 'PUT', body: { currentPassword, newPassword } });

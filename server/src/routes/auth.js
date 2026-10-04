@@ -144,6 +144,28 @@ router.put('/me/agreement', requireAuth, async (req, res) => {
   res.json({ user: toPublicUser(await findUser(req.session.userId)) });
 });
 
+// 계정 삭제 (되돌릴 수 없음): { password, confirm: true }
+// 함께 삭제(FK CASCADE): 캐릭터(프로필·스탯·인벤토리·아이템/소지금 기록), 알림, 내가 쓴 Q&A 글(답변 포함)
+router.delete('/me', authLimiter, requireAuth, async (req, res) => {
+  if (req.body?.confirm !== true) throw new HttpError(400, '복구할 수 없다는 안내에 동의해주세요.');
+  const userId = req.session.userId;
+  const [rows] = await pool.execute('SELECT role, password_hash FROM users WHERE id = ?', [userId]);
+  if (!rows[0] || !(await verifyPassword(String(req.body?.password ?? ''), rows[0].password_hash))) {
+    throw new HttpError(400, '비밀번호가 올바르지 않습니다.');
+  }
+  // 관리자가 한 명도 남지 않으면 사이트를 관리할 수 없으므로 막음
+  if (rows[0].role === 'admin') {
+    const [[{ admins }]] = await pool.query("SELECT COUNT(*) AS admins FROM users WHERE role = 'admin'");
+    if (Number(admins) <= 1) throw new HttpError(400, '마지막 관리자 계정은 삭제할 수 없습니다. 다른 관리자를 먼저 지정해주세요.');
+  }
+  await pool.execute('DELETE FROM users WHERE id = ?', [userId]);
+  await destroyUserSessions(userId);   // 다른 기기의 로그인도 끊음
+  req.session.destroy(() => {
+    res.clearCookie('projectq.sid');
+    res.status(204).end();
+  });
+});
+
 // 비밀번호 변경: { currentPassword, newPassword } → 다른 기기의 로그인은 끊김
 router.put('/me/password', authLimiter, requireAuth, async (req, res) => {
   const [rows] = await pool.execute('SELECT password_hash FROM users WHERE id = ?', [req.session.userId]);

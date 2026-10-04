@@ -1,9 +1,11 @@
 <script setup>
-// 마이페이지 계정(오너) 정보: 아이디(변경 불가), 소통 계정(수정), 약관동의(누르면 동의한 안내 팝업), 권한, 비밀번호 변경
+// 마이페이지 계정(오너) 정보: 아이디(변경 불가), 소통 계정(수정), 약관동의(누르면 동의한 안내 팝업), 권한, 비밀번호 변경, 계정 삭제
 import { ref, computed } from 'vue';
+import { useRouter } from 'vue-router';
 import {
-  auth, roleLabel, updateContact, changePassword, fetchAgreement, agreeNotice,
+  auth, roleLabel, updateContact, changePassword, fetchAgreement, agreeNotice, deleteAccount,
 } from '../auth';
+import { refreshUnread } from '../notifications';
 import { MarkdownView } from '../markdown';
 import ModalDialog from './ModalDialog.vue';
 
@@ -34,6 +36,31 @@ const confirmAgreement = () => run(async () => {
   agreement.value = await fetchAgreement();
   message.value = '안내에 동의했습니다.';
 });
+
+// 계정 삭제 팝업: { password, understood, error }
+const router = useRouter();
+const removing = ref(null);
+
+function openDelete() {
+  removing.value = { password: '', understood: false, error: '' };
+}
+
+async function confirmDelete() {
+  removing.value.error = '';
+  busy.value = true;
+  try {
+    const name = auth.user.username;
+    await deleteAccount(removing.value.password);
+    await refreshUnread({ force: true });
+    removing.value = null;
+    alert(`'${name}' 계정을 삭제했습니다. 이용해주셔서 감사합니다.`);
+    router.push('/');
+  } catch (e) {
+    removing.value.error = e.message;
+  } finally {
+    busy.value = false;
+  }
+}
 
 const formatTime = (v) => new Date(v).toLocaleString('ko-KR');
 
@@ -144,5 +171,39 @@ const savePassword = () => run(async () => {
 
     <p v-if="error" class="error">{{ error }}</p>
     <p v-if="message" class="ok">{{ message }}</p>
+
+    <div class="danger-zone">
+      <div>
+        <strong>계정 삭제</strong>
+        <p class="muted">계정과 캐릭터가 모두 삭제되며 복구할 수 없습니다.</p>
+      </div>
+      <button type="button" class="danger" @click="openDelete">계정 삭제하기</button>
+    </div>
+
+    <ModalDialog v-if="removing" title="계정 삭제" @close="removing = null">
+      <form class="form" @submit.prevent="confirmDelete">
+        <div class="delete-warning">
+          <p><strong>삭제한 계정은 복구할 수 없습니다.</strong> 아래 내용이 모두 즉시 삭제되며, 관리자도 되돌릴 수 없습니다.</p>
+          <ul>
+            <li>계정 <strong>{{ auth.user.username }}</strong> (같은 아이디로 다시 가입할 수는 있습니다)</li>
+            <li>캐릭터와 모든 프로필, 캐릭터 스탯</li>
+            <li>인벤토리 아이템, 소지금, 아이템·소지금 기록</li>
+            <li>내가 쓴 Q&amp;A 글과 그 답변, 받은 알림</li>
+          </ul>
+        </div>
+        <label>
+          비밀번호 확인
+          <input v-model="removing.password" type="password" required autocomplete="current-password" />
+        </label>
+        <label class="inline agree">
+          <input v-model="removing.understood" type="checkbox" /> 복구할 수 없다는 것을 이해했으며 계정을 삭제합니다.
+        </label>
+        <p v-if="removing.error" class="error">{{ removing.error }}</p>
+        <div class="actions">
+          <button type="submit" class="danger" :disabled="busy || !removing.understood || !removing.password">계정 영구 삭제</button>
+          <button type="button" class="secondary" @click="removing = null">취소</button>
+        </div>
+      </form>
+    </ModalDialog>
   </section>
 </template>
