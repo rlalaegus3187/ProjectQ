@@ -49,7 +49,7 @@ async function onLogout() {
           알림<span v-if="notifications.unread" class="count">{{ notifications.unread > 99 ? '99+' : notifications.unread }}</span>
         </RouterLink>
         <RouterLink v-if="isAdmin()" to="/admin">관리</RouterLink>
-        <RouterLink to="/mypage">{{ auth.user.name }}님</RouterLink>
+        <RouterLink to="/mypage">{{ auth.user.username }}님</RouterLink>
         <button class="link" @click="onLogout">로그아웃</button>
       </template>
       <template v-else>

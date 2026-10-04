@@ -1,5 +1,5 @@
 // 테스트용 샘플 계정(관리자) + 캐릭터를 만듭니다. (이미 있으면 건너뜀)
-//   계정: demo@projectq.local / demo1234
+//   계정: 아이디 demo / 비밀번호 demo1234
 const pool = require('../src/db');
 const { hashPassword } = require('../src/password');
 const {
@@ -7,8 +7,8 @@ const {
 } = require('../src/characters');
 
 async function main() {
-  const email = 'demo@projectq.local';
-  const [existing] = await pool.execute('SELECT id FROM users WHERE email = ?', [email]);
+  const username = 'demo';
+  const [existing] = await pool.execute('SELECT id FROM users WHERE username = ?', [username]);
   if (existing.length) {
     console.log('[seed] 샘플 계정이 이미 있습니다.');
     return;
@@ -25,12 +25,12 @@ async function main() {
 
   await withTransaction(async (conn) => {
     const [result] = await conn.execute(
-      "INSERT INTO users (email, name, role, password_hash) VALUES (?, ?, 'admin', ?)",
-      [email, '데모 사용자', passwordHash],
+      "INSERT INTO users (username, contact, role, password_hash) VALUES (?, ?, 'admin', ?)",
+      [username, '데모 계정', passwordHash],
     );
     await createCharacter(conn, result.insertId, character, profile);
   });
-  console.log('[seed] 샘플 계정 생성: demo@projectq.local / demo1234 (관리자, 캐릭터 포함)');
+  console.log('[seed] 샘플 계정 생성: 아이디 demo / 비밀번호 demo1234 (관리자, 캐릭터 포함)');
 }
 
 main()

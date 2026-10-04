@@ -5,8 +5,9 @@ import { api } from '../../api';
 import { parseYouTubeId, setSiteMusic, youtubeUrl } from '../../music';
 import { setSite } from '../../site';
 import ImageField from '../../components/ImageField.vue';
+import { MarkdownEditor } from '../../markdown';
 
-const form = ref(null);   // { sitePrivate, siteName, siteFavicon, qnaGuestWrite, siteMusic }
+const form = ref(null);   // { sitePrivate, siteName, siteFavicon, signupNotice, qnaGuestWrite, siteMusic }
 const error = ref('');
 const message = ref('');
 const saving = ref(false);
@@ -15,6 +16,7 @@ const musicInvalid = computed(() => !!form.value?.siteMusic && !parseYouTubeId(f
 
 const toForm = (s) => ({
   sitePrivate: !!s.sitePrivate,
+  signupNotice: s.signupNotice || '',
   siteName: s.siteName, siteFavicon: s.siteFavicon || '', qnaGuestWrite: !!s.qnaGuestWrite, siteMusic: youtubeUrl(s.siteMusic),
 });
 
@@ -85,6 +87,13 @@ onMounted(async () => {
             {{ form.siteName || '사이트 이름' }}
           </span>
         </div>
+      </fieldset>
+
+      <fieldset class="fieldset stack">
+        <legend>회원가입 안내 (주의문구)</legend>
+        <p class="muted">회원가입 화면 맨 위에 보이고, 가입하려면 아래 체크박스로 "동의합니다"를 눌러야 합니다. 비워두면 안내 없이 동의 체크만 보입니다.</p>
+        <MarkdownEditor v-model="form.signupNotice" :rows="10" :maxlength="20000"
+          placeholder="예: ## 가입 전 꼭 읽어주세요&#10;- 캐릭터 설정은 세계관을 따라주세요.&#10;- 소통 계정은 운영진 연락용입니다." />
       </fieldset>
 
       <fieldset class="fieldset stack">

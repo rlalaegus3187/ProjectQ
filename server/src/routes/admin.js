@@ -6,7 +6,7 @@ const {
   VALUE_TYPES, HttpError, getDefinitions, groupDefinitions, withTransaction, getStatPoints, setStatPoints,
 } = require('../characters');
 const {
-  setSetting, parseSiteName, parseFavicon, getSiteSettings, clearSitePrivateCache,
+  getSetting, setSetting, parseSiteName, parseFavicon, getSiteSettings, clearSitePrivateCache,
 } = require('../settings');
 const { parseYouTubeId } = require('../youtube');
 
@@ -47,14 +47,18 @@ function parseOptions(value) {
 
 // 전역 설정: 초기 투자 포인트, 사이트 이름·파비콘, 사이트 전체 음악(유튜브 영상 ID)
 async function currentSettings() {
-  return { statPoints: await getStatPoints(), ...(await getSiteSettings()) };
+  return {
+    statPoints: await getStatPoints(),
+    ...(await getSiteSettings()),
+    signupNotice: (await getSetting('signup_notice')) || '',   // 회원가입 안내(주의문구, 마크다운)
+  };
 }
 
 router.get('/settings', async (req, res) => {
   res.json(await currentSettings());
 });
 
-// 보낸 값만 변경: { statPoints?, siteName?, siteFavicon?(업로드한 이미지 경로, 빈 값이면 없음), siteMusic?(유튜브 링크, 빈 값이면 끔), qnaGuestWrite?(Q&A 비회원 글쓰기 허용), sitePrivate?(회원 전용 — 로그인해야 이용) }
+// 보낸 값만 변경: { statPoints?, siteName?, siteFavicon?(업로드한 이미지 경로, 빈 값이면 없음), siteMusic?(유튜브 링크, 빈 값이면 끔), qnaGuestWrite?(Q&A 비회원 글쓰기 허용), sitePrivate?(회원 전용 — 로그인해야 이용), signupNotice?(회원가입 안내, 마크다운) }
 router.put('/settings', async (req, res) => {
   const body = req.body ?? {};
   // 검증을 먼저 모두 한 뒤 저장 (하나라도 틀리면 아무것도 바꾸지 않음)
@@ -70,12 +74,18 @@ router.put('/settings', async (req, res) => {
   const siteMusic = body.siteMusic !== undefined ? parseYouTubeId(body.siteMusic, '사이트 음악') : undefined;
   const qnaGuestWrite = body.qnaGuestWrite !== undefined ? !!body.qnaGuestWrite : undefined;
   const sitePrivate = body.sitePrivate !== undefined ? !!body.sitePrivate : undefined;
+  let signupNotice;
+  if (body.signupNotice !== undefined) {
+    signupNotice = String(body.signupNotice ?? '').trim();
+    if (signupNotice.length > 20000) throw new HttpError(400, '회원가입 안내는 20,000자 이내로 입력해주세요.');
+  }
 
   if (statPoints !== undefined) await setStatPoints(statPoints);
   if (siteName !== undefined) await setSetting('site_name', siteName);
   if (siteFavicon !== undefined) await setSetting('site_favicon', siteFavicon);
   if (siteMusic !== undefined) await setSetting('site_music', siteMusic);
   if (qnaGuestWrite !== undefined) await setSetting('qna_guest_write', qnaGuestWrite ? '1' : '0');
+  if (signupNotice !== undefined) await setSetting('signup_notice', signupNotice || null);
   if (sitePrivate !== undefined) {
     await setSetting('site_private', sitePrivate ? '1' : '0');
     clearSitePrivateCache();

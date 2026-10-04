@@ -7,7 +7,7 @@ import { site } from '../../site';
 
 const route = useRoute();
 const router = useRouter();
-const email = ref('');
+const username = ref('');
 const password = ref('');
 const error = ref('');
 const loading = ref(false);
@@ -16,7 +16,7 @@ async function submit() {
   error.value = '';
   loading.value = true;
   try {
-    await login(email.value, password.value);
+    await login(username.value, password.value);
     // 로그인 전에 가려던 페이지로, 없으면 회원 전용 모드는 메인, 아니면 내 캐릭터(마이페이지)로 (내부 경로만 허용)
     const fallback = site.private ? '/' : '/mypage';
     const redirect = String(route.query.redirect || fallback);
@@ -39,7 +39,7 @@ async function submit() {
   <section class="card" :class="{ 'gate-card': site.private }">
     <h1 v-if="!site.private">로그인</h1>
     <form class="form" @submit.prevent="submit">
-      <label>이메일 <input v-model="email" type="email" autocomplete="email" required /></label>
+      <label>아이디 <input v-model="username" autocomplete="username" required maxlength="20" autocapitalize="off" spellcheck="false" /></label>
       <label>비밀번호 <input v-model="password" type="password" autocomplete="current-password" required /></label>
       <p v-if="error" class="error">{{ error }}</p>
       <button type="submit" :disabled="loading">{{ loading ? '로그인 중…' : '로그인' }}</button>

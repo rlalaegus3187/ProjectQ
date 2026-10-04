@@ -41,6 +41,7 @@ const router = createRouter({
       children: [
         { path: '', redirect: '/admin/applicants' },
         { path: 'applicants', component: () => import('./pages/admin/ApplicantsPage.vue') },
+        { path: 'users', component: () => import('./pages/admin/UsersPage.vue') },
         { path: 'contents/:slug?', component: () => import('./pages/admin/ContentEditPage.vue') },
         { path: 'attributes', component: () => import('./pages/admin/AttributesPage.vue') },
         { path: 'items', component: () => import('./pages/admin/ItemsPage.vue') },

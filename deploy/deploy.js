@@ -8,7 +8,7 @@
 //
 // 옵션
 //   --branch=<이름>   받아올 브랜치 (기본: 현재 체크아웃된 브랜치, 최초 clone 시에는 main)
-//   --seed            샘플 계정/게시글 생성 (demo@projectq.local / demo1234)
+//   --seed            샘플 계정/게시글 생성 (아이디 demo / 비밀번호 demo1234)
 //   --force           서버에서 직접 수정한 파일이 있어도 버리고 git 기준으로 맞춤
 //   --skip-pull       git pull 없이 현재 코드로만 빌드/재시작
 //   --skip-client     프론트(Vue) 빌드 생략

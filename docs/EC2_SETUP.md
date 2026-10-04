@@ -105,7 +105,7 @@ node /data/deploy.js --branch=$BRANCH --seed
 | 4 | Vue 빌드 → `/data/www/projectq` 교체 |
 | 5 | `pm2 startOrReload` → `/api/health` 헬스체크 |
 
-브라우저에서 `http://<EC2-IP>` → `demo@projectq.local` / `demo1234` 로 로그인.
+브라우저에서 `http://<EC2-IP>` → 아이디 `demo` / 비밀번호 `demo1234` 로 로그인.
 
 ### 이후 업데이트 (코드 push 후)
 ```bash

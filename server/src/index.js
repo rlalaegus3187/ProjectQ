@@ -49,6 +49,7 @@ app.use('/api/shop', require('./routes/shop'));
 app.use('/api/settings', require('./routes/settings'));
 app.use('/api/admin', require('./routes/adminShop'));
 app.use('/api/admin', require('./routes/adminApplicants'));
+app.use('/api/admin', require('./routes/adminUsers'));
 app.use('/api/contents', require('./routes/contents').publicRouter);
 app.use('/api/admin', require('./routes/contents').adminRouter);
 

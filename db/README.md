@@ -4,8 +4,8 @@
 users                          characters (계정당 1개)
 ─────────────────────          ─────────────────────
 id            PK          ┌──  id            PK
-email         UNIQUE      │    user_id       UNIQUE, FK → users.id
-name                      │    name          캐릭터 이름   ┐ 기본정보
+username      UNIQUE(아이디)│    user_id       UNIQUE, FK → users.id
+contact       소통 계정   │    name          캐릭터 이름   ┐ 기본정보
 role          admin/      │    hp            HP           ┘
               member/     │    application_status  신청 상태(작성중/작성완료)
               applicant   │
@@ -80,6 +80,9 @@ sessions  (express-mysql-session 로그인 세션)
 - 형식을 바꿔도 저장된 값은 그대로 두며, 새 형식에 맞지 않는 값은 다음에 캐릭터를 저장할 때 다시 입력받음
 - 항목 삭제 시 모든 캐릭터의 해당 값도 함께 삭제 (값을 남기려면 삭제 대신 '사용' 끄기)
 - **투자 포인트**: `숫자` 형식의 캐릭터 스탯은 포인트를 나눠 주는 스탯 — 값은 0 이상의 정수, 사용 중인 항목 값의 합계 ≤ `settings.stat_initial_points` (관리자 페이지에서 설정)
+- 로그인은 `users.username`(아이디, 영문·숫자·_ 4~20자, 대소문자 구분 없이 중복 불가, 변경 불가) + 비밀번호. 이메일·이름은 016 에서 삭제
+  (기존 회원 아이디 = 이메일 @ 앞부분, 짧으면 user<번호>, 겹치면 _<번호>). `contact` = 소통 계정
+- 회원가입 안내(주의문구)는 `settings.signup_notice` (마크다운)
 - 권한(`users.role`): `admin` 관리자 / `member` 멤버 / `applicant` 신청자. 가입 시 권한은 서버 설정 `SIGNUP_ROLE` (기본 `applicant`)
   - 멤버란에는 `admin`, `member` 의 캐릭터만 보임. 신청자는 프로필 1개만
   - `characters.application_status`: `draft` 작성중 / `submitted` 작성완료 (신청자만 의미, 작성완료면 수정 잠금), `submitted_at` 제출 시각

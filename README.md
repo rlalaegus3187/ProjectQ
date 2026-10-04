@@ -3,7 +3,9 @@
 Vue 3 + Node.js/Express + MySQL 로 만든 SPA 로그인 샘플입니다.
 
 - 세션 기반 로그인 (HttpOnly 쿠키, 세션은 MySQL 에 저장 → 재시작해도 로그인 유지)
-- 회원가입 / 로그인 / 로그아웃
+- **아이디 + 비밀번호 로그인** (이메일·이름 없음). 회원가입은 아이디 / 비밀번호 / 소통 계정 + 가입 안내(주의문구) 동의 — 안내는 관리 → 사이트 설정에서 작성
+  - 아이디는 바꿀 수 없음, 비밀번호·소통 계정은 마이페이지에서 변경. 관리 → 회원 관리에서 비밀번호 강제 변경
+  - 캐릭터는 가입한 뒤 마이페이지에서 작성
 - **콘텐츠 페이지**: 공지 · 세계관 · 시스템 · 캐릭터 가이드 — 내용은 DB, **관리 → 페이지 관리** 한 곳에서 마크다운으로 작성(페이지별 음악 지정 가능), 화면은 `ContentPage.vue` 하나가 표시
 - **마크다운 편집기**: 제목·굵게·기울임·취소선·목록·인용·링크·이미지 (`client/src/markdown/README.md`)
 - **Q&A 게시판**: 회원 질문·비밀글, 관리자 답변·메인 글 (마크다운 등록툴 + 이미지)
@@ -60,7 +62,9 @@ ProjectQ/
 │  │  ├─ routes/adminShop.js   /api/admin/shop (상점 관리)
 │  │  ├─ routes/adminApplicants.js  /api/admin/applicants (신청자 관리)
 │  │  ├─ routes/contents.js    /api/contents, /api/admin/contents (콘텐츠 페이지)
-│  │  ├─ routes/auth.js    /api/auth/signup, login, logout, me
+│  │  ├─ routes/auth.js    /api/auth/signup, login, logout, me, me/password
+│  │  ├─ routes/adminUsers.js  /api/admin/users (회원 관리, 비밀번호 강제 변경)
+│  │  ├─ accounts.js       아이디·비밀번호·소통 계정 검증, 회원 세션 정리
 │  │  ├─ routes/characters.js  /api/attributes, /api/characters
 │  │  ├─ routes/admin.js   /api/admin/attributes (관리자)
 │  │  ├─ routes/uploads.js /api/uploads (이미지 업로드/제공)
@@ -83,12 +87,17 @@ ProjectQ/
 
 | Method | Path | 설명 |
 |---|---|---|
-| POST | `/api/auth/signup` | `{ name, email, password, character: { name, hp, stats: {code: 값}, details: {code: 값} } }` 가입 + 캐릭터 등록 후 자동 로그인 |
-| POST | `/api/auth/login` | `{ email, password }` |
+| GET | `/api/auth/signup-info` | 회원가입 안내(주의문구, 마크다운) `{ notice }` |
+| POST | `/api/auth/signup` | `{ username, password, contact, agree: true }` 가입 후 자동 로그인 (신청자, 캐릭터는 마이페이지에서) |
+| POST | `/api/auth/login` | `{ username, password }` |
+| PUT | `/api/auth/me` | 소통 계정 수정 `{ contact }` (아이디는 변경 불가) |
+| PUT | `/api/auth/me/password` | 비밀번호 변경 `{ currentPassword, newPassword }` → 다른 기기 로그아웃 |
+| GET | `/api/admin/users?q=&role=&page=` | (관리자) 회원 목록 |
+| PUT | `/api/admin/users/:id/password` | (관리자) 비밀번호 강제 변경 `{ newPassword }` → 그 회원 로그아웃 + 알림 |
 | POST | `/api/auth/logout` | 세션 삭제 |
 | PUT | `/api/auth/me/preferences` | 계정 음악 설정 `{ musicVolume(0~100), musicEnabled }` |
 | GET | `/api/settings` | 공개 설정 `{ siteName, siteFavicon, siteMusic, qnaGuestWrite, sitePrivate }` (회원 전용 모드에서도 로그인 없이 조회 가능) (사이트 이름·파비콘, 사이트 전체 음악 영상 ID) |
-| GET | `/api/auth/me` | 현재 로그인 사용자 `{ id, email, name, role }` (401 이면 비로그인) |
+| GET | `/api/auth/me` | 현재 로그인 사용자 `{ id, username, contact, role }` (401 이면 비로그인) |
 | GET | `/api/attributes` | 현재 입력받는 항목 + 투자 포인트 `{ stats, details, statPoints }` |
 | GET | `/api/characters/me` | 내 캐릭터 (없으면 `character: null`) |
 | POST | `/api/characters` | 캐릭터 등록 `{ name, hp, stats, details }` → 대표 프로필(캐릭터 이름으로 표시) 함께 생성 (계정당 1개) |

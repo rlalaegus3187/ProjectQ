@@ -32,18 +32,18 @@ async function lockApplicants(conn, ids) {
   return rows;
 }
 
-// 목록: ?status=draft|submitted (없으면 전체), ?q= 캐릭터 이름/회원 이름/이메일
+// 목록: ?status=draft|submitted (없으면 전체), ?q= 캐릭터 이름/아이디/소통 계정
 router.get('/applicants', async (req, res) => {
   const status = ['draft', 'submitted'].includes(req.query.status) ? req.query.status : null;
   const q = String(req.query.q ?? '').trim();
   const conditions = ["u.role = 'applicant'"];
   const params = [];
   if (status) { conditions.push('c.application_status = ?'); params.push(status); }
-  if (q) { conditions.push('(c.name LIKE ? OR u.name LIKE ? OR u.email LIKE ?)'); params.push(`%${q}%`, `%${q}%`, `%${q}%`); }
+  if (q) { conditions.push('(c.name LIKE ? OR u.username LIKE ? OR u.contact LIKE ?)'); params.push(`%${q}%`, `%${q}%`, `%${q}%`); }
 
   const [rows] = await pool.query(
     `SELECT c.id, c.name, c.application_status, c.submitted_at, c.created_at, c.updated_at,
-            u.id AS user_id, u.name AS user_name, u.email,
+            u.id AS user_id, u.username, u.contact,
             (SELECT d.value
                FROM character_details d
                JOIN attribute_definitions ad ON ad.id = d.definition_id
@@ -75,7 +75,7 @@ router.get('/applicants', async (req, res) => {
       submittedAt: r.submitted_at,
       createdAt: r.created_at,
       updatedAt: r.updated_at,
-      user: { id: r.user_id, name: r.user_name, email: r.email },
+      user: { id: r.user_id, username: r.username, contact: r.contact },
     })),
     counts: {
       total: Number(counts.total),

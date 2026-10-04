@@ -246,7 +246,7 @@ async function getItemLogs(characterId, { itemId = null, limit = 20 } = {}, conn
   params.push(Math.min(Math.max(Number(limit) || 20, 1), 100));
   const [rows] = await conn.query(
     `SELECT l.id, l.item_id, i.name, i.small_image, l.amount, l.quantity_after, l.source, l.memo, l.created_at,
-            u.name AS actor_name
+            u.username AS actor_name
        FROM item_logs l
        JOIN items i ON i.id = l.item_id
        LEFT JOIN users u ON u.id = l.actor_user_id

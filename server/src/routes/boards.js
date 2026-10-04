@@ -124,7 +124,7 @@ function toListItem(row, viewer, verified) {
 async function findPost(boardKey, id) {
   const [rows] = await pool.execute(
     `SELECT p.id, p.board, p.user_id, p.guest_name, p.password_hash, p.title, p.body, p.is_hidden, p.is_pinned,
-            p.created_at, p.updated_at, u.name AS author
+            p.created_at, p.updated_at, u.username AS author
        FROM posts p LEFT JOIN users u ON u.id = p.user_id
       WHERE p.board = ? AND p.id = ?`,
     [boardKey, Number(id)],
@@ -133,7 +133,7 @@ async function findPost(boardKey, id) {
   return rows[0];
 }
 
-const LIST_COLUMNS = `p.id, p.user_id, p.guest_name, p.password_hash, p.title, p.is_hidden, p.is_pinned, p.created_at, u.name AS author,
+const LIST_COLUMNS = `p.id, p.user_id, p.guest_name, p.password_hash, p.title, p.is_hidden, p.is_pinned, p.created_at, u.username AS author,
   (SELECT COUNT(*) FROM post_replies r WHERE r.post_id = p.id) AS reply_count`;
 
 // 글쓰기 가능 여부: { canWrite, guestWrite(비회원으로 쓰는지) }
@@ -203,7 +203,7 @@ router.get('/:board/posts/:id', async (req, res) => {
   let replies = [];
   if (board.key === 'qna') {
     const [rows] = await pool.execute(
-      `SELECT r.id, r.body, r.created_at, r.updated_at, u.name AS author
+      `SELECT r.id, r.body, r.created_at, r.updated_at, u.username AS author
          FROM post_replies r JOIN users u ON u.id = r.user_id
         WHERE r.post_id = ? ORDER BY r.id`,
       [post.id],

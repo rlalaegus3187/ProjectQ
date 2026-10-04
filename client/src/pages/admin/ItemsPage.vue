@@ -194,14 +194,14 @@ onMounted(() => Promise.all([loadItems(), search()]).catch((e) => { error.value 
   <section class="card">
     <h2>캐릭터 인벤토리 (지급 / 회수)</h2>
     <form class="add-row" @submit.prevent="search">
-      <input v-model="query" placeholder="캐릭터 이름, 회원 이름, 이메일로 검색" />
+      <input v-model="query" placeholder="캐릭터 이름, 아이디, 소통 계정으로 검색" />
       <button type="submit" class="secondary">검색</button>
     </form>
     <ul class="post-list char-results">
       <li v-for="c in results" :key="c.id">
         <button type="button" class="post-link" :class="{ selected: target?.id === c.id }" @click="selectTarget(c)">
           <span class="post-title"><strong>{{ c.name }}</strong></span>
-          <span class="post-meta">{{ c.userName }} · {{ c.email }}</span>
+          <span class="post-meta">{{ c.username }}<template v-if="c.contact"> · {{ c.contact }}</template></span>
         </button>
       </li>
     </ul>

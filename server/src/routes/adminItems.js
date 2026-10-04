@@ -50,17 +50,17 @@ router.delete('/items/:id', async (req, res) => {
   res.status(204).end();
 });
 
-// 캐릭터 검색 (캐릭터 이름 / 회원 이름 / 이메일)
+// 캐릭터 검색 (캐릭터 이름 / 회원 아이디 / 소통 계정)
 router.get('/characters', async (req, res) => {
   const q = `%${String(req.query.q ?? '').trim()}%`;
   const [rows] = await pool.query(
-    `SELECT c.id, c.name, u.name AS user_name, u.email
+    `SELECT c.id, c.name, u.username, u.contact
        FROM characters c JOIN users u ON u.id = c.user_id
-      WHERE c.name LIKE ? OR u.name LIKE ? OR u.email LIKE ?
+      WHERE c.name LIKE ? OR u.username LIKE ? OR u.contact LIKE ?
       ORDER BY c.id DESC LIMIT 20`,
     [q, q, q],
   );
-  res.json({ characters: rows.map((r) => ({ id: r.id, name: r.name, userName: r.user_name, email: r.email })) });
+  res.json({ characters: rows.map((r) => ({ id: r.id, name: r.name, username: r.username, contact: r.contact })) });
 });
 
 // 인벤토리 + 아이템 습득/사용 기록 + 소지금 + 최근 소지금 내역

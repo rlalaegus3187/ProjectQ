@@ -1,11 +1,12 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue';
 import { api } from '../../api';
-import { auth, roleLabel, APPLICATION_LABELS } from '../../auth';
+import { auth, APPLICATION_LABELS } from '../../auth';
 import { fetchAttributes, toCharacterForm } from '../../character';
 import CharacterCard from '../../components/CharacterCard.vue';
 import CharacterForm from '../../components/CharacterForm.vue';
 import ProfileSection from '../../components/ProfileSection.vue';
+import AccountSection from '../../components/AccountSection.vue';
 import { formatMoney } from '../../items';
 
 const character = ref(null);
@@ -66,15 +67,7 @@ onMounted(() => load().catch((e) => { error.value = e.message; loaded.value = tr
 </script>
 
 <template>
-  <section class="card">
-    <h1>마이페이지</h1>
-    <dl class="kv">
-      <dt>이름</dt><dd>{{ auth.user.name }}</dd>
-      <dt>이메일</dt><dd>{{ auth.user.email }}</dd>
-      <dt>권한</dt>
-      <dd><span class="badge" :class="auth.user.role">{{ roleLabel(auth.user.role) }}</span></dd>
-    </dl>
-  </section>
+  <AccountSection />
 
   <!-- 신청자: 신청 상태 -->
   <section v-if="isApplicant && loaded" class="card application-panel">

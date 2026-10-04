@@ -4,9 +4,11 @@ const pool = require('../db');
 const { hashPassword, verifyPassword } = require('../password');
 const requireAuth = require('../middleware/requireAuth');
 const config = require('../config');
+const { HttpError } = require('../errors');
+const { getSetting } = require('../settings');
 const {
-  getDefinitions, getStatPoints, validateCharacterInput, validateProfileInput, DEFAULT_PROFILE_NAME, createCharacter, withTransaction,
-} = require('../characters');
+  parseUsername, parseNewPassword, parseContact, destroyUserSessions,
+} = require('../accounts');
 
 const router = express.Router();
 
@@ -19,15 +21,13 @@ const authLimiter = rateLimit({
   message: { message: '요청이 너무 많습니다. 잠시 후 다시 시도해주세요.' },
 });
 
-const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-
-const USER_COLUMNS = 'id, email, name, role, music_volume, music_enabled, created_at';
+const USER_COLUMNS = 'id, username, contact, role, music_volume, music_enabled, created_at';
 
 function toPublicUser(row) {
   return {
     id: row.id,
-    email: row.email,
-    name: row.name,
+    username: row.username,   // 로그인 아이디 (화면 표시 이름으로도 사용)
+    contact: row.contact,     // 소통 계정
     role: row.role,
     // 계정별 음악 설정 (음악 모듈이 사용)
     musicVolume: row.music_volume,
@@ -35,6 +35,8 @@ function toPublicUser(row) {
     createdAt: row.created_at,
   };
 }
+
+const findUser = async (id) => (await pool.execute(`SELECT ${USER_COLUMNS} FROM users WHERE id = ?`, [id]))[0][0];
 
 // 세션 고정(session fixation) 공격 방지를 위해 로그인 시 세션 ID 를 새로 발급
 function startSession(req, userId) {
@@ -47,58 +49,47 @@ function startSession(req, userId) {
   });
 }
 
+// 회원가입 안내(주의문구) — 관리 → 사이트 설정에서 작성 (마크다운). 회원 전용 모드에서도 로그인 없이 조회
+router.get('/signup-info', async (req, res) => {
+  res.json({ notice: (await getSetting('signup_notice')) || '' });
+});
+
+// 회원가입: { username, password, contact, agree: true } — 캐릭터는 가입 후 마이페이지에서 작성
 router.post('/signup', authLimiter, async (req, res) => {
-  const email = String(req.body?.email || '').trim().toLowerCase();
-  const name = String(req.body?.name || '').trim();
-  const password = String(req.body?.password || '');
-
-  if (!EMAIL_RE.test(email)) return res.status(400).json({ message: '이메일 형식이 올바르지 않습니다.' });
-  if (!name || name.length > 50) return res.status(400).json({ message: '이름은 1~50자로 입력해주세요.' });
-  if (password.length < 8) return res.status(400).json({ message: '비밀번호는 8자 이상이어야 합니다.' });
-
-  // 가입과 동시에 캐릭터 1개 등록 (계정·캐릭터를 한 트랜잭션으로 저장)
-  const defs = await getDefinitions();
-  const character = validateCharacterInput(req.body?.character, defs, await getStatPoints());
-  // 대표 프로필: { details } (이름은 쓰지 않음 — 캐릭터 이름으로 표시)
-  const profile = validateProfileInput(
-    { details: req.body?.character?.details, music: req.body?.character?.music },
-    defs,
-    { defaultName: DEFAULT_PROFILE_NAME },
-  );
+  if (req.body?.agree !== true) throw new HttpError(400, '가입 안내에 동의해야 가입할 수 있습니다.');
+  const username = parseUsername(req.body?.username);
+  const password = parseNewPassword(req.body?.password);
+  const contact = parseContact(req.body?.contact);
   const passwordHash = await hashPassword(password);
 
   let userId;
   try {
-    userId = await withTransaction(async (conn) => {
-      const [result] = await conn.execute(
-        'INSERT INTO users (email, name, role, password_hash) VALUES (?, ?, ?, ?)',
-        [email, name, config.signupRole, passwordHash],
-      );
-      await createCharacter(conn, result.insertId, character, profile);
-      return result.insertId;
-    });
+    const [result] = await pool.execute(
+      'INSERT INTO users (username, contact, role, password_hash) VALUES (?, ?, ?, ?)',
+      [username, contact, config.signupRole, passwordHash],
+    );
+    userId = result.insertId;
   } catch (err) {
-    if (err.code === 'ER_DUP_ENTRY') return res.status(409).json({ message: '이미 가입된 이메일입니다.' });
+    if (err.code === 'ER_DUP_ENTRY') throw new HttpError(409, '이미 사용 중인 아이디입니다.');
     throw err;
   }
 
   await startSession(req, userId);
-  const [rows] = await pool.execute(`SELECT ${USER_COLUMNS} FROM users WHERE id = ?`, [userId]);
-  res.status(201).json({ user: toPublicUser(rows[0]) });
+  res.status(201).json({ user: toPublicUser(await findUser(userId)) });
 });
 
 router.post('/login', authLimiter, async (req, res) => {
-  const email = String(req.body?.email || '').trim().toLowerCase();
+  const username = String(req.body?.username || '').trim();
   const password = String(req.body?.password || '');
 
   const [rows] = await pool.execute(
-    `SELECT ${USER_COLUMNS}, password_hash FROM users WHERE email = ?`,
-    [email],
+    `SELECT ${USER_COLUMNS}, password_hash FROM users WHERE username = ?`,
+    [username],
   );
   const user = rows[0];
-  // 이메일 존재 여부를 노출하지 않도록 같은 메시지 사용
+  // 아이디 존재 여부를 노출하지 않도록 같은 메시지 사용
   if (!user || !(await verifyPassword(password, user.password_hash))) {
-    return res.status(401).json({ message: '이메일 또는 비밀번호가 올바르지 않습니다.' });
+    return res.status(401).json({ message: '아이디 또는 비밀번호가 올바르지 않습니다.' });
   }
 
   await startSession(req, user.id);
@@ -115,12 +106,31 @@ router.post('/logout', (req, res, next) => {
 });
 
 router.get('/me', requireAuth, async (req, res) => {
-  const [rows] = await pool.execute(`SELECT ${USER_COLUMNS} FROM users WHERE id = ?`, [req.session.userId]);
-  if (!rows[0]) {
+  const user = await findUser(req.session.userId);
+  if (!user) {
     req.session.destroy(() => {});
     return res.status(401).json({ message: '로그인이 필요합니다.' });
   }
-  res.json({ user: toPublicUser(rows[0]) });
+  res.json({ user: toPublicUser(user) });
+});
+
+// 내 정보 수정: { contact } (아이디는 바꿀 수 없음)
+router.put('/me', requireAuth, async (req, res) => {
+  const contact = parseContact(req.body?.contact);
+  await pool.execute('UPDATE users SET contact = ? WHERE id = ?', [contact, req.session.userId]);
+  res.json({ user: toPublicUser(await findUser(req.session.userId)) });
+});
+
+// 비밀번호 변경: { currentPassword, newPassword } → 다른 기기의 로그인은 끊김
+router.put('/me/password', authLimiter, requireAuth, async (req, res) => {
+  const [rows] = await pool.execute('SELECT password_hash FROM users WHERE id = ?', [req.session.userId]);
+  if (!rows[0] || !(await verifyPassword(String(req.body?.currentPassword ?? ''), rows[0].password_hash))) {
+    throw new HttpError(400, '현재 비밀번호가 올바르지 않습니다.');
+  }
+  const newPassword = parseNewPassword(req.body?.newPassword, '새 비밀번호');
+  await pool.execute('UPDATE users SET password_hash = ? WHERE id = ?', [await hashPassword(newPassword), req.session.userId]);
+  await destroyUserSessions(req.session.userId, req.sessionID);
+  res.status(204).end();
 });
 
 // 계정별 음악 설정 저장: { musicVolume?: 0~100, musicEnabled?: boolean }
@@ -135,8 +145,7 @@ router.put('/me/preferences', requireAuth, async (req, res) => {
   if (req.body?.musicEnabled !== undefined) { updates.push('music_enabled = ?'); params.push(req.body.musicEnabled ? 1 : 0); }
   if (!updates.length) return res.status(400).json({ message: '변경할 내용이 없습니다.' });
   await pool.execute(`UPDATE users SET ${updates.join(', ')} WHERE id = ?`, [...params, req.session.userId]);
-  const [rows] = await pool.execute(`SELECT ${USER_COLUMNS} FROM users WHERE id = ?`, [req.session.userId]);
-  res.json({ user: toPublicUser(rows[0]) });
+  res.json({ user: toPublicUser(await findUser(req.session.userId)) });
 });
 
 module.exports = router;

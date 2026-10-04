@@ -20,15 +20,27 @@ export async function loadUser() {
   return auth.user;
 }
 
-export async function login(email, password) {
-  const { user } = await api('/auth/login', { method: 'POST', body: { email, password } });
+// 아이디 + 비밀번호로 로그인
+export async function login(username, password) {
+  const { user } = await api('/auth/login', { method: 'POST', body: { username, password } });
   auth.user = user;
 }
 
-// 회원가입 + 캐릭터 등록을 한 번에: { name, email, password, character: { name, hp, stats, details } }
+// 회원가입: { username, password, contact(소통 계정), agree(가입 안내 동의) } — 캐릭터는 가입 후 마이페이지에서
 export async function signup(payload) {
   const { user } = await api('/auth/signup', { method: 'POST', body: payload });
   auth.user = user;
+}
+
+// 소통 계정 수정 (아이디는 바꿀 수 없음)
+export async function updateContact(contact) {
+  const { user } = await api('/auth/me', { method: 'PUT', body: { contact } });
+  auth.user = user;
+}
+
+// 비밀번호 변경 → 다른 기기의 로그인은 끊김
+export async function changePassword(currentPassword, newPassword) {
+  await api('/auth/me/password', { method: 'PUT', body: { currentPassword, newPassword } });
 }
 
 export const isAdmin = () => auth.user?.role === 'admin';

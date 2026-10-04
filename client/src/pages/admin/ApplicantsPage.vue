@@ -138,7 +138,7 @@ onMounted(load);
     </div>
 
     <form class="add-row" @submit.prevent="load">
-      <input v-model="q" type="search" placeholder="캐릭터 이름 / 회원 이름 / 이메일" />
+      <input v-model="q" type="search" placeholder="캐릭터 이름 / 아이디 / 소통 계정" />
       <button type="submit" class="secondary">검색</button>
     </form>
 
@@ -175,7 +175,7 @@ onMounted(load);
             </td>
             <td><button type="button" class="link-button" @click="view(a)">{{ a.name }}</button></td>
             <td><span class="badge" :class="a.applicationStatus">{{ APPLICATION_LABELS[a.applicationStatus] }}</span></td>
-            <td>{{ a.user.name }} <span class="muted">{{ a.user.email }}</span></td>
+            <td>{{ a.user.username }} <span class="muted">{{ a.user.contact }}</span></td>
             <td>{{ a.submittedAt ? formatDate(a.submittedAt) : '-' }}</td>
             <td>{{ formatDate(a.updatedAt) }}</td>
           </tr>

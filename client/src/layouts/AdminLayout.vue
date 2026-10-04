@@ -3,6 +3,7 @@
 // router.js 에서 /admin 아래 자식 라우트로 등록 → 메뉴는 그대로, 내용만 교체
 const ADMIN_MENU = [
   { to: '/admin/applicants', label: '신청자 관리' },
+  { to: '/admin/users', label: '회원 관리' },
   { to: '/admin/contents', label: '페이지 관리' },
   { to: '/admin/attributes', label: '캐릭터 항목 관리' },
   { to: '/admin/items', label: '아이템 관리' },
