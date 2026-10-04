@@ -8,6 +8,8 @@ import ImageField from '../../components/ImageField.vue';
 import ModalDialog from '../../components/ModalDialog.vue';
 import MoneyLogList from '../../components/MoneyLogList.vue';
 import ItemLogList from '../../components/ItemLogList.vue';
+import BulkBar from '../../components/BulkBar.vue';
+import { useSelection } from '../../selection';
 import { formatMoney } from '../../items';
 
 const items = ref([]);
@@ -84,6 +86,34 @@ async function removeItem(item) {
   } catch (e) {
     error.value = e.message;
   }
+}
+
+// ---------- 일괄 처리 (체크한 아이템) ----------
+const sel = useSelection(() => items.value);
+
+async function bulk(fn, text) {
+  error.value = '';
+  try {
+    await fn();
+    sel.clear();
+    flash(text);
+    await loadItems();
+    if (target.value) await loadTargetInventory();
+  } catch (e) {
+    error.value = e.message;
+  }
+}
+
+const bulkFlag = (patch, text) => {
+  const ids = sel.ids.value;
+  return bulk(() => api('/admin/items/bulk', { method: 'PATCH', body: { ids, ...patch } }), `${ids.length}개 아이템: ${text}`);
+};
+
+function bulkRemove() {
+  const chosen = items.value.filter((i) => sel.has(i.id));
+  const owners = chosen.reduce((n, i) => n + i.ownerCount, 0);
+  if (!confirm(`${chosen.length}개 아이템을 삭제할까요?\n${chosen.map((i) => i.name).join(', ')}${owners ? `\n\n보유 중인 인벤토리(${owners}건)와 상점에서도 사라집니다.` : ''}\n되돌릴 수 없습니다.`)) return;
+  return bulk(() => api('/admin/items/bulk-delete', { method: 'POST', body: { ids: chosen.map((i) => i.id) } }), `${chosen.length}개 아이템을 삭제했습니다.`);
 }
 
 // ---------- 지급 / 회수 ----------
@@ -169,11 +199,24 @@ onMounted(() => Promise.all([loadItems(), search()]).catch((e) => { error.value 
     <p v-if="message" class="ok">{{ message }}</p>
 
     <p v-if="!items.length" class="muted">등록된 아이템이 없습니다.</p>
-    <div v-else class="table-wrap">
+    <BulkBar v-if="items.length" :count="sel.ids.value.length" @clear="sel.clear()">
+      <button type="button" class="secondary" :disabled="!sel.ids.value.length" @click="bulkFlag({ isBound: true }, '귀속으로')">귀속으로</button>
+      <button type="button" class="secondary" :disabled="!sel.ids.value.length" @click="bulkFlag({ isBound: false }, '귀속 해제')">귀속 해제</button>
+      <button type="button" class="secondary" :disabled="!sel.ids.value.length" @click="bulkFlag({ isSellable: true }, '판매 가능')">판매 가능</button>
+      <button type="button" class="secondary" :disabled="!sel.ids.value.length" @click="bulkFlag({ isSellable: false }, '판매 불가')">판매 불가</button>
+      <button type="button" class="danger" :disabled="!sel.ids.value.length" @click="bulkRemove">선택 삭제</button>
+    </BulkBar>
+    <div v-if="items.length" class="table-wrap">
       <table class="table">
-        <thead><tr><th>uid</th><th></th><th>이름</th><th>효과</th><th>귀속</th><th>판매</th><th>보유</th><th></th></tr></thead>
+        <thead>
+          <tr>
+            <th class="check"><input type="checkbox" aria-label="전체 선택" :checked="sel.allChecked.value" :indeterminate="sel.someChecked.value" @change="sel.toggleAll()" /></th>
+            <th>uid</th><th></th><th>이름</th><th>효과</th><th>귀속</th><th>판매</th><th>보유</th><th></th>
+          </tr>
+        </thead>
         <tbody>
-          <tr v-for="item in items" :key="item.id">
+          <tr v-for="item in items" :key="item.id" :class="{ checked: sel.has(item.id) }">
+            <td class="check"><input type="checkbox" :aria-label="`${item.name} 선택`" :checked="sel.has(item.id)" @change="sel.toggle(item.id)" /></td>
             <td>{{ item.id }}</td>
             <td><img v-if="item.smallImage" :src="item.smallImage" :alt="item.name" class="item-icon" /></td>
             <td class="title-cell">{{ item.name }}</td>

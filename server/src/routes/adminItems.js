@@ -8,6 +8,7 @@ const {
 } = require('../inventory');
 const { getMoney, changeMoney, getMoneyLogs } = require('../money');
 const { notify } = require('../notify');
+const { parseIds, pickFlags } = require('../bulk');
 
 const router = express.Router();
 router.use(requireAdmin);
@@ -30,6 +31,21 @@ router.post('/items', async (req, res) => {
     [d.name, d.description, d.smallImage, d.largeImage, d.effect, d.effectValues, d.isBound, d.isSellable],
   );
   res.status(201).json({ item: await getItem(result.insertId) });
+});
+
+// 일괄 변경: { ids, isBound?, isSellable? }
+router.patch('/items/bulk', async (req, res) => {
+  const ids = parseIds(req.body?.ids, { label: '아이템을' });
+  const { sets, params } = pickFlags(req.body, { isBound: 'is_bound', isSellable: 'is_sellable' });
+  const [result] = await pool.query(`UPDATE items SET ${sets.join(', ')} WHERE id IN (?)`, [...params, ids]);
+  res.json({ updated: result.affectedRows });
+});
+
+// 일괄 삭제: { ids } — 인벤토리·상점에서도 사라짐 (FK CASCADE)
+router.post('/items/bulk-delete', async (req, res) => {
+  const ids = parseIds(req.body?.ids, { label: '아이템을' });
+  const [result] = await pool.query('DELETE FROM items WHERE id IN (?)', [ids]);
+  res.json({ deleted: result.affectedRows });
 });
 
 router.put('/items/:id', async (req, res) => {

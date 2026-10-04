@@ -24,6 +24,7 @@ Vue 3 + Node.js/Express + MySQL 로 만든 SPA 로그인 샘플입니다.
 - **캐릭터 프로필 여러 개** (최대 10) — 프로필 양식 값만 프로필마다 따로, 대표 프로필 지정 (스탯·인벤토리는 캐릭터에 하나)
 - **권한 3단계: 관리자 / 멤버 / 신청자** — 가입하면 신청자(프로필 1개, 멤버란에 안 보임). 신청자는 마이페이지에서 신청서를 `작성중 ↔ 작성완료` 로 바꾸고(작성완료면 수정 잠금),
   관리자는 `관리 → 신청자 관리`에서 신청 프로필을 보고 **체크해서 한꺼번에 멤버로 전환**(신청 프로필이 대표 프로필, 멤버란 공개, 알림) 또는 **한꺼번에 삭제**
+- **관리 페이지**: 왼쪽 메뉴(그룹별)에서 고르면 오른쪽에 내용 (SPA, 좁은 화면에선 위쪽 가로 메뉴). 목록 화면(캐릭터 스탯·프로필 양식, 아이템, 상점)은 **체크박스로 전체/일부 선택 → 일괄 처리** (선택 저장, 사용·필수·귀속·판매 켜기/끄기, 선택 삭제 — 한 번에 하나라도 틀리면 전부 취소)
 - 관리자는 `관리 → 캐릭터 항목 관리`(`/admin/attributes`) 에서 캐릭터 스탯·프로필 양식 항목을 추가/수정/삭제
 - 항목 형식: 숫자, 짧은 텍스트, 긴 텍스트(마크다운 편집기), 링크, 이미지(업로드), 드롭다운
 - **스탯 투자 포인트**: 관리자가 초기 투자 포인트를 정하고, 캐릭터는 숫자형 스탯에 포인트를 나눠 투자 (합계 ≤ 전체 포인트)
@@ -119,6 +120,10 @@ ProjectQ/
 | GET | `/api/admin/applicants/:id` | (관리자) 신청자 캐릭터·프로필 보기 |
 | POST | `/api/admin/applicants/accept` | (관리자) `{ characterIds: [...] }` 한꺼번에 멤버로 전환 (신청 프로필 → 대표 프로필, 알림) |
 | POST | `/api/admin/applicants/delete` | (관리자) `{ characterIds: [...] }` 한꺼번에 캐릭터+프로필 삭제 (계정은 남음, 신청자만 처리) |
+| PUT/PATCH | `/api/admin/attributes/bulk` | (관리자) 일괄 저장 `{ items: [{ id, label, valueType, ... }] }` / 사용·필수 일괄 변경 `{ ids, isActive?, isRequired? }` |
+| POST | `/api/admin/attributes/bulk-delete`, `/api/admin/items/bulk-delete`, `/api/admin/shop/bulk-delete` | (관리자) 일괄 삭제 `{ ids }` |
+| PATCH | `/api/admin/items/bulk` | (관리자) `{ ids, isBound?, isSellable? }` |
+| PUT/PATCH | `/api/admin/shop/bulk` | (관리자) 일괄 저장 `{ items: [{ id, price, stock, isActive, sortOrder }] }` / 판매 켜기·끄기 `{ ids, isActive }` |
 | GET | `/api/admin/themes` | (관리자) CSS 테마 목록 `{ themes: [{ id, name, description, author, css, preview }], active }` — 적용은 settings 의 `siteTheme` |
 | GET/PUT | `/api/admin/settings` | (관리자) `{ statPoints, siteName, siteFavicon(업로드한 이미지 경로 — ico/png 등, 빈 값=없음), qnaGuestWrite(Q&A 비회원 글쓰기), sitePrivate(회원 전용), signupOpen(회원가입 허용), siteMusic(유튜브 링크, 빈 값=끔) }` 조회/변경 (보낸 값만) |
 | GET | `/api/admin/attributes` | (관리자) 전체 항목, 비활성 포함 |

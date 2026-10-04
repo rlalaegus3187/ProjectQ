@@ -10,6 +10,7 @@ const {
 } = require('../settings');
 const { parseYouTubeId } = require('../youtube');
 const { listThemes, findTheme } = require('../themes');
+const { parseIds, parseRows, pickFlags } = require('../bulk');
 
 const router = express.Router();
 router.use(requireAdmin);
@@ -140,12 +141,11 @@ router.post('/attributes', async (req, res) => {
 
 // 항목 수정 (code/분류는 변경 불가, 형식은 변경 가능)
 // 형식을 바꿔도 이미 저장된 값은 그대로 두고, 새 형식에 맞지 않으면 다음 저장 때 다시 입력받음
-router.patch('/attributes/:id', async (req, res) => {
-  const id = Number(req.params.id);
-  const [rows] = await pool.execute('SELECT value_type, options FROM attribute_definitions WHERE id = ?', [id]);
+// 항목 하나 수정 (conn: 트랜잭션 커넥션 또는 pool) — 단건/일괄 저장 공용
+async function patchAttribute(conn, id, body = {}) {
+  const [rows] = await conn.execute('SELECT value_type, options FROM attribute_definitions WHERE id = ?', [id]);
   if (!rows[0]) throw new HttpError(404, '항목을 찾을 수 없습니다.');
 
-  const body = req.body || {};
   const updates = [];
   const params = [];
   if (body.label !== undefined) { updates.push('label = ?'); params.push(parseLabel(body.label)); }
@@ -163,8 +163,48 @@ router.patch('/attributes/:id', async (req, res) => {
     params.push(valueType, options && JSON.stringify(options));
   }
   if (!updates.length) throw new HttpError(400, '변경할 내용이 없습니다.');
+  await conn.execute(`UPDATE attribute_definitions SET ${updates.join(', ')} WHERE id = ?`, [...params, id]);
+}
 
-  await pool.execute(`UPDATE attribute_definitions SET ${updates.join(', ')} WHERE id = ?`, [...params, id]);
+// ---------- 일괄 처리 (체크한 항목) — /:id 보다 먼저 등록 ----------
+// 일괄 저장: { items: [{ id, label, valueType, options?, isRequired, sortOrder, isActive }] } — 하나라도 틀리면 전부 취소
+router.put('/attributes/bulk', async (req, res) => {
+  const items = parseRows(req.body?.items);
+  await withTransaction(async (conn) => {
+    for (const item of items) {
+      try {
+        await patchAttribute(conn, item.id, item);
+      } catch (err) {
+        if (err.expose) err.message = `[${String(item.label ?? '').trim() || `#${item.id}`}] ${err.message}`;
+        throw err;
+      }
+    }
+  });
+  res.json({ updated: items.length });
+});
+
+// 사용/필수 일괄 변경: { ids, isActive?, isRequired? }
+router.patch('/attributes/bulk', async (req, res) => {
+  const ids = parseIds(req.body?.ids);
+  const { sets, params } = pickFlags(req.body, { isActive: 'is_active', isRequired: 'is_required' });
+  const [result] = await pool.query(`UPDATE attribute_definitions SET ${sets.join(', ')} WHERE id IN (?)`, [...params, ids]);
+  res.json({ updated: result.affectedRows });
+});
+
+// 일괄 삭제: { ids } — 저장된 값도 함께 삭제
+router.post('/attributes/bulk-delete', async (req, res) => {
+  const ids = parseIds(req.body?.ids);
+  const result = await withTransaction(async (conn) => {
+    const [stats] = await conn.query('DELETE FROM character_stats WHERE definition_id IN (?)', [ids]);
+    const [details] = await conn.query('DELETE FROM character_details WHERE definition_id IN (?)', [ids]);
+    const [defs] = await conn.query('DELETE FROM attribute_definitions WHERE id IN (?)', [ids]);
+    return { deleted: defs.affectedRows, deletedValues: stats.affectedRows + details.affectedRows };
+  });
+  res.json(result);
+});
+
+router.patch('/attributes/:id', async (req, res) => {
+  await patchAttribute(pool, Number(req.params.id), req.body || {});
   res.status(204).end();
 });
 

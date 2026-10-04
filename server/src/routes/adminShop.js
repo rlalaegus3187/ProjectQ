@@ -2,9 +2,10 @@
 const express = require('express');
 const pool = require('../db');
 const requireAdmin = require('../middleware/requireAdmin');
-const { HttpError } = require('../characters');
+const { HttpError, withTransaction } = require('../characters');
 const { toItem, ITEM_COLUMNS } = require('../inventory');
 const { MAX_MONEY } = require('../money');
+const { parseIds, parseRows, pickFlags } = require('../bulk');
 
 const router = express.Router();
 router.use(requireAdmin);
@@ -60,6 +61,37 @@ router.post('/shop', async (req, res) => {
     if (err.code === 'ER_DUP_ENTRY') throw new HttpError(409, `'${items[0].name}' 은(는) 이미 상점에 있습니다.`);
     throw err;
   }
+});
+
+// ---------- 일괄 처리 (/:id 보다 먼저) ----------
+// 일괄 저장: { items: [{ id, price, stock, isActive, sortOrder }] } — 하나라도 틀리면 전부 취소
+router.put('/shop/bulk', async (req, res) => {
+  const rows = parseRows(req.body?.items);
+  await withTransaction(async (conn) => {
+    for (const row of rows) {
+      const d = parseListing(row);
+      await conn.execute(
+        'UPDATE shop_items SET price = ?, stock = ?, is_active = ?, sort_order = ? WHERE id = ?',
+        [d.price, d.stock, d.isActive, d.sortOrder, row.id],
+      );
+    }
+  });
+  res.json({ updated: rows.length });
+});
+
+// 판매 켜기/끄기: { ids, isActive }
+router.patch('/shop/bulk', async (req, res) => {
+  const ids = parseIds(req.body?.ids, { label: '상품을' });
+  const { sets, params } = pickFlags(req.body, { isActive: 'is_active' });
+  const [result] = await pool.query(`UPDATE shop_items SET ${sets.join(', ')} WHERE id IN (?)`, [...params, ids]);
+  res.json({ updated: result.affectedRows });
+});
+
+// 일괄 내리기: { ids } (아이템 자체와 이미 산 아이템은 그대로)
+router.post('/shop/bulk-delete', async (req, res) => {
+  const ids = parseIds(req.body?.ids, { label: '상품을' });
+  const [result] = await pool.query('DELETE FROM shop_items WHERE id IN (?)', [ids]);
+  res.json({ deleted: result.affectedRows });
 });
 
 // 상품 수정: { price, stock, isActive, sortOrder }

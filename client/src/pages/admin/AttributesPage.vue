@@ -2,6 +2,8 @@
 import { ref, reactive, onMounted } from 'vue';
 import { api } from '../../api';
 import { VALUE_TYPES } from '../../character';
+import { useSelection } from '../../selection';
+import BulkBar from '../../components/BulkBar.vue';
 
 const CATEGORIES = [
   { key: 'stats', category: 'stat', title: '캐릭터 스탯', defaultType: 'number' },
@@ -97,6 +99,47 @@ function save(item) {
   return run(() => api(`/admin/attributes/${item.id}`, { method: 'PATCH', body }), `'${d.label}' 저장했습니다.`);
 }
 
+// ---------- 일괄 처리 (체크한 항목) ----------
+const sels = {
+  stats: useSelection(() => lists.value.stats),
+  details: useSelection(() => lists.value.details),
+};
+const selectedItems = (c) => lists.value[c.key].filter((item) => sels[c.key].has(item.id));
+
+// 체크한 항목의 입력칸(이름·형식·필수·순서·사용) 내용을 한꺼번에 저장
+function bulkSave(c) {
+  const items = selectedItems(c);
+  const typeChanged = items.filter((item) => drafts[item.id].valueType !== item.valueType);
+  if (typeChanged.length && !confirm(`${typeChanged.map((i) => `'${i.label}'`).join(', ')} 의 형식이 바뀝니다.\n이미 입력된 값이 새 형식에 맞지 않을 수 있습니다. 저장할까요?`)) return;
+  const body = items.map((item) => {
+    const d = drafts[item.id];
+    const row = { id: item.id, label: d.label, valueType: d.valueType, isRequired: d.isRequired, sortOrder: Number(d.sortOrder), isActive: d.isActive };
+    if (d.valueType === 'select') row.options = d.optionsText;
+    return row;
+  });
+  return run(async () => {
+    await api('/admin/attributes/bulk', { method: 'PUT', body: { items: body } });
+    sels[c.key].clear();
+  }, `${items.length}개 항목을 저장했습니다.`);
+}
+
+// 사용/필수 켜기·끄기
+function bulkFlag(c, patch, text) {
+  const ids = sels[c.key].ids.value;
+  return run(() => api('/admin/attributes/bulk', { method: 'PATCH', body: { ids, ...patch } }), `${ids.length}개 항목: ${text}`);
+}
+
+function bulkRemove(c) {
+  const items = selectedItems(c);
+  if (!confirm(`${items.length}개 항목을 삭제할까요?\n${items.map((i) => i.label).join(', ')}\n\n모든 캐릭터에 입력된 값도 함께 삭제되며 되돌릴 수 없습니다. (값을 남기려면 '사용 끄기')`)) return;
+  return run(async () => {
+    const { deleted, deletedValues } = await api('/admin/attributes/bulk-delete', { method: 'POST', body: { ids: items.map((i) => i.id) } });
+    for (const item of items) delete drafts[item.id];
+    sels[c.key].clear();
+    return `${deleted}개 항목을 삭제했습니다. (저장된 값 ${deletedValues}개 함께 삭제)`;
+  });
+}
+
 function saveStatPoints() {
   return run(
     () => api('/admin/settings', { method: 'PUT', body: { statPoints: statPointsDraft.value } }),
@@ -141,15 +184,31 @@ onMounted(() => load().catch((e) => { error.value = e.message; }));
       </p>
     </form>
 
+    <BulkBar v-if="lists[c.key].length" :count="sels[c.key].ids.value.length" @clear="sels[c.key].clear()">
+      <button type="button" :disabled="!sels[c.key].ids.value.length" @click="bulkSave(c)">선택 저장</button>
+      <button type="button" class="secondary" :disabled="!sels[c.key].ids.value.length" @click="bulkFlag(c, { isActive: true }, '사용 켬')">사용 켜기</button>
+      <button type="button" class="secondary" :disabled="!sels[c.key].ids.value.length" @click="bulkFlag(c, { isActive: false }, '사용 끔')">사용 끄기</button>
+      <button type="button" class="secondary" :disabled="!sels[c.key].ids.value.length" @click="bulkFlag(c, { isRequired: true }, '필수로')">필수로</button>
+      <button type="button" class="secondary" :disabled="!sels[c.key].ids.value.length" @click="bulkFlag(c, { isRequired: false }, '선택으로')">선택으로</button>
+      <button type="button" class="danger" :disabled="!sels[c.key].ids.value.length" @click="bulkRemove(c)">선택 삭제</button>
+    </BulkBar>
+
     <div class="table-wrap">
       <table class="table">
         <thead>
-          <tr><th>코드</th><th>표시 이름</th><th>형식</th><th>필수</th><th>순서</th><th>사용</th><th></th></tr>
+          <tr>
+            <th class="check">
+              <input type="checkbox" aria-label="전체 선택" :checked="sels[c.key].allChecked.value"
+                :indeterminate="sels[c.key].someChecked.value" :disabled="!lists[c.key].length" @change="sels[c.key].toggleAll()" />
+            </th>
+            <th>코드</th><th>표시 이름</th><th>형식</th><th>필수</th><th>순서</th><th>사용</th><th></th>
+          </tr>
         </thead>
         <tbody>
-          <tr v-if="!lists[c.key].length"><td colspan="7" class="muted">항목이 없습니다.</td></tr>
+          <tr v-if="!lists[c.key].length"><td colspan="8" class="muted">항목이 없습니다.</td></tr>
           <template v-for="item in lists[c.key]" :key="item.id">
-            <tr v-if="drafts[item.id]" :class="{ inactive: !drafts[item.id].isActive, dirty: isDirty(item) }">
+            <tr v-if="drafts[item.id]" :class="{ inactive: !drafts[item.id].isActive, dirty: isDirty(item), checked: sels[c.key].has(item.id) }">
+              <td class="check"><input type="checkbox" :aria-label="`${item.label} 선택`" :checked="sels[c.key].has(item.id)" @change="sels[c.key].toggle(item.id)" /></td>
               <td><code>{{ item.code }}</code></td>
               <td><input v-model="drafts[item.id].label" maxlength="100" /></td>
               <td>
@@ -166,7 +225,7 @@ onMounted(() => load().catch((e) => { error.value = e.message; }));
               </td>
             </tr>
             <tr v-if="drafts[item.id]?.valueType === 'select'" class="options-row">
-              <td></td>
+              <td></td><td></td>
               <td colspan="6">
                 <label class="options-label">
                   드롭다운 선택지 (한 줄에 하나씩)

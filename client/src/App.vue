@@ -58,7 +58,8 @@ async function onLogout() {
       </template>
     </nav>
   </header>
-  <main class="container" :class="{ gate }">
+  <!-- 관리 페이지는 왼쪽 메뉴가 있어서 넓게 -->
+  <main class="container" :class="{ gate, wide: route.path.startsWith('/admin') }">
     <RouterView />
   </main>
   <MusicPlayer />
