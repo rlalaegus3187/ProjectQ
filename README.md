@@ -15,7 +15,7 @@ Vue 3 + Node.js/Express + MySQL 로 만든 SPA 로그인 샘플입니다.
 - **Q&A 게시판**: 회원 질문·비밀글, 관리자 답변·메인 글 (마크다운 등록툴 + 이미지)
   - **비회원 질문**: 관리 → 사이트 설정의 스위치로 켜고 끔. 비회원은 이름 + 비밀번호로 작성(공개/비밀글), 비밀번호로 비밀글 보기·수정·삭제
   - **글 비밀번호**: 회원 비밀글에도 선택으로 걸 수 있음 → 비밀번호를 아는 사람은 로그인 없이 볼 수 있음
-- **알림**: 내 Q&A 질문에 답변이 달리면 상단 `알림` 에 표시
+- **알림**: 내 Q&A 질문에 답변이 달리면 상단 `알림` 에 표시. **알림 / 보관함** 탭 — 알림마다 [보관] [삭제], '모두 삭제'. 보관한 알림은 삭제되지 않음 (보관 해제 후 삭제)
 - **음악**: 프로필별 유튜브 음악, 사이트 전체 음악(관리 → 사이트 설정), 페이지별 음악(`usePageMusic`) — 오른쪽 아래 플레이어, 볼륨/정지는 계정별 저장 (`client/src/music/README.md`)
 - **소지금 / 상점**: 캐릭터 소지금(내역 기록), 관리자가 소지금 지급·회수, `상점 관리`에서 등록된 아이템을 골라 가격·재고 설정, 회원은 `상점`에서 구매
 - **아이템 / 인벤토리**: 관리자가 아이템 등록(이미지·효과·귀속·판매가능) 후 캐릭터에게 지급/회수, 회원은 `인벤토리` 에서 확인·버리기
@@ -111,6 +111,9 @@ ProjectQ/
 | POST | `/api/admin/users/bulk-delete` | (관리자) 회원 일괄 삭제 `{ ids }` — 캐릭터·프로필 등 함께 삭제 (FK CASCADE) |
 | PUT | `/api/admin/users/:id/password` | (관리자) 비밀번호 강제 변경 `{ newPassword }` → 그 회원 로그아웃 + 알림 |
 | POST | `/api/auth/logout` | 세션 삭제 |
+| GET | `/api/notifications?box=inbox\|archive` | 알림 / 보관함 목록 + `{ unreadCount, inboxCount, archivedCount }` |
+| PUT | `/api/notifications/:id/archive` | 보관 / 보관 해제 `{ archived }` (보관하면 읽음) |
+| DELETE | `/api/notifications/:id` | 삭제 (보관한 알림은 409) — `POST /api/notifications/delete-all` 은 보관함 빼고 모두 삭제 |
 | PUT | `/api/auth/me/preferences` | 계정 음악 설정 `{ musicVolume(0~100), musicEnabled }` |
 | GET | `/api/settings` | 공개 설정 `{ siteName, siteFavicon, siteMusic, qnaGuestWrite, sitePrivate }` (회원 전용 모드에서도 로그인 없이 조회 가능) (사이트 이름·파비콘, 사이트 전체 음악 영상 ID) |
 | GET | `/api/auth/me` | 현재 로그인 사용자 `{ id, username, contact, role }` (401 이면 비로그인) |

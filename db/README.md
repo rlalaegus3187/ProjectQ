@@ -43,7 +43,7 @@ posts          게시글  board: qna(Q&A) — 화면에서 쓰는 게시판은 Q
                is_hidden(Q&A 비밀글), is_pinned(Q&A 메인 글), user_id FK → users.id (비회원 글이면 NULL)
                guest_name(비회원 이름), password_hash(글 비밀번호, scrypt — 비회원 글 필수, 회원 비밀글 선택)
 post_replies   Q&A 답변 (관리자)  post_id FK → posts.id (글 삭제 시 함께 삭제)
-notifications  계정별 알림  user_id, type, post_id, link(이동 주소), message, is_read
+notifications  계정별 알림  user_id, type, post_id, link(이동 주소), message, is_read, is_archived(보관함 — 삭제 안 됨), archived_at
                → 추가는 server/src/notify.js 의 notify()/notifyUsers()/notifyAdmins() 사용
 items          아이템 (uid=id, name, description(마크다운), small_image, large_image,
                effect ENUM(none/hp_recover/stat_bonus/custom), effect_values JSON, is_bound 귀속, is_sellable 판매가능)

@@ -415,3 +415,8 @@ strong.off { color: var(--color-muted); }
 .menu-edit li:first-child { border-top: 0; }
 .menu-edit li.hidden strong { color: var(--color-muted); text-decoration: line-through; }
 .menu-edit-actions { margin-left: auto; display: flex; gap: 4px; }
+
+/* 알림 / 보관함 */
+.notification-list li { display: flex; align-items: center; gap: 8px; }
+.notification-list .post-link { flex: 1; min-width: 0; }
+.notification-actions { display: flex; gap: 4px; flex: none; }
