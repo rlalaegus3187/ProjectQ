@@ -132,11 +132,11 @@ const savePassword = () => run(async () => {
     <ModalDialog v-if="agreement" title="회원가입 안내 (약관)" @close="agreement = null">
       <p v-if="agreement.loading" class="muted">불러오는 중…</p>
       <template v-else>
-        <p v-if="agreement.agreedAt" class="ok">{{ formatTime(agreement.agreedAt) }}에 아래 내용에 동의했습니다.</p>
+        <p v-if="agreement.agreedAt" class="ok">{{ formatTime(agreement.agreedAt) }}에 동의했습니다.</p>
         <p v-else class="muted">동의 기록이 없습니다. 아래 안내를 읽고 동의해주세요.</p>
         <div class="signup-notice">
           <MarkdownView v-if="agreement.notice" :source="agreement.notice" />
-          <p v-else class="muted">{{ agreement.agreedAt ? '동의할 때 안내 내용이 없었습니다.' : '등록된 안내가 없습니다.' }}</p>
+          <p v-else class="muted">등록된 안내가 없습니다.</p>
         </div>
         <form v-if="!agreement.agreedAt" class="form" @submit.prevent="confirmAgreement">
           <label class="inline agree"><input v-model="agreeChecked" type="checkbox" /> 위 안내를 모두 읽었으며 동의합니다.</label>

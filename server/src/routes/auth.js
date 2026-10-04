@@ -127,13 +127,12 @@ router.put('/me', requireAuth, async (req, res) => {
   res.json({ user: toPublicUser(await findUser(req.session.userId)) });
 });
 
-// 내가 동의한 회원가입 안내 → { agreedAt, notice(동의한 그때 내용) }
-// 동의 기록이 없으면(이 기능 전 가입) agreedAt: null, notice: 지금 안내 — 마이페이지에서 동의할 수 있게
+// 회원가입 안내(약관) → { agreedAt(동의한 시각, 없으면 null), notice(지금 안내 — 관리자가 고치면 고친 내용) }
+// 동의 기록이 없으면(이 기능 전 가입) 마이페이지에서 동의할 수 있게
+// (가입 때의 내용은 users.agreed_notice 에 기록으로만 남겨둠)
 router.get('/me/agreement', requireAuth, async (req, res) => {
-  const [rows] = await pool.execute('SELECT agreed_at, agreed_notice FROM users WHERE id = ?', [req.session.userId]);
-  const row = rows[0];
-  if (row?.agreed_at) return res.json({ agreedAt: row.agreed_at, notice: row.agreed_notice || '' });
-  res.json({ agreedAt: null, notice: (await getSetting('signup_notice')) || '' });
+  const [rows] = await pool.execute('SELECT agreed_at FROM users WHERE id = ?', [req.session.userId]);
+  res.json({ agreedAt: rows[0]?.agreed_at ?? null, notice: (await getSetting('signup_notice')) || '' });
 });
 
 // 지금 안내에 동의 (동의 기록이 없는 회원) { agree: true }

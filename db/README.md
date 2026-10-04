@@ -84,7 +84,7 @@ sessions  (express-mysql-session 로그인 세션)
 - **투자 포인트**: `숫자` 형식의 캐릭터 스탯은 포인트를 나눠 주는 스탯 — 값은 0 이상의 정수, 사용 중인 항목 값의 합계 ≤ `settings.stat_initial_points` (관리자 페이지에서 설정)
 - 로그인은 `users.username`(아이디, 영문·숫자·_ 4~20자, 대소문자 구분 없이 중복 불가, 변경 불가) + 비밀번호. 이메일·이름은 016 에서 삭제
   (기존 회원 아이디 = 이메일 @ 앞부분, 짧으면 user<번호>, 겹치면 _<번호>). `contact` = 소통 계정
-- 회원가입 안내(주의문구)는 `settings.signup_notice` (마크다운). 회원이 동의하면 `users.agreed_at`(시각)과 `users.agreed_notice`(그때 안내 내용)를 저장
+- 회원가입 안내(주의문구)는 `settings.signup_notice` (마크다운). 회원이 동의하면 `users.agreed_at`(시각)과 `users.agreed_notice`(그때 안내 내용, 기록용)를 저장. 마이페이지에서는 지금 안내를 보여줌
 - 권한(`users.role`): `admin` 관리자 / `member` 멤버 / `applicant` 신청자. 가입 시 권한은 서버 설정 `SIGNUP_ROLE` (기본 `applicant`)
   - 멤버란에는 `admin`, `member` 의 캐릭터만 보임. 신청자는 프로필 1개만
   - `characters.application_status`: `draft` 작성중 / `submitted` 작성완료 (신청자만 의미, 작성완료면 수정 잠금), `submitted_at` 제출 시각
