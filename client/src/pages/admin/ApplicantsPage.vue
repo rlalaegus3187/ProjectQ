@@ -190,7 +190,7 @@ onMounted(load);
       <span v-if="viewing.submittedAt" class="muted"> 제출 {{ formatDate(viewing.submittedAt) }}</span>
     </p>
     <CharacterCard :character="viewing" />
-    <ProfileSection :key="viewing.id" :character="viewing" readonly />
+    <ProfileSection :key="viewing.id" :character="viewing" :play-music="false" />
     <div class="actions">
       <button v-if="!selected.has(viewing.id)" type="button" class="secondary" @click="checkViewing">선택에 추가</button>
       <button type="button" class="secondary" @click="viewing = null">닫기</button>

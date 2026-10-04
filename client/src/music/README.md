@@ -35,6 +35,10 @@ usePageMusic('dQw4w9WgXcQ');                 // 유튜브 영상 ID (또는 pars
 ## 사이트 전체 음악
 관리 → **사이트 설정**에서 유튜브 링크 입력. 코드에서 바꾸려면 `setSiteMusic('영상ID')`.
 
+## 곡이 바뀔 때
+뚝 끊기지 않게 **작아졌다가(약 0.6초) → 다음 곡을 작게 시작해서 커짐(약 1.2초)**. 정지/재생, 곡이 없어질 때도 같은 식으로 줄였다 키움.
+시간은 `MusicPlayer.vue` 의 `FADE_OUT_MS`, `FADE_IN_MS`.
+
 ## 볼륨 / 정지 (계정 단위 저장)
 플레이어의 ❚❚/▶ 버튼과 볼륨 슬라이더. 로그인한 회원은 계정에 저장(`users.music_volume`, `music_enabled`),
 비로그인은 브라우저에 저장. 코드에서: `setVolume(0~100)`, `setEnabled(true/false)`, `toggleMusic()`.

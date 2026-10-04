@@ -17,7 +17,7 @@ const inputId = `attr-${props.def.category}-${props.def.code}`;
 
     <input v-if="def.valueType === 'number'" :id="inputId" v-model="value" type="number" step="any" :required="def.isRequired" />
 
-    <!-- 긴 텍스트: 마크다운 편집기 (툴바 · 이미지 넣기 · 미리보기) -->
+    <!-- 긴 텍스트: 마크다운 편집기 (툴바 · 이미지 넣기) -->
     <MarkdownEditor v-else-if="def.valueType === 'long_text'" :id="inputId" v-model="value" :rows="6" :maxlength="10000"
       placeholder="내용을 입력하세요. (마크다운 사용 가능)" />
 

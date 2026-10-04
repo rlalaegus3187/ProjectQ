@@ -1,44 +1,73 @@
 <script setup>
-// 멤버란: 캐릭터 상세 (기본정보 + 캐릭터 스탯 + 프로필, 보기 전용)
-import { ref, watch } from 'vue';
-import { useRoute } from 'vue-router';
+// 캐릭터(프로필) 페이지 /members/:id — 기본정보 + 캐릭터 스탯 + 프로필
+// 처음엔 대표 프로필, 위쪽 목록에서 다른 프로필을 고르면 그 프로필과 음악으로 바뀜 (주소 ?profile=<번호> 로 바로 열기 가능)
+// 내 캐릭터면 보고 있는 프로필을 그 자리에서 팝업 폼으로 수정
+import { ref, computed, watch } from 'vue';
+import { useRoute, useRouter } from 'vue-router';
 import { api } from '../../api';
 import { auth } from '../../auth';
+import { fetchAttributes } from '../../character';
 import CharacterCard from '../../components/CharacterCard.vue';
 import ProfileSection from '../../components/ProfileSection.vue';
+import ProfileFormModal from '../../components/ProfileFormModal.vue';
 
 const route = useRoute();
+const router = useRouter();
 const character = ref(null);
 const error = ref('');
 const isMine = ref(false);
+const locked = ref(false);         // 내 신청서가 작성완료로 잠김
 const isApplicant = ref(false);   // 신청자의 신청서 (관리자만 볼 수 있음)
+const definitions = ref(null);
+const editing = ref(null);         // 수정 중인 프로필
 
-async function load() {
+// 주소의 ?profile= 과 보고 있는 프로필을 연결 (대표 프로필이면 주소에서 뺌)
+const selectedId = computed({
+  get: () => (route.query.profile ? Number(route.query.profile) : null),
+  set: (id) => {
+    const main = character.value?.profiles.find((p) => p.isMain);
+    const query = { ...route.query };
+    if (!id || id === main?.id) delete query.profile; else query.profile = String(id);
+    router.replace({ query });
+  },
+});
+
+async function load({ keep = false } = {}) {
   error.value = '';
-  character.value = null;
+  if (!keep) character.value = null;
   try {
     const data = await api(`/members/${route.params.id}`);
     character.value = data.character;
     isApplicant.value = !!data.applicant;
-    // 내 캐릭터면 마이페이지로 수정하러 갈 수 있게
     isMine.value = false;
     if (auth.user) {
       const mine = (await api('/characters/me')).character;
       isMine.value = mine?.id === character.value.id;
+      locked.value = !!mine?.locked;
     }
   } catch (e) {
     error.value = e.message;
   }
 }
 
-watch(() => route.params.id, load, { immediate: true });
+async function startEdit(profile) {
+  if (!definitions.value) definitions.value = await fetchAttributes();
+  editing.value = profile;
+}
+
+async function onSaved() {
+  editing.value = null;
+  await load({ keep: true });
+}
+
+watch(() => route.params.id, () => load(), { immediate: true });
 </script>
 
 <template>
   <section class="card">
     <div class="card-head">
       <RouterLink to="/members" class="muted">← 멤버 목록</RouterLink>
-      <RouterLink v-if="isMine" to="/mypage" class="button secondary">내 캐릭터 수정</RouterLink>
+      <RouterLink v-if="isMine" to="/mypage" class="button secondary">마이페이지</RouterLink>
     </div>
     <p v-if="error" class="error">{{ error }}</p>
     <p v-else-if="!character" class="muted">불러오는 중…</p>
@@ -53,5 +82,12 @@ watch(() => route.params.id, load, { immediate: true });
     </template>
   </section>
 
-  <ProfileSection v-if="character" :key="character.id" :character="character" readonly />
+  <ProfileSection v-if="character" :key="character.id" v-model:selected="selectedId" :character="character">
+    <template #actions="{ profile }">
+      <button v-if="isMine && !locked && profile" type="button" class="secondary" @click="startEdit(profile)">이 프로필 수정</button>
+    </template>
+  </ProfileSection>
+
+  <ProfileFormModal v-if="editing && definitions" :character="character" :definitions="definitions" :profile="editing"
+    @saved="onSaved" @close="editing = null" />
 </template>

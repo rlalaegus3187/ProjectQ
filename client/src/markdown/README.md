@@ -8,7 +8,7 @@ import { renderMarkdown, MarkdownEditor, MarkdownView } from '../markdown';
 
 | 이름 | 용도 |
 |---|---|
-| `<MarkdownEditor v-model="text" />` | 편집기 — 툴바(제목·굵게·기울임·취소선·목록·인용·링크), **이미지 넣기**(업로드 후 본문에 삽입), **미리보기** |
+| `<MarkdownEditor v-model="text" />` | 편집기 — 툴바(제목·굵게·기울임·취소선·목록·인용·링크), **이미지 넣기**(업로드 후 본문에 삽입) |
 | `<MarkdownView :source="text" />` | 표시 |
 | `renderMarkdown(text)` | 마크다운 → 안전한 HTML 문자열 (직접 `v-html` 에 넣을 때) |
 

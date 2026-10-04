@@ -5,7 +5,8 @@ import { auth, APPLICATION_LABELS } from '../../auth';
 import { fetchAttributes, toCharacterForm } from '../../character';
 import CharacterCard from '../../components/CharacterCard.vue';
 import CharacterForm from '../../components/CharacterForm.vue';
-import ProfileSection from '../../components/ProfileSection.vue';
+import ProfileList from '../../components/ProfileList.vue';
+import ModalDialog from '../../components/ModalDialog.vue';
 import AccountSection from '../../components/AccountSection.vue';
 import { formatMoney } from '../../items';
 
@@ -103,7 +104,7 @@ onMounted(() => load().catch((e) => { error.value = e.message; loaded.value = tr
   <section class="card">
     <div class="card-head">
       <h2>내 캐릭터</h2>
-      <div v-if="character && !form" class="actions">
+      <div v-if="character" class="actions">
         <span class="money-badge">소지금 <strong>{{ formatMoney(character.money) }}</strong></span>
         <RouterLink to="/inventory" class="button secondary">인벤토리</RouterLink>
         <button v-if="!character.locked" class="secondary" @click="startEdit">수정하기</button>
@@ -112,14 +113,13 @@ onMounted(() => load().catch((e) => { error.value = e.message; loaded.value = tr
 
     <p v-if="!loaded" class="muted">불러오는 중…</p>
 
-    <form v-else-if="form" class="form" @submit.prevent="save">
-      <p v-if="!character" class="muted">아직 캐릭터가 없습니다. 캐릭터를 등록해주세요. (계정당 1개)</p>
-      <p v-else class="muted">기본정보와 캐릭터 스탯을 수정합니다. 프로필은 아래 프로필에서 각각 수정하세요.</p>
-      <CharacterForm v-model="form" :definitions="definitions" :with-profile="!character" />
+    <!-- 캐릭터가 없으면 바로 등록 폼 -->
+    <form v-else-if="form && !character" class="form" @submit.prevent="save">
+      <p class="muted">아직 캐릭터가 없습니다. 캐릭터를 등록해주세요. (계정당 1개)</p>
+      <CharacterForm v-model="form" :definitions="definitions" with-profile />
       <p v-if="error" class="error">{{ error }}</p>
       <div class="actions">
-        <button type="submit" :disabled="saving">{{ saving ? '저장 중…' : character ? '저장' : '캐릭터 등록' }}</button>
-        <button v-if="character" type="button" class="secondary" @click="form = null">취소</button>
+        <button type="submit" :disabled="saving">{{ saving ? '저장 중…' : '캐릭터 등록' }}</button>
       </div>
     </form>
 
@@ -128,6 +128,18 @@ onMounted(() => load().catch((e) => { error.value = e.message; loaded.value = tr
     <p v-if="error && !form" class="error">{{ error }}</p>
   </section>
 
-  <ProfileSection v-if="character && definitions" :character="character" :definitions="definitions"
-    :readonly="character.locked" @updated="(c) => { character = c; }" />
+  <!-- 수정하기: 기본정보 + 스탯 (프로필 수정과 같은 팝업 폼) -->
+  <ModalDialog v-if="form && character" title="캐릭터 수정 — 기본정보 · 스탯" @close="form = null">
+    <form class="form" @submit.prevent="save">
+      <CharacterForm v-model="form" :definitions="definitions" />
+      <p v-if="error" class="error">{{ error }}</p>
+      <div class="actions">
+        <button type="submit" :disabled="saving">{{ saving ? '저장 중…' : '저장' }}</button>
+        <button type="button" class="secondary" @click="form = null">취소</button>
+      </div>
+    </form>
+  </ModalDialog>
+
+  <ProfileList v-if="character && definitions" :character="character" :definitions="definitions"
+    :readonly="character.locked" :public-page="auth.user.role !== 'applicant'" @updated="(c) => { character = c; }" />
 </template>

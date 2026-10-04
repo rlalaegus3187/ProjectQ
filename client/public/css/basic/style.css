@@ -55,7 +55,8 @@ h3 { font-size: 15px; margin: 0 0 8px; color: var(--color-text-sub); }
 .card-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
 .card-head h2 { margin: 0; }
 .actions { display: flex; gap: 8px; }
-.fieldset { border: 1px solid var(--color-border); border-radius: 8px; padding: 12px 16px 16px; margin: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 12px; }
+/* 입력 폼: 한 줄에 한 칸 (짧은 텍스트도 한 줄 전체) — 프로필·캐릭터·아이템 등 모든 폼 공통 */
+.fieldset { border: 1px solid var(--color-border); border-radius: 8px; padding: 12px 16px 16px; margin: 0; display: grid; grid-template-columns: minmax(0, 1fr); gap: 12px; }
 .fieldset legend { font-weight: 600; font-size: 14px; padding: 0 4px; }
 .fieldset .muted { grid-column: 1 / -1; margin: 0; }
 .fieldset.stack { grid-template-columns: 1fr; }
@@ -172,9 +173,6 @@ a.button.small, .row-actions a.button { padding: 6px 10px; font-size: 13px; }
 .markdown th, .markdown td { border: 1px solid var(--color-border); padding: 4px 8px; }
 /* 게시글 등록툴 */
 .post-editor { display: flex; flex-direction: column; gap: 8px; }
-.editor-tabs { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; border-bottom: 1px solid var(--color-border); }
-.editor-tabs > button { background: none; color: var(--color-muted); border-radius: 6px 6px 0 0; padding: 8px 12px; }
-.editor-tabs > button.active { color: var(--color-primary); border-bottom: 2px solid var(--color-primary); }
 .toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; }
 .toolbar-sep { width: 1px; height: 18px; background: var(--color-border); margin: 0 4px; }
 .toolbar button, .toolbar-file { background: #f3f4f6; color: var(--color-text-sub); padding: 4px 10px; font-size: 13px; border-radius: 4px; cursor: pointer; }
@@ -183,7 +181,6 @@ a.button.small, .row-actions a.button { padding: 6px 10px; font-size: 13px; }
 .toolbar-file.disabled { opacity: .6; }
 .markdown-editor { display: flex; flex-direction: column; gap: 8px; }
 .markdown-editor textarea { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 14px; resize: vertical; }
-.preview { min-height: 200px; padding: 12px; border: 1px solid var(--color-border); border-radius: 6px; }
 /* 관리자 */
 .tabs { display: flex; gap: 4px; border-bottom: 1px solid var(--color-border); margin-bottom: 12px; }
 .tabs a { padding: 8px 14px; color: var(--color-muted); }
@@ -214,7 +211,7 @@ a.button.small, .row-actions a.button { padding: 6px 10px; font-size: 13px; }
 .item-badges { display: flex; gap: 6px; flex-wrap: wrap; }
 .discard-row { display: flex; gap: 8px; justify-content: flex-end; margin-top: 16px; padding-top: 12px; border-top: 1px solid var(--color-border-light); }
 .item-icon { width: 32px; height: 32px; object-fit: contain; border-radius: 4px; }
-.two-col { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; }
+.two-col { display: grid; grid-template-columns: minmax(0, 1fr); gap: 12px; }   /* 예전 2열 → 한 줄에 한 칸 */
 .checks { display: flex; gap: 16px; flex-wrap: wrap; }
 textarea.mono { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 13px; }
 .small-link { font-size: 12px; margin-left: 6px; }
@@ -381,3 +378,11 @@ strong.off { color: var(--color-muted); }
 .role-select { padding: 4px 6px; font-size: 13px; }
 .bulk-select { padding: 5px 6px; font-size: 13px; }
 .applicant-note { margin: 0 0 12px; padding: 8px 12px; border-radius: 6px; background: #eef2ff; font-size: 14px; }
+.tab-music { font-size: 12px; color: var(--color-muted); }
+
+/* 마이페이지 프로필 목록 */
+.profile-list { list-style: none; margin: 12px 0 0; padding: 0; }
+.profile-list li { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; padding: 10px 4px; border-top: 1px solid var(--color-border-light); }
+.profile-list li:first-child { border-top: 0; }
+.profile-list li.main { background: var(--color-primary-soft); border-radius: 8px; padding: 10px 12px; }
+.profile-list-info { display: flex; flex-direction: column; gap: 2px; }

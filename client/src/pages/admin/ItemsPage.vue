@@ -290,30 +290,42 @@ onMounted(() => Promise.all([loadItems(), search()]).catch((e) => { error.value 
   </section>
 
   <ModalDialog v-if="editing" :title="editing.id ? `아이템 수정 (uid ${editing.id})` : '새 아이템'" @close="editing = null">
+    <!-- 프로필 수정과 같은 폼 모양: 칸 묶음(fieldset) + 한 줄에 한 칸 + 아래 버튼 -->
     <form class="form" @submit.prevent="saveItem">
-      <label>이름 <input v-model="editing.name" required maxlength="100" /></label>
-      <div class="field">
-        <label>설명</label>
-        <MarkdownEditor v-model="editing.description" :rows="5" :maxlength="10000" />
-      </div>
-      <div class="two-col">
+      <fieldset class="fieldset">
+        <legend>기본 정보</legend>
+        <div class="field">
+          <label for="item-name">이름<span class="req">*</span></label>
+          <input id="item-name" v-model="editing.name" required maxlength="100" />
+        </div>
+        <div class="field">
+          <label for="item-desc">설명</label>
+          <MarkdownEditor id="item-desc" v-model="editing.description" :rows="5" :maxlength="10000" />
+        </div>
+      </fieldset>
+      <fieldset class="fieldset">
+        <legend>이미지</legend>
         <div class="field"><label for="item-small">작은 이미지 (인벤토리 칸)</label><ImageField id="item-small" v-model="editing.smallImage" /></div>
         <div class="field"><label for="item-large">큰 이미지 (상세 보기)</label><ImageField id="item-large" v-model="editing.largeImage" /></div>
-      </div>
-      <div class="two-col">
-        <label>효과
-          <select v-model="editing.effect">
+      </fieldset>
+      <fieldset class="fieldset">
+        <legend>효과</legend>
+        <div class="field">
+          <label for="item-effect">효과 종류</label>
+          <select id="item-effect" v-model="editing.effect">
             <option v-for="e in EFFECTS" :key="e.value" :value="e.value">{{ e.label }} ({{ e.value }})</option>
           </select>
-        </label>
-        <label>효과수치 (JSON) <button type="button" class="link small-link" @click="useExample">예시 넣기</button>
-          <textarea v-model="editing.effectValuesText" rows="3" class="mono" />
-        </label>
-      </div>
-      <div class="checks">
+        </div>
+        <div class="field">
+          <label for="item-values">효과수치 (JSON) <button type="button" class="link small-link" @click="useExample">예시 넣기</button></label>
+          <textarea id="item-values" v-model="editing.effectValuesText" rows="3" class="mono" />
+        </div>
+      </fieldset>
+      <fieldset class="fieldset">
+        <legend>설정</legend>
         <label class="inline"><input v-model="editing.isBound" type="checkbox" /> 귀속 (다른 캐릭터에게 넘길 수 없음)</label>
         <label class="inline"><input v-model="editing.isSellable" type="checkbox" /> 판매 가능</label>
-      </div>
+      </fieldset>
       <p v-if="editError" class="error">{{ editError }}</p>
       <div class="actions">
         <button type="submit" :disabled="saving">{{ saving ? '저장 중…' : '저장' }}</button>

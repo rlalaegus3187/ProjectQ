@@ -1,135 +1,46 @@
 <script setup>
-// 캐릭터 프로필 여러 개: 탭으로 전환, 추가 / 수정 / 삭제 / 대표 지정
-// 스탯·기본정보는 캐릭터에 하나, 프로필 양식 값만 프로필마다 따로
-import { ref, computed, watch } from 'vue';
-import { api } from '../api';
-import { toProfileForm } from '../character';
-import AttributeValue from './AttributeValue.vue';
-import ProfileFields from './ProfileFields.vue';
-import { usePageMusic, youtubeUrl } from '../music';
+// 캐릭터 프로필 보기 (프로필 페이지 /members/:id, 신청자 보기 팝업)
+// 처음엔 대표 프로필, 위쪽 목록에서 다른 프로필을 고르면 그 프로필로 바뀜 — 음악도 그 프로필 음악으로
+//   <ProfileSection :character="c" v-model:selected="profileId" />    (selected 를 주소 ?profile= 과 연결 가능)
+//   <template #actions="{ profile }"> 수정 버튼 등 </template>
+import { computed } from 'vue';
+import ProfileView from './ProfileView.vue';
+import { usePageMusic } from '../music';
 
 const props = defineProps({
   character: { type: Object, required: true },
-  definitions: { type: Object, default: null },   // readonly 면 필요 없음
-  readonly: { type: Boolean, default: false },     // 멤버란 등 보기 전용
-  playMusic: { type: Boolean, default: true },     // 보고 있는 프로필의 음악 재생
+  playMusic: { type: Boolean, default: true },   // 보고 있는 프로필의 음악 재생
 });
-const emit = defineEmits(['updated']);   // 서버가 돌려준 최신 캐릭터
-
-const selectedId = ref(props.character.profiles[0]?.id ?? null);
-const form = ref(null);          // 편집 중인 프로필 { name, details }
-const editingId = ref(null);     // null + form 있으면 새 프로필
-const error = ref('');
-const busy = ref(false);
+const selectedId = defineModel('selected', { type: Number, default: null });
 
 const profiles = computed(() => props.character.profiles);
-const selected = computed(() => profiles.value.find((p) => p.id === selectedId.value) ?? profiles.value[0]);
+// 고른 프로필이 없으면(처음, 없어진 프로필) 대표 프로필 = 맨 앞
+const selected = computed(() => profiles.value.find((p) => p.id === selectedId.value) ?? profiles.value[0] ?? null);
 // 대표 프로필은 이름 대신 캐릭터 이름으로 표시
 const tabLabel = (p) => (p.isMain ? props.character.name : p.name);
-const editingMain = computed(() => editingId.value !== null && profiles.value.find((p) => p.id === editingId.value)?.isMain);
-const canAdd = computed(() => profiles.value.length < (props.character.maxProfiles ?? 10));
 
 // 보고 있는 프로필의 음악 재생 (음악이 없는 프로필이면 페이지/사이트 음악으로)
 usePageMusic(() => (props.playMusic ? selected.value?.musicVideoId : null));
-
-// 목록이 바뀌어 선택한 프로필이 없어지면 대표 프로필로
-watch(profiles, (list) => {
-  if (!list.some((p) => p.id === selectedId.value)) selectedId.value = list[0]?.id ?? null;
-});
-
-function select(id) {
-  if (form.value && !confirm('수정 중인 내용이 사라집니다. 이동할까요?')) return;
-  form.value = null;
-  selectedId.value = id;
-}
-
-function startAdd() {
-  error.value = '';
-  editingId.value = null;
-  form.value = toProfileForm(props.definitions);
-}
-
-function startEdit() {
-  error.value = '';
-  editingId.value = selected.value.id;
-  form.value = toProfileForm(props.definitions, selected.value);
-}
-
-async function run(fn) {
-  error.value = '';
-  busy.value = true;
-  try {
-    const { character } = await fn();
-    emit('updated', character);
-    return character;
-  } catch (e) {
-    error.value = e.message;
-    return null;
-  } finally {
-    busy.value = false;
-  }
-}
-
-async function save() {
-  const isNew = editingId.value === null;
-  const character = await run(() => (isNew
-    ? api('/characters/me/profiles', { method: 'POST', body: form.value })
-    : api(`/characters/me/profiles/${editingId.value}`, { method: 'PUT', body: form.value })));
-  if (!character) return;
-  // 새 프로필이면 방금 만든 프로필(가장 큰 id)을 선택
-  if (isNew) selectedId.value = Math.max(...character.profiles.map((p) => p.id));
-  form.value = null;
-}
-
-const makeMain = () => run(() => api(`/characters/me/profiles/${selected.value.id}/main`, { method: 'PUT' }));
-
-async function remove() {
-  if (!confirm(`'${tabLabel(selected.value)}' 프로필을 삭제할까요? 되돌릴 수 없습니다.`)) return;
-  await run(() => api(`/characters/me/profiles/${selected.value.id}`, { method: 'DELETE' }));
-}
 </script>
 
 <template>
   <section class="card">
     <div class="card-head">
-      <h2>프로필 <span v-if="!readonly" class="muted">{{ profiles.length }} / {{ character.maxProfiles ?? 10 }}</span></h2>
-      <button v-if="!readonly && !form && canAdd" type="button" class="secondary" @click="startAdd">+ 새 프로필</button>
+      <h2>프로필</h2>
+      <slot name="actions" :profile="selected" />
     </div>
 
-    <div class="tabs profile-tabs" role="tablist">
-      <button v-for="p in profiles" :key="p.id" type="button" role="tab" :aria-selected="p.id === selected?.id"
-        :class="{ active: form ? editingId === p.id : p.id === selected?.id }" @click="select(p.id)">
-        <span v-if="p.isMain" class="badge pin">대표</span> {{ tabLabel(p) }}
-      </button>
-      <button v-if="form && editingId === null" type="button" class="active" role="tab" aria-selected="true">새 프로필</button>
-    </div>
-
-    <form v-if="form" class="form" @submit.prevent="save">
-      <ProfileFields v-model:name="form.name" v-model:details="form.details" v-model:music="form.music" :definitions="definitions"
-        :legend="editingId === null ? '새 프로필' : editingMain ? `대표 프로필 수정 (${character.name})` : '프로필 수정'" :show-name="!editingMain" />
-      <p v-if="error" class="error">{{ error }}</p>
-      <div class="actions">
-        <button type="submit" :disabled="busy">{{ busy ? '저장 중…' : editingId === null ? '프로필 추가' : '저장' }}</button>
-        <button type="button" class="secondary" @click="form = null">취소</button>
+    <p v-if="!selected" class="muted">프로필이 없습니다.</p>
+    <template v-else>
+      <!-- 프로필이 여러 개면 위쪽 목록에서 고르기 -->
+      <div v-if="profiles.length > 1" class="tabs profile-tabs" role="tablist" aria-label="프로필 목록">
+        <button v-for="p in profiles" :key="p.id" type="button" role="tab" :aria-selected="p.id === selected.id"
+          :class="{ active: p.id === selected.id }" @click="selectedId = p.id">
+          <span v-if="p.isMain" class="badge pin">대표</span> {{ tabLabel(p) }}
+          <span v-if="p.musicVideoId" class="tab-music" title="프로필 음악">♪</span>
+        </button>
       </div>
-    </form>
-
-    <template v-else-if="selected">
-      <div v-if="!readonly" class="actions profile-actions">
-        <button type="button" class="secondary" @click="startEdit">프로필 수정</button>
-        <button v-if="!selected.isMain" type="button" class="secondary" :disabled="busy" @click="makeMain">대표로 지정</button>
-        <button v-if="!selected.isMain" type="button" class="danger" :disabled="busy" @click="remove">삭제</button>
-      </div>
-      <p v-if="selected.musicVideoId" class="profile-music">
-        ♪ 프로필 음악 <a :href="youtubeUrl(selected.musicVideoId)" target="_blank" rel="noopener noreferrer">유튜브에서 보기</a>
-      </p>
-      <p v-if="!selected.details.length" class="muted">등록된 프로필 양식이 없습니다.</p>
-      <dl v-else class="kv">
-        <template v-for="detail in selected.details" :key="detail.code">
-          <dt>{{ detail.label }}</dt><dd><AttributeValue :attr="detail" /></dd>
-        </template>
-      </dl>
-      <p v-if="error" class="error">{{ error }}</p>
+      <ProfileView :key="selected.id" :profile="selected" />
     </template>
   </section>
 </template>

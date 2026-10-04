@@ -14,6 +14,46 @@ let blockTimer = null;
 
 const STATE = { ENDED: 0, PLAYING: 1, PAUSED: 2, BUFFERING: 3, CUED: 5 };
 
+// ---------- 볼륨 페이드 (곡이 바뀔 때 뚝 끊기지 않게: 작아졌다가 → 다음 곡 → 커짐) ----------
+const FADE_OUT_MS = 600;
+const FADE_IN_MS = 1200;
+let playerVolume = 0;      // 플레이어에 지금 설정된 볼륨 (페이드 중엔 music.volume 과 다름)
+let fadeTimer = null;
+let fadeToken = 0;         // 새 페이드가 시작되면 이전 페이드는 취소
+let pendingFadeIn = false; // 재생이 실제로 시작되면 커지기 시작
+
+function setPlayerVolume(v) {
+  playerVolume = Math.max(0, Math.min(100, v));
+  player.setVolume(Math.round(playerVolume));
+}
+
+// target: 숫자 또는 () => 숫자 (페이드 중에 볼륨을 바꿔도 따라감). 끝까지 가면 true, 취소되면 false
+function fadeTo(target, ms) {
+  const token = ++fadeToken;
+  clearInterval(fadeTimer);
+  const from = playerVolume;
+  const goal = () => (typeof target === 'function' ? target() : target);
+  const steps = Math.max(1, Math.round(ms / 40));
+  let i = 0;
+  return new Promise((resolve) => {
+    if (!ready) { resolve(false); return; }
+    fadeTimer = setInterval(() => {
+      if (token !== fadeToken) { clearInterval(fadeTimer); resolve(false); return; }
+      i += 1;
+      const t = i / steps;
+      setPlayerVolume(from + (goal() - from) * (t * (2 - t)));   // 부드럽게 (ease-out)
+      if (i >= steps) {
+        clearInterval(fadeTimer);
+        fadeTimer = null;
+        resolve(true);
+      }
+    }, 40);
+  });
+}
+const cancelFade = () => { fadeToken += 1; clearInterval(fadeTimer); fadeTimer = null; };
+const isPlaying = () => ready && [STATE.PLAYING, STATE.BUFFERING].includes(player.getPlayerState?.());
+const fadeIn = () => fadeTo(() => music.volume, FADE_IN_MS);
+
 // 자동 재생이 막혔는지 확인: 재생을 요청했는데 잠시 뒤에도 재생 중이 아니면 → 클릭 필요
 function checkBlocked() {
   clearTimeout(blockTimer);
@@ -24,30 +64,44 @@ function checkBlocked() {
   }, 2000);
 }
 
+// 작은 소리에서 시작해서 재생이 시작되면 커짐
 function play() {
   if (!ready) return;
+  cancelFade();
   player.unMute();
-  player.setVolume(music.volume);
+  setPlayerVolume(0);
+  pendingFadeIn = true;
   player.playVideo();
   checkBlocked();
 }
 
-// 곡/재생 여부가 바뀔 때 플레이어에 반영
-function sync() {
+// 곡/재생 여부가 바뀔 때 플레이어에 반영 (바뀌는 도중에 또 바뀌면 마지막 것만 반영)
+let syncToken = 0;
+async function sync() {
   if (!ready) return;
+  const token = ++syncToken;
   const track = currentTrack.value;
-  if (!track) {
+
+  if (!track) {                                   // 재생할 곡 없음 → 작아지며 멈춤
+    if (isPlaying()) await fadeTo(0, FADE_OUT_MS);
+    if (token !== syncToken) return;
     player.stopVideo();
     loadedTrack = null;
     music.title = '';
     music.blocked = false;
     return;
   }
-  if (track !== loadedTrack) {
+
+  if (track !== loadedTrack) {                    // 다른 곡 → 작아졌다가 다음 곡을 작게 시작해서 커짐
+    if (loadedTrack && isPlaying()) await fadeTo(0, FADE_OUT_MS);
+    if (token !== syncToken) return;
     loadedTrack = track;
     music.title = '';
     music.error = '';
+    cancelFade();
+    setPlayerVolume(0);
     if (music.enabled) {
+      pendingFadeIn = true;
       player.loadVideoById(track);   // 불러오면서 바로 재생
       checkBlocked();
     } else {
@@ -55,8 +109,14 @@ function sync() {
     }
     return;
   }
-  if (music.enabled) play();
-  else player.pauseVideo();
+
+  if (music.enabled) {                            // 다시 재생 → 커지며 시작
+    if (!isPlaying()) play();
+  } else if (isPlaying()) {                       // 정지 → 작아지며 멈춤
+    await fadeTo(0, FADE_OUT_MS);
+    if (token !== syncToken) return;
+    player.pauseVideo();
+  }
 }
 
 async function ensurePlayer() {
@@ -71,13 +131,17 @@ async function ensurePlayer() {
       events: {
         onReady: () => {
           ready = true;
-          player.setVolume(music.volume);
+          setPlayerVolume(0);
           sync();
         },
         onStateChange: (e) => {
           if (e.data === STATE.PLAYING) {
             music.blocked = false;
             music.title = player.getVideoData?.().title || '';
+            if (pendingFadeIn) {
+              pendingFadeIn = false;
+              fadeIn();
+            }
           }
           if (e.data === STATE.ENDED && music.enabled) {   // 한 곡 반복
             player.seekTo(0);
@@ -106,7 +170,8 @@ watch([currentTrack, () => music.enabled], () => {
   if (!player) ensurePlayer();
   else sync();
 });
-watch(() => music.volume, (v) => { if (ready) player.setVolume(v); });
+// 볼륨 슬라이더: 페이드 중이면 페이드가 새 볼륨을 따라가고, 아니면 바로 반영
+watch(() => music.volume, (v) => { if (ready && !fadeTimer && isPlaying()) setPlayerVolume(v); });
 
 onMounted(() => {
   ensurePlayer();
@@ -117,6 +182,7 @@ onBeforeUnmount(() => {
   document.removeEventListener('pointerdown', onFirstGesture, true);
   document.removeEventListener('keydown', onFirstGesture, true);
   clearTimeout(blockTimer);
+  cancelFade();
   player?.destroy?.();
 });
 </script>
