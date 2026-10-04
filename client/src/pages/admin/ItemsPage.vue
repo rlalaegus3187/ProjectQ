@@ -9,6 +9,7 @@ import ModalDialog from '../../components/ModalDialog.vue';
 import MoneyLogList from '../../components/MoneyLogList.vue';
 import ItemLogList from '../../components/ItemLogList.vue';
 import BulkBar from '../../components/BulkBar.vue';
+import ToggleSwitch from '../../components/ToggleSwitch.vue';
 import { useSelection } from '../../selection';
 import { formatMoney } from '../../items';
 
@@ -324,7 +325,7 @@ onMounted(() => Promise.all([loadItems(), search()]).catch((e) => { error.value 
       <fieldset class="fieldset">
         <legend>설정</legend>
         <label class="inline"><input v-model="editing.isBound" type="checkbox" /> 귀속 (다른 캐릭터에게 넘길 수 없음)</label>
-        <label class="inline"><input v-model="editing.isSellable" type="checkbox" /> 판매 가능</label>
+        <label class="toggle"><ToggleSwitch v-model="editing.isSellable" /> 판매 가능</label>
       </fieldset>
       <p v-if="editError" class="error">{{ editError }}</p>
       <div class="actions">

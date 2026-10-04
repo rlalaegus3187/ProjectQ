@@ -10,6 +10,7 @@ import { MarkdownEditor } from '../../markdown';
 import { parseYouTubeId, youtubeUrl } from '../../music';
 import { formatDate } from '../../boards';
 import ModalDialog from '../../components/ModalDialog.vue';
+import ToggleSwitch from '../../components/ToggleSwitch.vue';
 
 const route = useRoute();
 const router = useRouter();
@@ -218,7 +219,7 @@ onMounted(() => load().catch((e) => { error.value = e.message; }));
           <label for="new-slug">주소 <span class="muted">(영문 소문자·숫자·-, 만든 뒤 바꿀 수 없음)</span></label>
           <div class="slug-input"><span class="muted">/</span><input id="new-slug" v-model="creating.slug" required pattern="[a-z][a-z0-9\-]{1,29}" maxlength="30" placeholder="event" /></div>
         </div>
-        <label class="inline"><input v-model="creating.showInMenu" type="checkbox" /> 상단 메뉴에 보이기</label>
+        <label class="toggle"><ToggleSwitch v-model="creating.showInMenu" /> 상단 메뉴에 보이기</label>
       </fieldset>
       <p v-if="creating.error" class="error">{{ creating.error }}</p>
       <div class="actions">

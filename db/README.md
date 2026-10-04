@@ -6,7 +6,7 @@ users                          characters (계정당 1개)
 id            PK          ┌──  id            PK
 username      UNIQUE(아이디)│    user_id       UNIQUE, FK → users.id
 contact       소통 계정   │    name          캐릭터 이름   ┐ 기본정보
-role          admin/      │    special1~5    특별 스탯    ┘ (HP·MP 등, 이름은 settings.special_stats)
+role          admin/      │    costN_current / costN_max  코스트 1~5 현재치/최대치 ┘ (HP·MP 등, 이름은 settings.costs)
               member/     │    application_status  신청 상태(작성중/제출 완료)
               applicant   │
 password_hash (scrypt)    │
@@ -57,7 +57,7 @@ settings.site_menu                  상단 메뉴 구성 JSON [{ key: 'page:noti
 settings.site_theme                 CSS 테마 폴더 이름 (client/public/css/<이름>, 없거나 폴더가 없으면 basic)
 settings.profile_add_open           프로필 추가 허용 ('0' = 막음, 기본 허용 — 관리자는 항상 가능)
 settings.profile_edit_open          프로필 수정·삭제·대표 지정 허용 ('0' = 막음, 기본 허용)
-settings.special_stats              특별 스탯 1~5 이름·사용 JSON [{ name, enabled }] × 5 (없으면 1=HP, 2=MP 사용 / 3~5 미사용)
+settings.costs                      코스트 1~5 이름·사용 JSON [{ name, enabled }] × 5 (없으면 1=HP, 2=MP 사용 / 3~5 미사용)
 settings.stats_enabled              캐릭터 스탯 사용 ('0' = 미사용 — 입력·표시 숨김, 저장된 값은 남음 / 기본 사용)
 settings.signup_open                회원가입 허용 ('0' = 막음, 없거나 '1' = 허용)
 settings.site_closed                사이트 비공개 ('1' = 관리자만 로그인·이용, 없거나 '0' = 공개)

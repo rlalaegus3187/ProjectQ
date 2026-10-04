@@ -14,8 +14,8 @@ defineProps({
       <h3>기본정보</h3>
       <dl class="kv">
         <dt>캐릭터 이름</dt><dd>{{ character.name }}</dd>
-        <template v-for="s in character.specials || []" :key="s.slot">
-          <dt>{{ s.name }}</dt><dd>{{ s.value ?? '—' }}</dd>
+        <template v-for="s in character.costs || []" :key="s.slot">
+          <dt>{{ s.name }}</dt><dd>{{ s.current ?? '—' }} / {{ s.max ?? '—' }}</dd>
         </template>
       </dl>
     </section>

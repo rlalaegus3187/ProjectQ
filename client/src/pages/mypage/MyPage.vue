@@ -40,7 +40,7 @@ async function save() {
   saving.value = true;
   try {
     const { character: saved } = character.value
-      ? await api('/characters/me', { method: 'PUT', body: { name: form.value.name, specials: form.value.specials, stats: form.value.stats } })
+      ? await api('/characters/me', { method: 'PUT', body: { name: form.value.name, costs: form.value.costs, stats: form.value.stats } })
       : await api('/characters', { method: 'POST', body: form.value });
     character.value = saved;
     form.value = null;

@@ -28,10 +28,16 @@ const remaining = computed(() => totalPoints.value - usedPoints.value);
   <fieldset class="fieldset">
     <legend>기본정보</legend>
     <label>캐릭터 이름 <input v-model="form.name" required maxlength="50" /></label>
-    <!-- 특별 스탯 (HP, MP 등 — 이름·사용 여부는 관리 → 캐릭터 항목) -->
-    <label v-for="s in definitions.specials || []" :key="s.slot">
-      {{ s.name }} <input v-model="form.specials[s.slot]" type="number" min="0" step="1" required />
-    </label>
+    <!-- 코스트 (HP, MP 등 — 현재치 / 최대치, 이름·사용 여부는 관리 → 캐릭터 항목) -->
+    <div v-for="s in definitions.costs || []" :key="s.slot" class="field">
+      <span>{{ s.name }} <span class="muted">(현재치 / 최대치)</span></span>
+      <span class="cost-inputs">
+        <input v-model="form.costs[s.slot].current" type="number" min="0" :max="form.costs[s.slot].max || undefined" step="1" required
+          placeholder="현재치" :aria-label="`${s.name} 현재치`" />
+        <span class="muted">/</span>
+        <input v-model="form.costs[s.slot].max" type="number" min="0" step="1" required placeholder="최대치" :aria-label="`${s.name} 최대치`" />
+      </span>
+    </div>
   </fieldset>
 
   <!-- 관리 → 캐릭터 항목에서 캐릭터 스탯을 '미사용'으로 두면 숨김 -->

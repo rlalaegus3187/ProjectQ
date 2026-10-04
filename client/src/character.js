@@ -26,15 +26,16 @@ const fill = (defs, values) => Object.fromEntries(
   defs.map((d) => [d.code, values[d.code] || (isPointStat(d) ? 0 : '')]),
 );
 
-// 캐릭터 폼 (기본정보 + 특별 스탯 + 스탯 [+ 첫 프로필]). character 가 있으면 기존 값으로 채움
+// 캐릭터 폼 (기본정보 + 코스트 + 스탯 [+ 첫 프로필]). character 가 있으면 기존 값으로 채움
 // 새 캐릭터(회원가입/캐릭터 만들기)일 때는 대표 프로필 값(details)도 함께 입력
 export function toCharacterForm(definitions, character = null) {
   return {
     name: character?.name ?? '',
-    // 특별 스탯 (HP, MP 등 — 사용 중인 것만) { 슬롯: 값 }
-    specials: Object.fromEntries((definitions.specials || []).map((s) => [
-      s.slot, character?.specials?.find((c) => c.slot === s.slot)?.value ?? '',
-    ])),
+    // 코스트 (HP, MP 등 — 사용 중인 것만) { 슬롯: { current 현재치, max 최대치 } }
+    costs: Object.fromEntries((definitions.costs || []).map((s) => {
+      const saved = character?.costs?.find((c) => c.slot === s.slot);
+      return [s.slot, { current: saved?.current ?? '', max: saved?.max ?? '' }];
+    })),
     stats: fill(definitions.stats, valuesOf(character?.stats)),
     music: '',
     details: fill(definitions.details, {}),

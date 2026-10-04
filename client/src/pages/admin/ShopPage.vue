@@ -5,6 +5,7 @@ import { api } from '../../api';
 import { formatMoney } from '../../items';
 import { useSelection } from '../../selection';
 import BulkBar from '../../components/BulkBar.vue';
+import ToggleSwitch from '../../components/ToggleSwitch.vue';
 
 const listings = ref([]);
 const items = ref([]);
@@ -99,7 +100,7 @@ onMounted(() => load().catch((e) => { error.value = e.message; }));
         <label class="inline">가격 <input v-model.number="newListing.price" class="money-input" type="number" min="0" step="1" required /></label>
         <label class="inline">재고 <input v-model="newListing.stock" class="narrow" type="number" min="0" step="1" placeholder="무제한" /></label>
         <label class="inline">순서 <input v-model.number="newListing.sortOrder" class="narrow" type="number" step="1" /></label>
-        <label class="inline"><input v-model="newListing.isActive" type="checkbox" /> 판매</label>
+        <label class="toggle"><ToggleSwitch v-model="newListing.isActive" /> 판매</label>
         <button type="submit" :disabled="!available.length">추가</button>
       </div>
     </form>
@@ -130,7 +131,7 @@ onMounted(() => load().catch((e) => { error.value = e.message; }));
             <td><input v-model.number="drafts[l.id].price" class="money-input" type="number" min="0" step="1" :title="formatMoney(drafts[l.id].price)" /></td>
             <td><input v-model="drafts[l.id].stock" class="narrow" type="number" min="0" step="1" placeholder="무제한" /></td>
             <td><input v-model.number="drafts[l.id].sortOrder" class="narrow" type="number" step="1" /></td>
-            <td><input v-model="drafts[l.id].isActive" type="checkbox" /></td>
+            <td><ToggleSwitch v-model="drafts[l.id].isActive" :label="`${l.item.name} 판매`" /></td>
             <td class="row-actions">
               <button type="button" :disabled="!isDirty(l)" @click="save(l)">저장</button>
               <button type="button" class="danger" @click="remove(l)">내리기</button>

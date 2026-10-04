@@ -4,6 +4,7 @@
 import { ref, computed, onMounted } from 'vue';
 import { api } from '../../api';
 import { loadMenu } from '../../menu';
+import ToggleSwitch from '../../components/ToggleSwitch.vue';
 
 const items = ref([]);
 const saved = ref('');
@@ -58,8 +59,8 @@ onMounted(() => load().catch((e) => { error.value = e.message; }));
 
     <ul class="menu-edit">
       <li v-for="(m, i) in items" :key="m.key" :class="{ hidden: !m.visible }">
-        <label class="inline">
-          <input v-model="m.visible" type="checkbox" :aria-label="`${m.label} 메뉴에 보이기`" />
+        <label class="toggle">
+          <ToggleSwitch v-model="m.visible" :label="`${m.label} 메뉴에 보이기`" />
           <strong>{{ m.label }}</strong>
         </label>
         <span class="muted">{{ m.to }}</span>

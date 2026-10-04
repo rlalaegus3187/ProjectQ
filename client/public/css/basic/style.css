@@ -299,6 +299,11 @@ input.invalid { border-color: var(--color-danger); }
 .switch input:checked + .slider { background: var(--color-primary); }
 .switch input:checked + .slider::after { transform: translateX(20px); }
 .switch input:focus-visible + .slider { outline: 2px solid #93c5fd; outline-offset: 2px; }
+/* 스위치 + 옆 글자 (<label class="toggle"><ToggleSwitch /> 판매</label>) */
+label.toggle, .form label.toggle { display: inline-flex; flex-direction: row; align-items: center; gap: 8px; cursor: pointer; }
+/* 코스트 입력: 현재치 / 최대치 */
+.cost-inputs { display: flex; align-items: center; gap: 8px; }
+.cost-inputs input { width: 120px; }
 strong.on { color: var(--color-primary); }
 strong.off { color: var(--color-muted); }
 

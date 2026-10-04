@@ -5,6 +5,7 @@ import { setSite } from '../../site';
 import { VALUE_TYPES } from '../../character';
 import { useSelection } from '../../selection';
 import BulkBar from '../../components/BulkBar.vue';
+import ToggleSwitch from '../../components/ToggleSwitch.vue';
 
 const CATEGORIES = [
   { key: 'stats', category: 'stat', title: '캐릭터 스탯', defaultType: 'number' },
@@ -14,8 +15,8 @@ const CATEGORIES = [
 const lists = ref({ stats: [], details: [] });
 const statPoints = ref(0);        // 저장된 초기 투자 포인트
 const statPointsDraft = ref(0);   // 입력 중인 값
-const specials = ref([]);         // 특별 스탯 1~5 [{ slot, name, enabled }] (입력 중인 값)
-const specialsSaved = ref('');    // 저장된 값 (JSON) — 바뀐 게 있는지 비교
+const costs = ref([]);         // 코스트 1~5 [{ slot, name, enabled }] (입력 중인 값)
+const costsSaved = ref('');    // 저장된 값 (JSON) — 바뀐 게 있는지 비교
 const statsEnabled = ref(true);   // 캐릭터 스탯 사용 여부 (끄면 회원가입·마이페이지·캐릭터 화면에서 스탯이 숨겨짐)
 const drafts = reactive({});   // id → 수정 중인 값
 const error = ref('');
@@ -48,8 +49,8 @@ async function load() {
   statPoints.value = settings.statPoints;
   statPointsDraft.value = settings.statPoints;
   statsEnabled.value = settings.statsEnabled !== false;
-  specials.value = settings.specialStats.map((s) => ({ ...s }));
-  specialsSaved.value = JSON.stringify(specials.value);
+  costs.value = settings.costs.map((s) => ({ ...s }));
+  costsSaved.value = JSON.stringify(costs.value);
   for (const item of [...lists.value.stats, ...lists.value.details]) drafts[item.id] = toDraft(item);
 }
 
@@ -147,11 +148,11 @@ function bulkRemove(c) {
   });
 }
 
-// 특별 스탯 1~5 이름·사용 저장
-function saveSpecials() {
+// 코스트 1~5 이름·사용 저장
+function saveCosts() {
   return run(
-    () => api('/admin/settings', { method: 'PUT', body: { specialStats: specials.value.map(({ name, enabled }) => ({ name, enabled })) } }),
-    '특별 스탯을 저장했습니다.',
+    () => api('/admin/settings', { method: 'PUT', body: { costs: costs.value.map(({ name, enabled }) => ({ name, enabled })) } }),
+    '코스트를 저장했습니다.',
   );
 }
 
@@ -195,26 +196,26 @@ onMounted(() => load().catch((e) => { error.value = e.message; }));
   </section>
 
   <section class="card">
-    <h2>특별 스탯</h2>
+    <h2>코스트</h2>
     <p class="muted">
       HP, MP, 이성처럼 캐릭터마다 숫자를 <strong>그대로 입력</strong>하는 값입니다. (아래 캐릭터 스탯처럼 투자 포인트를 나눠 쓰지 않음)
       5칸 중 쓸 칸에 이름을 정하고 '사용'을 켜면 기본정보에 입력칸이 생깁니다. 끄면 숨겨지고 저장된 값은 남습니다.
     </p>
-    <form class="form" @submit.prevent="saveSpecials">
+    <form class="form" @submit.prevent="saveCosts">
       <div class="table-wrap">
         <table class="table">
           <thead><tr><th>칸</th><th>이름</th><th>사용</th></tr></thead>
           <tbody>
-            <tr v-for="s in specials" :key="s.slot" :class="{ inactive: !s.enabled }">
-              <td>특별 스탯 {{ s.slot }}</td>
-              <td><input v-model="s.name" maxlength="20" :placeholder="['예: HP', '예: MP', '예: 이성', '예: SP', '예: 기력'][s.slot - 1]" :aria-label="`특별 스탯 ${s.slot} 이름`" /></td>
-              <td><input v-model="s.enabled" type="checkbox" :aria-label="`특별 스탯 ${s.slot} 사용`" /></td>
+            <tr v-for="s in costs" :key="s.slot" :class="{ inactive: !s.enabled }">
+              <td>코스트 {{ s.slot }}</td>
+              <td><input v-model="s.name" maxlength="20" :placeholder="['예: HP', '예: MP', '예: 이성', '예: SP', '예: 기력'][s.slot - 1]" :aria-label="`코스트 ${s.slot} 이름`" /></td>
+              <td><ToggleSwitch v-model="s.enabled" :label="`코스트 ${s.slot} 사용`" /></td>
             </tr>
           </tbody>
         </table>
       </div>
       <div class="actions">
-        <button type="submit" :disabled="JSON.stringify(specials) === specialsSaved">저장</button>
+        <button type="submit" :disabled="JSON.stringify(costs) === costsSaved">저장</button>
       </div>
     </form>
   </section>
@@ -279,7 +280,7 @@ onMounted(() => load().catch((e) => { error.value = e.message; }));
               </td>
               <td><input v-model="drafts[item.id].isRequired" type="checkbox" /></td>
               <td><input v-model.number="drafts[item.id].sortOrder" class="narrow" type="number" step="1" /></td>
-              <td><input v-model="drafts[item.id].isActive" type="checkbox" /></td>
+              <td><ToggleSwitch v-model="drafts[item.id].isActive" :label="`${item.label} 사용`" /></td>
               <td class="row-actions">
                 <button type="button" :disabled="!isDirty(item)" @click="save(item)">저장</button>
                 <button type="button" class="danger" @click="remove(item)">삭제</button>
