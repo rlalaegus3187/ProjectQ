@@ -63,6 +63,8 @@ async function getSiteSettings(conn = pool) {
     siteMusic: await getSetting('site_music', conn),
     qnaGuestWrite: await isGuestWriteAllowed(conn),
     sitePrivate: await isSitePrivate(conn),
+    // 지금 적용된 CSS 테마 { id, css(덮어쓸 css 주소, basic 이면 null) }
+    siteTheme: await require('./themes').getActiveTheme(conn),
   };
 }
 

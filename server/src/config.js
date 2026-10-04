@@ -21,6 +21,8 @@ module.exports = {
   cookieSecure: process.env.COOKIE_SECURE === 'true',
   // 회원가입 시 부여할 권한 (admin / member / applicant). 기본은 신청자
   signupRole: ['admin', 'member', 'applicant'].includes(process.env.SIGNUP_ROLE) ? process.env.SIGNUP_ROLE : 'applicant',
+  // CSS 테마 폴더 (기본: 저장소의 client/public/css — 배포하면 웹 루트 /css/ 로 올라감)
+  themesDir: process.env.THEMES_DIR || path.join(__dirname, '..', '..', 'client', 'public', 'css'),
   // 업로드 이미지 저장 위치 (운영: /data/uploads, 개발: server/uploads)
   uploadDir: process.env.UPLOAD_DIR
     || (process.env.NODE_ENV === 'production' ? '/data/uploads' : path.join(__dirname, '..', 'uploads')),

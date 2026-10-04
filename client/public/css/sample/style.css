@@ -1,0 +1,21 @@
+/* 샘플 테마 — basic(/css/basic/style.css) 다음에 불러와서 덮어씀
+   1) 색·글꼴·모서리는 변수만 바꾸면 사이트 전체에 적용됩니다. */
+:root {
+  --color-bg: #f7f3ff;
+  --color-surface: #ffffff;
+  --color-text: #2e1065;
+  --color-text-sub: #4c1d95;
+  --color-muted: #7c6f99;
+  --color-primary: #7c3aed;
+  --color-primary-dark: #6d28d9;
+  --color-primary-soft: #ede9fe;
+  --color-border: #e9e1fb;
+  --color-border-light: #f3eefe;
+  --color-input-border: #d8ccf5;
+  --radius: 16px;
+}
+
+/* 2) 변수로 안 되는 부분은 basic 과 같은 선택자로 덮어쓰기 */
+.nav { box-shadow: 0 2px 12px rgba(124, 58, 237, .08); }
+.brand { color: var(--color-primary); letter-spacing: .5px; }
+button, a.button { border-radius: 999px; }

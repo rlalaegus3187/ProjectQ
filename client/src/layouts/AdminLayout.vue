@@ -9,6 +9,7 @@ const ADMIN_MENU = [
   { to: '/admin/items', label: '아이템 관리' },
   { to: '/admin/shop', label: '상점 관리' },
   { to: '/admin/settings', label: '사이트 설정' },
+  { to: '/admin/themes', label: '테마' },
 ];
 </script>
 

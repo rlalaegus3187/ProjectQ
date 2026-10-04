@@ -47,6 +47,7 @@ const router = createRouter({
         { path: 'items', component: () => import('./pages/admin/ItemsPage.vue') },
         { path: 'shop', component: () => import('./pages/admin/ShopPage.vue') },
         { path: 'settings', component: () => import('./pages/admin/SettingsPage.vue') },
+        { path: 'themes', component: () => import('./pages/admin/ThemesPage.vue') },
       ],
     },
     { path: '/shop', component: () => import('./pages/shop/ShopPage.vue') },

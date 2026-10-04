@@ -1,12 +1,38 @@
-// 사이트 설정 (관리 → 사이트 설정) — 이름(상단 로고·탭 제목), 파비콘, 회원 전용 여부
+// 사이트 설정 (관리 → 사이트 설정) — 이름(상단 로고·탭 제목), 파비콘, 회원 전용 여부, CSS 테마
 //   import { site, loadSite } from './site';   site.name, site.favicon, site.private
 import { reactive, watchEffect } from 'vue';
 import { api } from './api';
 
-export const site = reactive({ name: 'ProjectQ', favicon: null, private: false, music: null, loaded: false });
+export const site = reactive({
+  name: 'ProjectQ', favicon: null, private: false, music: null, theme: { id: 'basic', css: null }, loaded: false,
+});
+
+// CSS 테마 적용: basic(/css/basic/style.css, index.html) 다음에 <link id="theme-css"> 로 테마 css 를 덮어씀
+// css 가 null 이면 basic 만. remember: 다음 방문 때 바로 붙이도록 브라우저에 기억 (index.html 의 스크립트가 사용)
+export function applyTheme(css, { remember = true } = {}) {
+  let link = document.getElementById('theme-css');
+  if (!css) {
+    link?.remove();
+  } else {
+    if (!link) {
+      link = document.createElement('link');
+      link.rel = 'stylesheet';
+      link.id = 'theme-css';
+      document.head.appendChild(link);
+    }
+    if (link.getAttribute('href') !== css) link.setAttribute('href', css);
+  }
+  if (remember) {
+    try { localStorage.setItem('pq-theme', JSON.stringify({ css: css || null })); } catch { /* 저장 못 해도 동작 */ }
+  }
+}
 
 // GET /api/settings 결과를 반영
-export function setSite({ siteName, siteFavicon, sitePrivate, siteMusic }) {
+export function setSite({ siteName, siteFavicon, sitePrivate, siteMusic, siteTheme }) {
+  if (siteTheme) {
+    site.theme = siteTheme;
+    applyTheme(siteTheme.css);
+  }
   if (siteName) site.name = siteName;
   site.favicon = siteFavicon || null;
   if (sitePrivate !== undefined) site.private = !!sitePrivate;

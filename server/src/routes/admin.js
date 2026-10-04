@@ -9,6 +9,7 @@ const {
   getSetting, setSetting, parseSiteName, parseFavicon, getSiteSettings, clearSitePrivateCache,
 } = require('../settings');
 const { parseYouTubeId } = require('../youtube');
+const { listThemes, findTheme } = require('../themes');
 
 const router = express.Router();
 router.use(requireAdmin);
@@ -54,11 +55,16 @@ async function currentSettings() {
   };
 }
 
+// CSS 테마 목록 (client/public/css/<폴더>) + 지금 테마
+router.get('/themes', async (req, res) => {
+  res.json({ themes: listThemes(), active: (await getSiteSettings()).siteTheme.id });
+});
+
 router.get('/settings', async (req, res) => {
   res.json(await currentSettings());
 });
 
-// 보낸 값만 변경: { statPoints?, siteName?, siteFavicon?(업로드한 이미지 경로, 빈 값이면 없음), siteMusic?(유튜브 링크, 빈 값이면 끔), qnaGuestWrite?(Q&A 비회원 글쓰기 허용), sitePrivate?(회원 전용 — 로그인해야 이용), signupNotice?(회원가입 안내, 마크다운) }
+// 보낸 값만 변경: { statPoints?, siteName?, siteFavicon?(업로드한 이미지 경로, 빈 값이면 없음), siteMusic?(유튜브 링크, 빈 값이면 끔), qnaGuestWrite?(Q&A 비회원 글쓰기 허용), sitePrivate?(회원 전용 — 로그인해야 이용), signupNotice?(회원가입 안내, 마크다운), siteTheme?(테마 폴더 이름) }
 router.put('/settings', async (req, res) => {
   const body = req.body ?? {};
   // 검증을 먼저 모두 한 뒤 저장 (하나라도 틀리면 아무것도 바꾸지 않음)
@@ -74,6 +80,11 @@ router.put('/settings', async (req, res) => {
   const siteMusic = body.siteMusic !== undefined ? parseYouTubeId(body.siteMusic, '사이트 음악') : undefined;
   const qnaGuestWrite = body.qnaGuestWrite !== undefined ? !!body.qnaGuestWrite : undefined;
   const sitePrivate = body.sitePrivate !== undefined ? !!body.sitePrivate : undefined;
+  let siteTheme;
+  if (body.siteTheme !== undefined) {
+    siteTheme = String(body.siteTheme ?? '');
+    if (!findTheme(siteTheme)) throw new HttpError(400, '없는 테마입니다. (css 폴더에 style.css 가 있는지 확인)');
+  }
   let signupNotice;
   if (body.signupNotice !== undefined) {
     signupNotice = String(body.signupNotice ?? '').trim();
@@ -86,6 +97,7 @@ router.put('/settings', async (req, res) => {
   if (siteMusic !== undefined) await setSetting('site_music', siteMusic);
   if (qnaGuestWrite !== undefined) await setSetting('qna_guest_write', qnaGuestWrite ? '1' : '0');
   if (signupNotice !== undefined) await setSetting('signup_notice', signupNotice || null);
+  if (siteTheme !== undefined) await setSetting('site_theme', siteTheme);
   if (sitePrivate !== undefined) {
     await setSetting('site_private', sitePrivate ? '1' : '0');
     clearSitePrivateCache();

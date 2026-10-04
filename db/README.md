@@ -53,6 +53,7 @@ character_profiles.music_video_id  프로필 음악 (유튜브 영상 ID, NULL =
 users.music_volume / music_enabled  계정별 음악 볼륨(0~100) / 재생 여부
 settings.site_music                 사이트 전체 음악 (유튜브 영상 ID)
 settings.site_name                  사이트 이름 (없으면 ProjectQ)
+settings.site_theme                 CSS 테마 폴더 이름 (client/public/css/<이름>, 없거나 폴더가 없으면 basic)
 settings.site_private               회원 전용 모드 ('1' = 로그인해야 이용, 없거나 '0' = 공개)
 settings.qna_guest_write            Q&A 비회원 글쓰기 허용 ('1' 허용, 없거나 '0' 막음)
 settings.site_favicon               파비콘(브라우저 탭 아이콘): 업로드 이미지 경로 ico/png 등 (없으면 없음)

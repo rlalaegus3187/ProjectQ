@@ -4,6 +4,20 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>ProjectQ</title>
+    <!-- 기본 테마: 항상 먼저 불러옴 (client/public/css/basic/style.css) -->
+    <link rel="stylesheet" href="/css/basic/style.css" />
+    <!-- 선택된 테마(관리 → 사이트 설정)는 basic 다음에 불러와서 덮어씀.
+         지난번 테마를 바로 붙여서 basic 모습이 잠깐 보이는 것을 막음 → 설정을 불러오면 src/site.js 가 최신으로 바꿈 -->
+    <script>
+      try {
+        var t = JSON.parse(localStorage.getItem('pq-theme') || 'null');
+        if (t && typeof t.css === 'string' && /^\/css\/[a-z0-9][a-z0-9_-]*\/style\.css(\?v=\d+)?$/.test(t.css)) {
+          var l = document.createElement('link');
+          l.rel = 'stylesheet'; l.id = 'theme-css'; l.href = t.css;
+          document.head.appendChild(l);
+        }
+      } catch (e) { /* 저장된 테마가 없거나 막힘 → basic */ }
+    </script>
   </head>
   <body>
     <div id="app"></div>
