@@ -5,6 +5,7 @@ import { auth, APPLICATION_LABELS } from '../../auth';
 import { fetchAttributes, toCharacterForm } from '../../character';
 import CharacterCard from '../../components/CharacterCard.vue';
 import CharacterForm from '../../components/CharacterForm.vue';
+import { MarkdownView } from '../../markdown';
 import ProfileList from '../../components/ProfileList.vue';
 import ModalDialog from '../../components/ModalDialog.vue';
 import AccountSection from '../../components/AccountSection.vue';
@@ -49,16 +50,29 @@ async function save() {
   }
 }
 
-// 신청자: 작성완료 제출 / 작성중으로 되돌리기
+// 신청자: 프로필은 [저장]만 하면 되고(동의 필요 없음), 처음 [신청서 제출]할 때 제출 동의사항 팝업에 동의
+// 제출한 뒤에도 계속 수정할 수 있음
 const isApplicant = computed(() => auth.user?.role === 'applicant');
-async function setApplication(status) {
-  if (status === 'submitted' && !confirm('신청서를 작성완료로 제출할까요?\n제출하면 작성중으로 되돌리기 전까지 수정할 수 없습니다.')) return;
-  error.value = '';
+const submitting = ref(null);   // 제출 팝업 { notice, agree, error }
+
+async function openSubmit() {
+  submitting.value = { notice: null, agree: false, error: '' };
+  try {
+    submitting.value.notice = (await api('/characters/me/application-notice')).notice;
+  } catch (e) {
+    submitting.value.notice = '';
+    submitting.value.error = e.message;
+  }
+}
+
+async function submitApplication() {
+  submitting.value.error = '';
   saving.value = true;
   try {
-    character.value = (await api('/characters/me/application', { method: 'PUT', body: { status } })).character;
+    character.value = (await api('/characters/me/application/submit', { method: 'POST', body: { agree: true } })).character;
+    submitting.value = null;
   } catch (e) {
-    error.value = e.message;
+    submitting.value.error = e.message;
   } finally {
     saving.value = false;
   }
@@ -70,36 +84,46 @@ onMounted(() => load().catch((e) => { error.value = e.message; loaded.value = tr
 <template>
   <AccountSection />
 
-  <!-- 신청자: 신청 상태 -->
+  <!-- 신청자: 신청서 (프로필 저장은 자유, 처음 제출할 때 동의) -->
   <section v-if="isApplicant && loaded" class="card application-panel">
     <div class="card-head">
       <h2>캐릭터 신청</h2>
       <span v-if="character" class="badge" :class="character.applicationStatus">
-        {{ APPLICATION_LABELS[character.applicationStatus] }}
+        {{ character.applicationStatus === 'submitted' ? '제출 완료' : '작성중' }}
       </span>
     </div>
-    <template v-if="!character">
-      <p class="muted">아래에서 캐릭터를 작성한 뒤 작성완료로 제출해주세요.</p>
-    </template>
+    <p v-if="!character" class="muted">아래에서 캐릭터를 작성한 뒤 신청서를 제출해주세요.</p>
     <template v-else-if="character.applicationStatus === 'draft'">
       <p class="muted">
-        신청서를 작성 중입니다. 신청자는 프로필을 1개만 등록할 수 있습니다.
-        다 작성했으면 <strong>작성완료</strong>로 제출해주세요. 관리자가 확인 후 멤버로 전환합니다.
+        아래 캐릭터와 프로필을 작성하고 <strong>저장</strong>해 두세요. 다 작성했으면 <strong>신청서 제출</strong>을 눌러주세요.
+        제출한 뒤에도 내용은 계속 수정할 수 있습니다.
       </p>
       <div class="actions">
-        <button type="button" :disabled="saving || !!form" @click="setApplication('submitted')">작성완료로 제출</button>
+        <button type="button" :disabled="saving || !!form" @click="openSubmit">신청서 제출</button>
       </div>
     </template>
-    <template v-else>
-      <p class="muted">
-        신청서를 제출했습니다. 관리자가 검토 중입니다. 멤버로 전환되면 알림으로 알려드립니다.
-        제출한 신청서는 수정할 수 없습니다 — 고치려면 작성중으로 되돌려주세요.
-      </p>
-      <div class="actions">
-        <button type="button" class="secondary" :disabled="saving" @click="setApplication('draft')">작성중으로 되돌리기</button>
-      </div>
-    </template>
+    <p v-else class="muted">
+      <template v-if="character.submittedAt">{{ new Date(character.submittedAt).toLocaleString('ko-KR') }}에 </template>신청서를 제출했습니다.
+      관리자가 검토 중이며, 멤버로 전환되면 알림으로 알려드립니다. 내용은 계속 수정할 수 있습니다.
+    </p>
   </section>
+
+  <!-- 신청서 제출 동의 (관리 → 사이트 설정 → 신청서 제출 동의사항) -->
+  <ModalDialog v-if="submitting" title="신청서 제출" @close="submitting = null">
+    <form class="form" @submit.prevent="submitApplication">
+      <p v-if="submitting.notice === null" class="muted">불러오는 중…</p>
+      <div v-else-if="submitting.notice" class="signup-notice"><MarkdownView :source="submitting.notice" /></div>
+      <label class="inline agree">
+        <input v-model="submitting.agree" type="checkbox" />
+        {{ submitting.notice ? '위 동의사항을 모두 읽었으며 동의합니다.' : '신청서 제출에 동의합니다.' }}
+      </label>
+      <p v-if="submitting.error" class="error">{{ submitting.error }}</p>
+      <div class="actions">
+        <button type="submit" :disabled="saving || !submitting.agree">{{ saving ? '제출 중…' : '제출' }}</button>
+        <button type="button" class="secondary" @click="submitting = null">취소</button>
+      </div>
+    </form>
+  </ModalDialog>
 
   <section class="card">
     <div class="card-head">
@@ -107,7 +131,7 @@ onMounted(() => load().catch((e) => { error.value = e.message; loaded.value = tr
       <div v-if="character" class="actions">
         <span class="money-badge">소지금 <strong>{{ formatMoney(character.money) }}</strong></span>
         <RouterLink to="/inventory" class="button secondary">인벤토리</RouterLink>
-        <button v-if="!character.locked" class="secondary" @click="startEdit">수정하기</button>
+        <button class="secondary" @click="startEdit">수정하기</button>
       </div>
     </div>
 
@@ -141,5 +165,5 @@ onMounted(() => load().catch((e) => { error.value = e.message; loaded.value = tr
   </ModalDialog>
 
   <ProfileList v-if="character && definitions" :character="character" :definitions="definitions"
-    :readonly="character.locked" :public-page="auth.user.role !== 'applicant'" @updated="(c) => { character = c; }" />
+    :public-page="auth.user.role !== 'applicant'" @updated="(c) => { character = c; }" />
 </template>

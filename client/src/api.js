@@ -13,6 +13,8 @@ export async function api(path, { method = 'GET', body } = {}) {
     const error = new Error(data?.message || `요청 실패 (${res.status})`);
     error.status = res.status;
     error.data = data;   // 서버가 보낸 추가 정보 (예: 비밀번호로 열 수 있는 비밀글)
+    // 사이트가 비공개로 바뀌었으면 화면 전체를 안내로 (App.vue 가 받음)
+    if (data?.siteClosed) window.dispatchEvent(new CustomEvent('site-closed', { detail: data.message }));
     throw error;
   }
   return data;

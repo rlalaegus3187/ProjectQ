@@ -53,6 +53,7 @@ async function currentSettings() {
     statPoints: await getStatPoints(),
     ...(await getSiteSettings()),
     signupNotice: (await getSetting('signup_notice')) || '',   // 회원가입 안내(주의문구, 마크다운)
+    applicationNotice: (await getSetting('application_notice')) || '',   // 신청서 제출 동의사항(마크다운)
   };
 }
 
@@ -65,7 +66,7 @@ router.get('/settings', async (req, res) => {
   res.json(await currentSettings());
 });
 
-// 보낸 값만 변경: { statPoints?, siteName?, siteFavicon?(업로드한 이미지 경로, 빈 값이면 없음), siteMusic?(유튜브 링크, 빈 값이면 끔), qnaGuestWrite?(Q&A 비회원 글쓰기 허용), sitePrivate?(회원 전용 — 로그인해야 이용), signupNotice?(회원가입 안내, 마크다운), siteTheme?(테마 폴더 이름), signupOpen?(회원가입 허용), profileAddOpen?, profileEditOpen?(프로필 추가/수정 허용) }
+// 보낸 값만 변경: { statPoints?, siteName?, siteFavicon?(업로드한 이미지 경로, 빈 값이면 없음), siteMusic?(유튜브 링크, 빈 값이면 끔), qnaGuestWrite?(Q&A 비회원 글쓰기 허용), sitePrivate?(회원 전용 — 로그인해야 이용), signupNotice?(회원가입 안내, 마크다운), siteTheme?(테마 폴더 이름), signupOpen?(회원가입 허용), siteClosed?, siteClosedMessage?(사이트 비공개·문구), applicationNotice?(신청서 제출 동의사항), profileAddOpen?, profileEditOpen?(프로필 추가/수정 허용) }
 router.put('/settings', async (req, res) => {
   const body = req.body ?? {};
   // 검증을 먼저 모두 한 뒤 저장 (하나라도 틀리면 아무것도 바꾸지 않음)
@@ -82,6 +83,17 @@ router.put('/settings', async (req, res) => {
   const qnaGuestWrite = body.qnaGuestWrite !== undefined ? !!body.qnaGuestWrite : undefined;
   const sitePrivate = body.sitePrivate !== undefined ? !!body.sitePrivate : undefined;
   const signupOpen = body.signupOpen !== undefined ? !!body.signupOpen : undefined;
+  const siteClosed = body.siteClosed !== undefined ? !!body.siteClosed : undefined;
+  let siteClosedMessage;
+  if (body.siteClosedMessage !== undefined) {
+    siteClosedMessage = String(body.siteClosedMessage ?? '').trim();
+    if (siteClosedMessage.length > 5000) throw new HttpError(400, '비공개 안내 문구는 5,000자 이내로 입력해주세요.');
+  }
+  let applicationNotice;
+  if (body.applicationNotice !== undefined) {
+    applicationNotice = String(body.applicationNotice ?? '').trim();
+    if (applicationNotice.length > 20000) throw new HttpError(400, '신청서 제출 동의사항은 20,000자 이내로 입력해주세요.');
+  }
   const profileAddOpen = body.profileAddOpen !== undefined ? !!body.profileAddOpen : undefined;
   const profileEditOpen = body.profileEditOpen !== undefined ? !!body.profileEditOpen : undefined;
   let siteTheme;
@@ -103,6 +115,12 @@ router.put('/settings', async (req, res) => {
   if (signupNotice !== undefined) await setSetting('signup_notice', signupNotice || null);
   if (siteTheme !== undefined) await setSetting('site_theme', siteTheme);
   if (signupOpen !== undefined) await setSetting('signup_open', signupOpen ? '1' : '0');
+  if (siteClosedMessage !== undefined) await setSetting('site_closed_message', siteClosedMessage || null);
+  if (applicationNotice !== undefined) await setSetting('application_notice', applicationNotice || null);
+  if (siteClosed !== undefined) {
+    await setSetting('site_closed', siteClosed ? '1' : '0');
+    clearSitePrivateCache();
+  }
   if (profileAddOpen !== undefined) await setSetting('profile_add_open', profileAddOpen ? '1' : '0');
   if (profileEditOpen !== undefined) await setSetting('profile_edit_open', profileEditOpen ? '1' : '0');
   if (sitePrivate !== undefined) {

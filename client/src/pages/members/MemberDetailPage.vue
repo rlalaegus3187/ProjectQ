@@ -17,7 +17,6 @@ const router = useRouter();
 const character = ref(null);
 const error = ref('');
 const isMine = ref(false);
-const locked = ref(false);         // 내 신청서가 작성완료로 잠김
 const isApplicant = ref(false);   // 신청자의 신청서 (관리자만 볼 수 있음)
 const definitions = ref(null);
 const editing = ref(null);         // 수정 중인 프로필
@@ -44,7 +43,6 @@ async function load({ keep = false } = {}) {
     if (auth.user) {
       const mine = (await api('/characters/me')).character;
       isMine.value = mine?.id === character.value.id;
-      locked.value = !!mine?.locked;
     }
   } catch (e) {
     error.value = e.message;
@@ -85,7 +83,7 @@ watch(() => route.params.id, () => load(), { immediate: true });
 
   <ProfileSection v-if="character" :key="character.id" v-model:selected="selectedId" :character="character">
     <template #actions="{ profile }">
-      <button v-if="isMine && !locked && profile && (site.profileEditOpen || isAdmin())" type="button" class="secondary" @click="startEdit(profile)">이 프로필 수정</button>
+      <button v-if="isMine && profile && (site.profileEditOpen || isAdmin())" type="button" class="secondary" @click="startEdit(profile)">이 프로필 수정</button>
     </template>
   </ProfileSection>
 

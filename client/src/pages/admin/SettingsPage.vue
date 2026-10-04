@@ -17,6 +17,9 @@ const musicInvalid = computed(() => !!form.value?.siteMusic && !parseYouTubeId(f
 const toForm = (s) => ({
   sitePrivate: !!s.sitePrivate,
   signupOpen: s.signupOpen !== false,
+  siteOpen: !s.siteClosed,   // 사이트 공개 (끄면 관리자만)
+  siteClosedMessage: s.siteClosedMessage || '',
+  applicationNotice: s.applicationNotice || '',
   profileAddOpen: s.profileAddOpen !== false,
   profileEditOpen: s.profileEditOpen !== false,
   signupNotice: s.signupNotice || '',
@@ -28,7 +31,9 @@ async function save() {
   message.value = '';
   saving.value = true;
   try {
-    const s = await api('/admin/settings', { method: 'PUT', body: form.value });
+    const { siteOpen, ...rest } = form.value;
+    if (!siteOpen && !confirm('사이트를 비공개로 바꿀까요?\n관리자 말고는 아무도 로그인하거나 볼 수 없게 됩니다.')) return;
+    const s = await api('/admin/settings', { method: 'PUT', body: { ...rest, siteClosed: !siteOpen } });
     form.value = toForm(s);
     setSite(s);                 // 상단 로고·브라우저 탭에 바로 반영
     setSiteMusic(s.siteMusic);
@@ -77,6 +82,22 @@ onMounted(async () => {
             <span class="muted">— 끄면 회원가입 화면에 "지금은 회원가입을 받지 않습니다"가 보이고 가입 버튼·링크가 사라집니다. 이미 가입한 회원은 그대로 로그인할 수 있습니다.</span>
           </span>
         </label>
+        <label class="switch-row">
+          <span class="switch">
+            <input v-model="form.siteOpen" type="checkbox" role="switch" :aria-checked="form.siteOpen" />
+            <span class="slider" />
+          </span>
+          <span>
+            사이트 공개 <strong :class="form.siteOpen ? 'on' : 'off'">{{ form.siteOpen ? '공개' : '비공개' }}</strong>
+            <span class="muted">— 끄면 <strong>관리자 말고는 아무도</strong> 로그인할 수 없고, 어느 주소로 들어와도 아래 문구만 보입니다. 이미 로그인한 회원도 막힙니다.
+              관리자는 그 화면의 '관리자 로그인'으로 들어올 수 있습니다.</span>
+          </span>
+        </label>
+        <div class="field">
+          <label for="closed-message">비공개일 때 보일 문구 <span class="muted">(마크다운, 비우면 "홈페이지 비공개 상태입니다.")</span></label>
+          <MarkdownEditor id="closed-message" v-model="form.siteClosedMessage" :rows="4" :maxlength="5000"
+            placeholder="예: ## 점검 중입니다&#10;10월 20일 오후 6시에 다시 열립니다." />
+        </div>
       </fieldset>
 
       <fieldset class="fieldset stack">
@@ -131,6 +152,13 @@ onMounted(async () => {
         <p class="muted">회원가입 화면 맨 위에 보이고, 가입하려면 아래 체크박스로 "동의합니다"를 눌러야 합니다. 비워두면 안내 없이 동의 체크만 보입니다.</p>
         <MarkdownEditor v-model="form.signupNotice" :rows="10" :maxlength="20000"
           placeholder="예: ## 가입 전 꼭 읽어주세요&#10;- 캐릭터 설정은 세계관을 따라주세요.&#10;- 소통 계정은 운영진 연락용입니다." />
+      </fieldset>
+
+      <fieldset class="fieldset stack">
+        <legend>신청서 제출 동의사항</legend>
+        <p class="muted">신청자가 마이페이지에서 처음 [신청서 제출]을 누를 때 팝업으로 보이고, "동의합니다"를 체크해야 제출됩니다. (저장할 때는 묻지 않음) 비워두면 동의 체크만 보입니다.</p>
+        <MarkdownEditor v-model="form.applicationNotice" :rows="8" :maxlength="20000"
+          placeholder="예: ## 제출 전 확인해주세요&#10;- 제출한 신청서는 운영진이 검토합니다.&#10;- 결과는 알림으로 안내됩니다." />
       </fieldset>
 
       <fieldset class="fieldset stack">

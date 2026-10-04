@@ -7,7 +7,7 @@ id            PK          ┌──  id            PK
 username      UNIQUE(아이디)│    user_id       UNIQUE, FK → users.id
 contact       소통 계정   │    name          캐릭터 이름   ┐ 기본정보
 role          admin/      │    hp            HP           ┘
-              member/     │    application_status  신청 상태(작성중/작성완료)
+              member/     │    application_status  신청 상태(작성중/제출 완료)
               applicant   │
 password_hash (scrypt)    │
 created_at ...            │
@@ -58,6 +58,9 @@ settings.site_theme                 CSS 테마 폴더 이름 (client/public/css/
 settings.profile_add_open           프로필 추가 허용 ('0' = 막음, 기본 허용 — 관리자는 항상 가능)
 settings.profile_edit_open          프로필 수정·삭제·대표 지정 허용 ('0' = 막음, 기본 허용)
 settings.signup_open                회원가입 허용 ('0' = 막음, 없거나 '1' = 허용)
+settings.site_closed                사이트 비공개 ('1' = 관리자만 로그인·이용, 없거나 '0' = 공개)
+settings.site_closed_message        비공개일 때 보일 문구 (마크다운, 없으면 "홈페이지 비공개 상태입니다.")
+settings.application_notice         신청서 제출 동의사항 (마크다운, 처음 제출할 때 팝업)
 settings.site_private               회원 전용 모드 ('1' = 로그인해야 이용, 없거나 '0' = 공개)
 settings.qna_guest_write            Q&A 비회원 글쓰기 허용 ('1' 허용, 없거나 '0' 막음)
 settings.site_favicon               파비콘(브라우저 탭 아이콘): 업로드 이미지 경로 ico/png 등 (없으면 없음)
@@ -91,7 +94,7 @@ sessions  (express-mysql-session 로그인 세션)
 - 회원가입 안내(주의문구)는 `settings.signup_notice` (마크다운). 회원이 동의하면 `users.agreed_at`(시각)과 `users.agreed_notice`(그때 안내 내용, 기록용)를 저장. 마이페이지에서는 지금 안내를 보여줌
 - 권한(`users.role`): `admin` 관리자 / `member` 멤버 / `applicant` 신청자. 가입 시 권한은 서버 설정 `SIGNUP_ROLE` (기본 `applicant`)
   - 멤버란에는 `admin`, `member` 의 캐릭터만 보임. 신청자는 프로필 1개만
-  - `characters.application_status`: `draft` 작성중 / `submitted` 작성완료 (신청자만 의미, 작성완료면 수정 잠금), `submitted_at` 제출 시각
+  - `characters.application_status`: `draft` 작성중 / `submitted` 제출 완료 (신청자만 의미, 제출 후에도 수정 가능), `submitted_at` 제출 시각
   - 관리자가 멤버로 전환하면 `role = 'member'`, 신청 프로필이 대표 프로필. 삭제하면 캐릭터·프로필만 삭제(계정은 남음)
   - 기존 `user`(일반) 계정은 011 마이그레이션에서 `member` 로 바뀜
 

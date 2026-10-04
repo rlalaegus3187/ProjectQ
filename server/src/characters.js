@@ -136,7 +136,8 @@ const ROLES = ['admin', 'member', 'applicant'];
 const MEMBER_ROLES = ['admin', 'member'];   // 멤버란에 보이는 권한
 const maxProfilesFor = (role) => (role === 'applicant' ? APPLICANT_MAX_PROFILES : MAX_PROFILES);
 // 신청자가 신청서를 '작성완료'로 제출하면 수정 잠금 (작성중으로 되돌리면 다시 수정 가능)
-const isLocked = (role, status) => role === 'applicant' && status === 'submitted';
+// 제출한 뒤에도 수정할 수 있음 (잠금 없음) — 예전 '작성완료면 잠금' 규칙은 없앰. locked 는 호환용으로 항상 false
+const isLocked = () => false;
 
 async function getOwnerInfo(conn, characterId, { lock = false } = {}) {
   const [rows] = await conn.execute(

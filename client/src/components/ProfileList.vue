@@ -12,7 +12,7 @@ import { site } from '../site';
 const props = defineProps({
   character: { type: Object, required: true },
   definitions: { type: Object, required: true },
-  readonly: { type: Boolean, default: false },   // 신청서 잠금(작성완료) 등
+  readonly: { type: Boolean, default: false },   // 보기 전용
   publicPage: { type: Boolean, default: true },  // 프로필 페이지가 공개인지 (신청자는 관리자만 볼 수 있어 팝업으로 보기)
 });
 const emit = defineEmits(['updated']);

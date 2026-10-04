@@ -53,7 +53,21 @@ async function isSitePrivate(conn = pool) {
   privateCache = { value, until: Date.now() + 5000 };
   return value;
 }
-const clearSitePrivateCache = () => { privateCache = null; };
+const clearSitePrivateCache = () => { privateCache = null; closedCache = null; };
+
+// 사이트 비공개 (settings.site_closed = '1') — 관리자 말고는 로그인도, 어떤 화면도 못 봄. 문구는 site_closed_message
+// 요청마다 확인하므로 짧게 캐시 (설정을 바꾸면 바로 지움)
+let closedCache = null;
+async function isSiteClosed(conn = pool) {
+  if (closedCache && closedCache.until > Date.now()) return closedCache.value;
+  const value = (await getSetting('site_closed', conn)) === '1';
+  closedCache = { value, until: Date.now() + 5000 };
+  return value;
+}
+const DEFAULT_CLOSED_MESSAGE = '홈페이지 비공개 상태입니다.';
+async function getClosedMessage(conn = pool) {
+  return (await getSetting('site_closed_message', conn)) || DEFAULT_CLOSED_MESSAGE;
+}
 
 // 회원가입 허용 여부 (settings.signup_open = '0' 이면 막음, 기본은 허용)
 async function isSignupOpen(conn = pool) {
@@ -76,6 +90,8 @@ async function getSiteSettings(conn = pool) {
     siteMusic: await getSetting('site_music', conn),
     qnaGuestWrite: await isGuestWriteAllowed(conn),
     sitePrivate: await isSitePrivate(conn),
+    siteClosed: await isSiteClosed(conn),
+    siteClosedMessage: await getClosedMessage(conn),
     signupOpen: await isSignupOpen(conn),
     profileAddOpen: await isProfileAddOpen(conn),
     profileEditOpen: await isProfileEditOpen(conn),
@@ -85,7 +101,7 @@ async function getSiteSettings(conn = pool) {
 }
 
 module.exports = {
-  getSetting, setSetting, parseSiteName, parseFavicon, getSiteSettings, isGuestWriteAllowed, isSitePrivate, isSignupOpen, isProfileAddOpen, isProfileEditOpen,
+  getSetting, setSetting, parseSiteName, parseFavicon, getSiteSettings, isGuestWriteAllowed, isSitePrivate, isSiteClosed, getClosedMessage, isSignupOpen, isProfileAddOpen, isProfileEditOpen,
   clearSitePrivateCache,
   DEFAULT_SITE_NAME,
 };

@@ -9,7 +9,7 @@ import CharacterCard from '../../components/CharacterCard.vue';
 import ProfileSection from '../../components/ProfileSection.vue';
 
 const FILTERS = [
-  { value: 'submitted', label: '작성완료' },
+  { value: 'submitted', label: '제출 완료' },
   { value: 'draft', label: '작성중' },
   { value: '', label: '전체' },
 ];
@@ -120,7 +120,7 @@ onMounted(load);
     <div class="card-head">
       <h1>신청자 관리</h1>
       <span class="muted">
-        신청자 {{ counts.total }}명 · 작성완료 {{ counts.submitted }} · 작성중 {{ counts.draft }}
+        신청자 {{ counts.total }}명 · 제출 완료 {{ counts.submitted }} · 작성중 {{ counts.draft }}
         <template v-if="counts.noCharacter"> · 캐릭터 없음 {{ counts.noCharacter }}</template>
       </span>
     </div>

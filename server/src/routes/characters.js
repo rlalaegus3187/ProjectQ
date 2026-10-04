@@ -111,20 +111,25 @@ router.delete('/characters/me/profiles/:profileId', requireAuth, async (req, res
 
 // ---------- 신청서 상태 (신청자만) ----------
 // { status: 'submitted' (작성완료 제출) | 'draft' (작성중으로 되돌리기) }
-router.put('/characters/me/application', requireAuth, async (req, res) => {
-  const status = req.body?.status;
-  if (!['draft', 'submitted'].includes(status)) throw new HttpError(400, '신청 상태는 draft 또는 submitted 입니다.');
+// 신청서 제출 동의사항 (관리 → 사이트 설정에서 작성, 마크다운)
+router.get('/characters/me/application-notice', requireAuth, async (req, res) => {
+  res.json({ notice: (await require('../settings').getSetting('application_notice')) || '' });
+});
+
+// 신청서 제출 (신청자, 처음 한 번): { agree: true } — 관리 → 사이트 설정의 '신청서 제출 동의사항'에 동의해야 함
+// 제출한 뒤에도 프로필·캐릭터는 계속 수정할 수 있음 (저장할 때는 동의 필요 없음)
+router.post('/characters/me/application/submit', requireAuth, async (req, res) => {
+  if (req.body?.agree !== true) throw new HttpError(400, '신청서 제출 동의사항에 동의해주세요.');
   const characterId = await myCharacterId(req);
   const [[user]] = await pool.execute('SELECT role FROM users WHERE id = ?', [req.session.userId]);
-  if (user?.role !== 'applicant') throw new HttpError(400, '신청자만 신청 상태를 바꿀 수 있습니다.');
-  await pool.execute(
-    `UPDATE characters SET application_status = ?, submitted_at = ${status === 'submitted' ? 'NOW()' : 'NULL'} WHERE id = ?`,
-    [status, characterId],
+  if (user?.role !== 'applicant') throw new HttpError(400, '신청자만 신청서를 제출할 수 있습니다.');
+  const [result] = await pool.execute(
+    "UPDATE characters SET application_status = 'submitted', submitted_at = NOW() WHERE id = ? AND application_status = 'draft'",
+    [characterId],
   );
-  if (status === 'submitted') {
-    const [[c]] = await pool.execute('SELECT name FROM characters WHERE id = ?', [characterId]);
-    await notifyAdmins({ type: 'application', message: `${c.name} 님이 신청서를 작성완료했습니다.`, link: '/admin/applicants' });
-  }
+  if (!result.affectedRows) throw new HttpError(409, '이미 제출한 신청서입니다. 내용은 그대로 수정하면 됩니다.');
+  const [[c]] = await pool.execute('SELECT name FROM characters WHERE id = ?', [characterId]);
+  await notifyAdmins({ type: 'application', message: `${c.name} 님이 신청서를 제출했습니다.`, link: '/admin/applicants' });
   await sendMine(req, res);
 });
 

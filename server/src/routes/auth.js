@@ -5,7 +5,9 @@ const { hashPassword, verifyPassword } = require('../password');
 const requireAuth = require('../middleware/requireAuth');
 const config = require('../config');
 const { HttpError } = require('../errors');
-const { getSetting, isSignupOpen } = require('../settings');
+const {
+  getSetting, isSignupOpen, isSiteClosed, getClosedMessage,
+} = require('../settings');
 const {
   parseUsername, parseNewPassword, parseContact, destroyUserSessions,
 } = require('../accounts');
@@ -96,6 +98,11 @@ router.post('/login', authLimiter, async (req, res) => {
   // 아이디 존재 여부를 노출하지 않도록 같은 메시지 사용
   if (!user || !(await verifyPassword(password, user.password_hash))) {
     return res.status(401).json({ message: '아이디 또는 비밀번호가 올바르지 않습니다.' });
+  }
+
+  // 사이트 비공개 중에는 관리자만 로그인 (비밀번호가 맞아도 다른 회원은 안내 문구)
+  if (user.role !== 'admin' && await isSiteClosed()) {
+    return res.status(403).json({ message: await getClosedMessage(), siteClosed: true });
   }
 
   await startSession(req, user.id);
