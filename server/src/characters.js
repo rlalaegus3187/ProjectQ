@@ -11,6 +11,7 @@ const UPLOAD_URL_RE = /^\/api\/uploads\/[a-f0-9]{32}\.(png|jpg|gif|webp)$/;
 
 const { HttpError } = require('./errors');
 const { parseYouTubeId } = require('./youtube');
+const { getEnabledSpecialStats, validateSpecialValues, specialsOf } = require('./specialStats');
 
 // 숫자형 캐릭터 스탯 = 투자 포인트를 분배하는 스탯 (0 이상의 정수, 합계 ≤ 투자 포인트)
 const isPointStat = (def) => def.category === 'stat' && def.valueType === 'number';
@@ -159,17 +160,13 @@ async function assertEditable(conn, characterId) {
   return info;
 }
 
-// 캐릭터 입력 검증 (기본정보 + 스탯): { name, hp, stats: {code: value} }
+// 캐릭터 입력 검증 (기본정보 + 특별 스탯 + 스탯): { name, specials: {슬롯: 값}, stats: {code: value} }
 // statPoints: 투자 포인트 총량 (숫자형 스탯 합계 상한). null 이면 검사 안 함
-function validateCharacterInput(input, defs, statPoints = null) {
+// specials: 사용 중인 특별 스탯 [{ slot, name }] (getEnabledSpecialStats) — 여기 없는 슬롯은 건드리지 않음
+function validateCharacterInput(input, defs, statPoints = null, specials = []) {
   const name = String(input?.name ?? '').trim();
   if (!name || name.length > 50) throw new HttpError(400, '캐릭터 이름은 1~50자로 입력해주세요.');
-
-  const hpText = String(input?.hp ?? '').trim();
-  const hp = Number(hpText);
-  if (hpText === '' || !Number.isInteger(hp) || hp < 0 || hp > MAX_INT) {
-    throw new HttpError(400, 'HP는 0 이상의 정수로 입력해주세요.');
-  }
+  const specialValues = validateSpecialValues(input?.specials, specials);
 
   const { stats } = groupDefinitions(defs);
   const statValues = validateValues(input?.stats, stats);
@@ -177,7 +174,7 @@ function validateCharacterInput(input, defs, statPoints = null) {
   if (statPoints !== null && used > statPoints) {
     throw new HttpError(400, `스탯에 투자한 포인트(${used})가 전체 포인트(${statPoints})보다 많습니다.`);
   }
-  return { name, hp, stats: statValues };
+  return { name, specials: specialValues, stats: statValues };
 }
 
 // 프로필 입력 검증: { name, details: {code: value} }
@@ -213,22 +210,33 @@ async function createCharacter(conn, userId, data, profile) {
   let characterId;
   try {
     const [result] = await conn.execute(
-      'INSERT INTO characters (user_id, name, hp) VALUES (?, ?, ?)',
-      [userId, data.name, data.hp],
+      'INSERT INTO characters (user_id, name) VALUES (?, ?)',
+      [userId, data.name],
     );
     characterId = result.insertId;
   } catch (err) {
     if (err.code === 'ER_DUP_ENTRY') throw new HttpError(409, '이미 캐릭터가 있습니다. (계정당 1개)');
     throw err;
   }
+  await saveSpecials(conn, characterId, data.specials);
   await saveValues(conn, 'character_stats', 'character_id', characterId, data.stats);
   await createProfile(conn, characterId, profile, { isMain: true });
   return characterId;
 }
 
-// 기본정보 + 스탯만 수정 (프로필은 따로)
+// 특별 스탯 저장 (사용 중인 슬롯만 — 슬롯 번호는 1~5 로 검증된 값)
+async function saveSpecials(conn, characterId, specials) {
+  if (!specials.length) return;
+  await conn.execute(
+    `UPDATE characters SET ${specials.map((s) => `special${Number(s.slot)} = ?`).join(', ')} WHERE id = ?`,
+    [...specials.map((s) => s.value), characterId],
+  );
+}
+
+// 기본정보 + 특별 스탯 + 스탯만 수정 (프로필은 따로)
 async function updateCharacter(conn, characterId, data) {
-  await conn.execute('UPDATE characters SET name = ?, hp = ? WHERE id = ?', [data.name, data.hp, characterId]);
+  await conn.execute('UPDATE characters SET name = ? WHERE id = ?', [data.name, characterId]);
+  await saveSpecials(conn, characterId, data.specials);
   await saveValues(conn, 'character_stats', 'character_id', characterId, data.stats);
 }
 
@@ -295,7 +303,7 @@ async function getCharacterByUserId(userId, conn = pool) {
 // { userId } 또는 { characterId } 로 조회 (멤버란은 characterId)
 async function getCharacter({ userId, characterId }, conn = pool) {
   const [rows] = await conn.execute(
-    `SELECT c.id, c.name, c.hp, c.money, c.application_status, c.submitted_at, c.created_at, c.updated_at, u.role
+    `SELECT c.id, c.name, c.special1, c.special2, c.special3, c.special4, c.special5, c.money, c.application_status, c.submitted_at, c.created_at, c.updated_at, u.role
        FROM characters c JOIN users u ON u.id = c.user_id
       WHERE c.${userId !== undefined ? 'user_id' : 'id'} = ?`,
     [Number(userId !== undefined ? userId : characterId)],
@@ -303,7 +311,7 @@ async function getCharacter({ userId, characterId }, conn = pool) {
   const character = rows[0];
   if (!character) return null;
 
-  const [defs, totalPoints] = await Promise.all([getDefinitions(conn), getStatPoints(conn)]);
+  const [defs, totalPoints, enabledSpecials] = await Promise.all([getDefinitions(conn), getStatPoints(conn), getEnabledSpecialStats(conn)]);
   const [statRows] = await conn.execute('SELECT definition_id, value FROM character_stats WHERE character_id = ?', [character.id]);
   const [profileRows] = await conn.execute(
     'SELECT id, name, music_video_id, is_main, created_at, updated_at FROM character_profiles WHERE character_id = ? ORDER BY is_main DESC, sort_order, id',
@@ -326,7 +334,7 @@ async function getCharacter({ userId, characterId }, conn = pool) {
   return {
     id: character.id,
     name: character.name,
-    hp: character.hp,
+    specials: specialsOf(character, enabledSpecials),   // 사용 중인 특별 스탯 [{ slot, name, value }]
     money: Number(character.money),
     stats: stats.map(withValue(statValues)),
     statPoints: { total: totalPoints, used: usedPoints },

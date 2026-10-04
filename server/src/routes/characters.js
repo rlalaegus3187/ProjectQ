@@ -20,6 +20,7 @@ const {
   withTransaction,
 } = require('../characters');
 const { notifyAdmins } = require('../notify');
+const { getEnabledSpecialStats } = require('../specialStats');
 const { isProfileAddOpen, isProfileEditOpen, isStatsEnabled, getSetting } = require('../settings');
 
 // 프로필 추가/수정이 막혀 있으면(관리 → 사이트 설정) 403 — 관리자는 항상 가능
@@ -35,15 +36,18 @@ const router = express.Router();
 
 // 현재 입력받는 캐릭터 스탯/프로필 항목 + 투자 포인트 총량 (회원가입 폼에서도 쓰므로 로그인 불필요)
 // statsEnabled: 캐릭터 스탯 사용 여부 (관리 → 캐릭터 항목에서 끄면 스탯 입력칸을 숨김)
+// specials: 사용 중인 특별 스탯 [{ slot, name }] (HP, MP 등)
 router.get('/attributes', async (req, res) => {
-  const [defs, statPoints, statsEnabled] = await Promise.all([getDefinitions(), getStatPoints(), isStatsEnabled()]);
-  res.json({ ...groupDefinitions(defs), statPoints, statsEnabled });
+  const [defs, statPoints, statsEnabled, specials] = await Promise.all([getDefinitions(), getStatPoints(), isStatsEnabled(), getEnabledSpecialStats()]);
+  res.json({ ...groupDefinitions(defs), statPoints, statsEnabled, specials });
 });
 
 // 캐릭터 입력 검증 — 스탯 미사용이면 보낸 스탯 값은 무시하고 검사·저장하지 않음 (저장된 값은 그대로)
+// 특별 스탯은 사용 중인 것만 검사·저장
 async function validateCharacter(body, defs) {
-  if (await isStatsEnabled()) return validateCharacterInput(body, defs, await getStatPoints());
-  return validateCharacterInput({ ...body, stats: {} }, defs.filter((d) => d.category !== 'stat'));
+  const specials = await getEnabledSpecialStats();
+  if (await isStatsEnabled()) return validateCharacterInput(body, defs, await getStatPoints(), specials);
+  return validateCharacterInput({ ...body, stats: {} }, defs.filter((d) => d.category !== 'stat'), null, specials);
 }
 
 async function myCharacterId(req) {
@@ -87,7 +91,7 @@ const sendMine = async (req, res, status = 200) => {
 // 내 캐릭터 (없으면 character: null) — profiles 포함 (대표 프로필이 맨 앞)
 router.get('/characters/me', requireAuth, (req, res) => sendMine(req, res));
 
-// 캐릭터 생성 (계정당 1개 — 이미 있으면 409): { name, hp, stats, details, music? } → 대표 프로필 1개 함께 생성
+// 캐릭터 생성 (계정당 1개 — 이미 있으면 409): { name, specials: {슬롯: 값}, stats, details, music? } → 대표 프로필 1개 함께 생성
 router.post('/characters', requireAuth, async (req, res) => {
   const defs = await getDefinitions();
   const data = await validateCharacter(req.body, defs);
@@ -97,7 +101,7 @@ router.post('/characters', requireAuth, async (req, res) => {
   await sendMine(req, res, 201);
 });
 
-// 기본정보 + 스탯 수정: { name, hp, stats }  (프로필은 아래 프로필 API 로)
+// 기본정보 + 특별 스탯 + 스탯 수정: { name, specials, stats }  (프로필은 아래 프로필 API 로)
 router.put('/characters/me', requireAuth, async (req, res) => {
   const data = await validateCharacter(req.body, await getDefinitions());
   await editMine(req, (conn, characterId) => updateCharacter(conn, characterId, data));

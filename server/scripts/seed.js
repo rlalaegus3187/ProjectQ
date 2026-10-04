@@ -2,6 +2,7 @@
 //   계정: 아이디 demo / 비밀번호 demo1234
 const pool = require('../src/db');
 const { hashPassword } = require('../src/password');
+const { getEnabledSpecialStats } = require('../src/specialStats');
 const {
   getDefinitions, validateCharacterInput, validateProfileInput, DEFAULT_PROFILE_NAME, createCharacter, withTransaction,
 } = require('../src/characters');
@@ -22,7 +23,7 @@ async function main() {
   const details = { ...fill(defs.filter((d) => d.category === 'detail')), original_name: 'Demo Character', age: 20 };
   const known = new Set(defs.filter((d) => d.category === 'detail').map((d) => d.code));
   for (const code of Object.keys(details)) if (!known.has(code)) delete details[code];
-  const character = validateCharacterInput({ name: '데모 캐릭터', hp: 100, stats }, defs);
+  const character = validateCharacterInput({ name: '데모 캐릭터', specials: { 1: 100, 2: 50, 3: 0, 4: 0, 5: 0 }, stats }, defs, null, await getEnabledSpecialStats());
   const profile = validateProfileInput(
     { details },
     defs,

@@ -14,7 +14,9 @@ defineProps({
       <h3>기본정보</h3>
       <dl class="kv">
         <dt>캐릭터 이름</dt><dd>{{ character.name }}</dd>
-        <dt>HP</dt><dd>{{ character.hp }}</dd>
+        <template v-for="s in character.specials || []" :key="s.slot">
+          <dt>{{ s.name }}</dt><dd>{{ s.value ?? '—' }}</dd>
+        </template>
       </dl>
     </section>
 

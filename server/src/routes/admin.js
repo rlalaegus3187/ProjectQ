@@ -8,6 +8,7 @@ const {
 const {
   getSetting, setSetting, parseSiteName, parseFavicon, getSiteSettings, clearSitePrivateCache,
 } = require('../settings');
+const { getSpecialStats, saveSpecialStats } = require('../specialStats');
 const { parseYouTubeId } = require('../youtube');
 const { listThemes, findTheme } = require('../themes');
 const { parseIds, parseRows, pickFlags } = require('../bulk');
@@ -51,6 +52,7 @@ function parseOptions(value) {
 async function currentSettings() {
   return {
     statPoints: await getStatPoints(),
+    specialStats: await getSpecialStats(),   // 특별 스탯 1~5 [{ slot, name, enabled }]
     ...(await getSiteSettings()),
     signupNotice: (await getSetting('signup_notice')) || '',   // 회원가입 안내(주의문구, 마크다운)
     applicationNotice: (await getSetting('application_notice')) || '',   // 신청서 제출 동의사항(마크다운)
@@ -66,7 +68,7 @@ router.get('/settings', async (req, res) => {
   res.json(await currentSettings());
 });
 
-// 보낸 값만 변경: { statPoints?, siteName?, siteFavicon?(업로드한 이미지 경로, 빈 값이면 없음), siteMusic?(유튜브 링크, 빈 값이면 끔), qnaGuestWrite?(Q&A 비회원 글쓰기 허용), sitePrivate?(회원 전용 — 로그인해야 이용), signupNotice?(회원가입 안내, 마크다운), siteTheme?(테마 폴더 이름), signupOpen?(회원가입 허용), siteClosed?, siteClosedMessage?(사이트 비공개·문구), applicationNotice?(신청서 제출 동의사항), profileAddOpen?, profileEditOpen?(프로필 추가/수정 허용), statsEnabled?(캐릭터 스탯 사용) }
+// 보낸 값만 변경: { statPoints?, siteName?, siteFavicon?(업로드한 이미지 경로, 빈 값이면 없음), siteMusic?(유튜브 링크, 빈 값이면 끔), qnaGuestWrite?(Q&A 비회원 글쓰기 허용), sitePrivate?(회원 전용 — 로그인해야 이용), signupNotice?(회원가입 안내, 마크다운), siteTheme?(테마 폴더 이름), signupOpen?(회원가입 허용), siteClosed?, siteClosedMessage?(사이트 비공개·문구), applicationNotice?(신청서 제출 동의사항), profileAddOpen?, profileEditOpen?(프로필 추가/수정 허용), statsEnabled?(캐릭터 스탯 사용), specialStats?([{ name, enabled }] × 5 — 특별 스탯 이름·사용) }
 router.put('/settings', async (req, res) => {
   const body = req.body ?? {};
   // 검증을 먼저 모두 한 뒤 저장 (하나라도 틀리면 아무것도 바꾸지 않음)
@@ -108,6 +110,8 @@ router.put('/settings', async (req, res) => {
     if (signupNotice.length > 20000) throw new HttpError(400, '회원가입 안내는 20,000자 이내로 입력해주세요.');
   }
 
+  // 특별 스탯은 검사에서 막힐 수 있으므로 먼저 저장
+  if (body.specialStats !== undefined) await saveSpecialStats(body.specialStats);
   if (statPoints !== undefined) await setStatPoints(statPoints);
   if (siteName !== undefined) await setSetting('site_name', siteName);
   if (siteFavicon !== undefined) await setSetting('site_favicon', siteFavicon);
