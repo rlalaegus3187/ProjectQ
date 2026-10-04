@@ -1,10 +1,11 @@
 // 멤버란: 전체 캐릭터 목록 / 캐릭터 상세 (보기 전용, 로그인 없이 공개)
 // 계정 정보(이메일 등)와 인벤토리는 공개하지 않음
-// 멤버·관리자의 캐릭터만 보임 (신청자는 관리 → 신청자 관리에서)
+// 멤버·관리자의 캐릭터만 보임. 신청자의 캐릭터(신청서)는 관리자만 볼 수 있음 — 주소로 직접 들어와도 다른 사람에겐 404
 // 로그인한 회원만 보게 하려면: router.use(require('../middleware/requireAuth'));
 const express = require('express');
 const pool = require('../db');
 const { HttpError, getCharacter, MEMBER_ROLES } = require('../characters');
+const loadViewer = require('../middleware/loadViewer');
 
 const router = express.Router();
 const PAGE_SIZE = 24;
@@ -53,13 +54,19 @@ router.get('/', async (req, res) => {
 });
 
 // 상세: 기본정보 + 스탯 + 프로필 (보기 전용)
-router.get('/:id', async (req, res) => {
+// 상세: 멤버·관리자 캐릭터는 누구나, 신청자 캐릭터(신청서)는 관리자만 (없는 것처럼 404 — 존재 여부도 숨김)
+router.get('/:id', loadViewer, async (req, res) => {
   if (!/^\d+$/.test(req.params.id)) throw new HttpError(404, '캐릭터를 찾을 수 없습니다.');
   const character = await getCharacter({ characterId: req.params.id });
-  if (!character || !MEMBER_ROLES.includes(character.ownerRole)) throw new HttpError(404, '캐릭터를 찾을 수 없습니다.');
+  const isApplicant = character && !MEMBER_ROLES.includes(character.ownerRole);
+  if (!character || (isApplicant && !req.viewer?.isAdmin)) throw new HttpError(404, '캐릭터를 찾을 수 없습니다.');
+  if (isApplicant) {
+    // 관리자가 보는 신청서: 신청 상태까지 보여줌
+    return res.json({ character, applicant: true });
+  }
   // 소지금·신청 정보는 공개하지 않음
   for (const key of ['money', 'applicationStatus', 'submittedAt', 'locked']) delete character[key];
-  res.json({ character });
+  res.json({ character, applicant: false });
 });
 
 module.exports = router;

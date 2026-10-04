@@ -95,6 +95,9 @@ input.narrow { width: 72px; }
 /* 관리자 표 */
 button.danger { background: #fee2e2; color: #b91c1c; }
 .row-actions { display: flex; gap: 6px; }
+/* 표 칸(td)은 flex 로 만들면 아래 줄이 어긋나므로 칸 그대로 두고 안의 버튼만 띄움 */
+.table td.row-actions { display: table-cell; white-space: nowrap; }
+.table td.row-actions > * + * { margin-left: 6px; }
 .row-actions button { padding: 6px 10px; font-size: 13px; }
 .table select { padding: 6px; }
 .table tr.dirty td { background: #fffbeb; }
@@ -373,3 +376,8 @@ strong.off { color: var(--color-muted); }
   .admin-nav-label { display: none; }
   .admin-nav a { white-space: nowrap; }
 }
+
+/* 회원 관리 */
+.role-select { padding: 4px 6px; font-size: 13px; }
+.bulk-select { padding: 5px 6px; font-size: 13px; }
+.applicant-note { margin: 0 0 12px; padding: 8px 12px; border-radius: 6px; background: #eef2ff; font-size: 14px; }

@@ -15,9 +15,16 @@ async function main() {
   }
 
   const defs = await getDefinitions();
-  const character = validateCharacterInput({ name: '데모 캐릭터', hp: 100 }, defs);
+  // 필수 항목이 있으면 기본값으로 채움 (숫자 0, 드롭다운 첫 선택지, 그 외 '-')
+  const fill = (list) => Object.fromEntries(list.filter((d) => d.isRequired && d.valueType !== 'image')
+    .map((d) => [d.code, d.valueType === 'number' ? 0 : d.valueType === 'select' ? d.options?.[0] : d.valueType === 'link' ? 'https://example.com' : '-']));
+  const stats = fill(defs.filter((d) => d.category === 'stat'));
+  const details = { ...fill(defs.filter((d) => d.category === 'detail')), original_name: 'Demo Character', age: 20 };
+  const known = new Set(defs.filter((d) => d.category === 'detail').map((d) => d.code));
+  for (const code of Object.keys(details)) if (!known.has(code)) delete details[code];
+  const character = validateCharacterInput({ name: '데모 캐릭터', hp: 100, stats }, defs);
   const profile = validateProfileInput(
-    { details: { original_name: 'Demo Character', age: 20 } },
+    { details },
     defs,
     { defaultName: DEFAULT_PROFILE_NAME },
   );

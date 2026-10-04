@@ -11,12 +11,15 @@ const route = useRoute();
 const character = ref(null);
 const error = ref('');
 const isMine = ref(false);
+const isApplicant = ref(false);   // 신청자의 신청서 (관리자만 볼 수 있음)
 
 async function load() {
   error.value = '';
   character.value = null;
   try {
-    character.value = (await api(`/members/${route.params.id}`)).character;
+    const data = await api(`/members/${route.params.id}`);
+    character.value = data.character;
+    isApplicant.value = !!data.applicant;
     // 내 캐릭터면 마이페이지로 수정하러 갈 수 있게
     isMine.value = false;
     if (auth.user) {
@@ -40,6 +43,11 @@ watch(() => route.params.id, load, { immediate: true });
     <p v-if="error" class="error">{{ error }}</p>
     <p v-else-if="!character" class="muted">불러오는 중…</p>
     <template v-else>
+      <p v-if="isApplicant" class="applicant-note">
+        <span class="badge applicant">신청자</span>
+        아직 멤버가 아닌 신청자의 신청서입니다. 관리자만 볼 수 있습니다.
+        <RouterLink to="/admin/applicants">신청자 관리로</RouterLink>
+      </p>
       <h1>{{ character.name }}</h1>
       <CharacterCard :character="character" />
     </template>
