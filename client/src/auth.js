@@ -38,6 +38,13 @@ export async function updateContact(contact) {
   auth.user = user;
 }
 
+// 내가 동의한 회원가입 안내 { agreedAt, notice } / 동의 기록이 없으면 지금 안내에 동의
+export const fetchAgreement = () => api('/auth/me/agreement');
+export async function agreeNotice() {
+  const { user } = await api('/auth/me/agreement', { method: 'PUT', body: { agree: true } });
+  auth.user = user;
+}
+
 // 비밀번호 변경 → 다른 기기의 로그인은 끊김
 export async function changePassword(currentPassword, newPassword) {
   await api('/auth/me/password', { method: 'PUT', body: { currentPassword, newPassword } });

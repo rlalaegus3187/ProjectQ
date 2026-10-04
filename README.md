@@ -4,6 +4,7 @@ Vue 3 + Node.js/Express + MySQL 로 만든 SPA 로그인 샘플입니다.
 
 - 세션 기반 로그인 (HttpOnly 쿠키, 세션은 MySQL 에 저장 → 재시작해도 로그인 유지)
 - **아이디 + 비밀번호 로그인** (이메일·이름 없음). 회원가입은 아이디 / 비밀번호 / 소통 계정 + 가입 안내(주의문구) 동의 — 안내는 관리 → 사이트 설정에서 작성
+  - 마이페이지 **약관동의 (완료)** 를 누르면 가입 때 동의한 안내를 팝업으로 다시 봄 (동의한 그때 내용 그대로 저장). 기록이 없는 기존 회원은 (미완료) → 팝업에서 동의
   - 아이디는 바꿀 수 없음, 비밀번호·소통 계정은 마이페이지에서 변경. 관리 → 회원 관리에서 비밀번호 강제 변경
   - 캐릭터는 가입한 뒤 마이페이지에서 작성
 - **콘텐츠 페이지**: 공지 · 세계관 · 시스템 · 캐릭터 가이드 — 내용은 DB, **관리 → 페이지 관리** 한 곳에서 마크다운으로 작성(페이지별 음악 지정 가능), 화면은 `ContentPage.vue` 하나가 표시
@@ -91,6 +92,7 @@ ProjectQ/
 | POST | `/api/auth/signup` | `{ username, password, contact, agree: true }` 가입 후 자동 로그인 (신청자, 캐릭터는 마이페이지에서) |
 | POST | `/api/auth/login` | `{ username, password }` |
 | PUT | `/api/auth/me` | 소통 계정 수정 `{ contact }` (아이디는 변경 불가) |
+| GET/PUT | `/api/auth/me/agreement` | 내가 동의한 안내 `{ agreedAt, notice }` / 기록이 없으면 지금 안내에 동의 `{ agree: true }` |
 | PUT | `/api/auth/me/password` | 비밀번호 변경 `{ currentPassword, newPassword }` → 다른 기기 로그아웃 |
 | GET | `/api/admin/users?q=&role=&page=` | (관리자) 회원 목록 |
 | PUT | `/api/admin/users/:id/password` | (관리자) 비밀번호 강제 변경 `{ newPassword }` → 그 회원 로그아웃 + 알림 |

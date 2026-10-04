@@ -21,13 +21,14 @@ const authLimiter = rateLimit({
   message: { message: '요청이 너무 많습니다. 잠시 후 다시 시도해주세요.' },
 });
 
-const USER_COLUMNS = 'id, username, contact, role, music_volume, music_enabled, created_at';
+const USER_COLUMNS = 'id, username, contact, agreed_at, role, music_volume, music_enabled, created_at';
 
 function toPublicUser(row) {
   return {
     id: row.id,
     username: row.username,   // 로그인 아이디 (화면 표시 이름으로도 사용)
     contact: row.contact,     // 소통 계정
+    agreedAt: row.agreed_at,  // 회원가입 안내(약관) 동의 시각 (null = 기록 없음)
     role: row.role,
     // 계정별 음악 설정 (음악 모듈이 사용)
     musicVolume: row.music_volume,
@@ -61,12 +62,14 @@ router.post('/signup', authLimiter, async (req, res) => {
   const password = parseNewPassword(req.body?.password);
   const contact = parseContact(req.body?.contact);
   const passwordHash = await hashPassword(password);
+  // 동의한 그때의 안내 내용을 함께 저장 (나중에 마이페이지에서 다시 보기)
+  const notice = (await getSetting('signup_notice')) || '';
 
   let userId;
   try {
     const [result] = await pool.execute(
-      'INSERT INTO users (username, contact, role, password_hash) VALUES (?, ?, ?, ?)',
-      [username, contact, config.signupRole, passwordHash],
+      'INSERT INTO users (username, contact, agreed_at, agreed_notice, role, password_hash) VALUES (?, ?, NOW(), ?, ?, ?)',
+      [username, contact, notice, config.signupRole, passwordHash],
     );
     userId = result.insertId;
   } catch (err) {
@@ -118,6 +121,26 @@ router.get('/me', requireAuth, async (req, res) => {
 router.put('/me', requireAuth, async (req, res) => {
   const contact = parseContact(req.body?.contact);
   await pool.execute('UPDATE users SET contact = ? WHERE id = ?', [contact, req.session.userId]);
+  res.json({ user: toPublicUser(await findUser(req.session.userId)) });
+});
+
+// 내가 동의한 회원가입 안내 → { agreedAt, notice(동의한 그때 내용) }
+// 동의 기록이 없으면(이 기능 전 가입) agreedAt: null, notice: 지금 안내 — 마이페이지에서 동의할 수 있게
+router.get('/me/agreement', requireAuth, async (req, res) => {
+  const [rows] = await pool.execute('SELECT agreed_at, agreed_notice FROM users WHERE id = ?', [req.session.userId]);
+  const row = rows[0];
+  if (row?.agreed_at) return res.json({ agreedAt: row.agreed_at, notice: row.agreed_notice || '' });
+  res.json({ agreedAt: null, notice: (await getSetting('signup_notice')) || '' });
+});
+
+// 지금 안내에 동의 (동의 기록이 없는 회원) { agree: true }
+router.put('/me/agreement', requireAuth, async (req, res) => {
+  if (req.body?.agree !== true) throw new HttpError(400, '안내에 동의해주세요.');
+  const notice = (await getSetting('signup_notice')) || '';
+  await pool.execute(
+    'UPDATE users SET agreed_at = NOW(), agreed_notice = ? WHERE id = ? AND agreed_at IS NULL',
+    [notice, req.session.userId],
+  );
   res.json({ user: toPublicUser(await findUser(req.session.userId)) });
 });
 
