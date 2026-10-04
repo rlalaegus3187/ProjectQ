@@ -54,7 +54,7 @@ async function onLogout() {
       </template>
       <template v-else>
         <RouterLink to="/login">로그인</RouterLink>
-        <RouterLink to="/signup">회원가입</RouterLink>
+        <RouterLink v-if="site.signupOpen" to="/signup">회원가입</RouterLink>
       </template>
     </nav>
   </header>

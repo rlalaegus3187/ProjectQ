@@ -55,6 +55,11 @@ async function isSitePrivate(conn = pool) {
 }
 const clearSitePrivateCache = () => { privateCache = null; };
 
+// 회원가입 허용 여부 (settings.signup_open = '0' 이면 막음, 기본은 허용)
+async function isSignupOpen(conn = pool) {
+  return (await getSetting('signup_open', conn)) !== '0';
+}
+
 // 공개 설정 (로그인 없이 GET /api/settings, 관리자 설정 화면)
 async function getSiteSettings(conn = pool) {
   return {
@@ -63,12 +68,13 @@ async function getSiteSettings(conn = pool) {
     siteMusic: await getSetting('site_music', conn),
     qnaGuestWrite: await isGuestWriteAllowed(conn),
     sitePrivate: await isSitePrivate(conn),
+    signupOpen: await isSignupOpen(conn),
     // 지금 적용된 CSS 테마 { id, css(덮어쓸 css 주소, basic 이면 null) }
     siteTheme: await require('./themes').getActiveTheme(conn),
   };
 }
 
 module.exports = {
-  getSetting, setSetting, parseSiteName, parseFavicon, getSiteSettings, isGuestWriteAllowed, isSitePrivate, clearSitePrivateCache,
+  getSetting, setSetting, parseSiteName, parseFavicon, getSiteSettings, isGuestWriteAllowed, isSitePrivate, isSignupOpen, clearSitePrivateCache,
   DEFAULT_SITE_NAME,
 };

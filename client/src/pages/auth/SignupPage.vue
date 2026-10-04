@@ -11,6 +11,7 @@ import { site } from '../../site';
 const router = useRouter();
 const form = ref({ username: '', password: '', passwordConfirm: '', contact: '', agree: false });
 const notice = ref(null);
+const open = ref(true);   // 회원가입 허용 여부 (관리 → 사이트 설정)
 const error = ref('');
 const loading = ref(false);
 
@@ -20,7 +21,9 @@ const passwordMismatch = computed(() => !!form.value.passwordConfirm && form.val
 
 onMounted(async () => {
   try {
-    notice.value = (await api('/auth/signup-info')).notice;
+    const info = await api('/auth/signup-info');
+    open.value = info.open;
+    notice.value = info.notice;
   } catch {
     notice.value = '';
   }
@@ -47,6 +50,12 @@ async function submit() {
   <section class="card signup-card">
     <RouterLink v-if="site.private" to="/login" class="muted">← 로그인으로</RouterLink>
     <h1>회원가입</h1>
+
+    <template v-if="!open">
+      <p class="signup-closed">지금은 회원가입을 받지 않습니다.</p>
+      <p class="muted">모집 기간에 다시 찾아주세요. 이미 계정이 있다면 <RouterLink to="/login">로그인</RouterLink>해주세요.</p>
+    </template>
+    <template v-else>
 
     <!-- 가입 안내(주의문구): 관리 → 사이트 설정에서 작성 -->
     <div v-if="notice" class="signup-notice">
@@ -85,5 +94,6 @@ async function submit() {
       <p class="muted">가입하면 마이페이지에서 캐릭터를 작성할 수 있습니다.</p>
     </form>
     <p class="muted">이미 계정이 있나요? <RouterLink to="/login">로그인</RouterLink></p>
+    </template>
   </section>
 </template>

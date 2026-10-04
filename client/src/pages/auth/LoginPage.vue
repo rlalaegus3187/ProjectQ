@@ -44,6 +44,7 @@ async function submit() {
       <p v-if="error" class="error">{{ error }}</p>
       <button type="submit" :disabled="loading">{{ loading ? '로그인 중…' : '로그인' }}</button>
     </form>
-    <p class="muted">계정이 없나요? <RouterLink to="/signup">회원가입</RouterLink></p>
+    <p v-if="site.signupOpen" class="muted">계정이 없나요? <RouterLink to="/signup">회원가입</RouterLink></p>
+    <p v-else class="muted">지금은 회원가입을 받지 않습니다.</p>
   </section>
 </template>

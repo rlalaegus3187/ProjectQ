@@ -5,7 +5,7 @@ const { hashPassword, verifyPassword } = require('../password');
 const requireAuth = require('../middleware/requireAuth');
 const config = require('../config');
 const { HttpError } = require('../errors');
-const { getSetting } = require('../settings');
+const { getSetting, isSignupOpen } = require('../settings');
 const {
   parseUsername, parseNewPassword, parseContact, destroyUserSessions,
 } = require('../accounts');
@@ -51,12 +51,15 @@ function startSession(req, userId) {
 }
 
 // 회원가입 안내(주의문구) — 관리 → 사이트 설정에서 작성 (마크다운). 회원 전용 모드에서도 로그인 없이 조회
+// open: 회원가입 허용 여부 (관리 → 사이트 설정)
 router.get('/signup-info', async (req, res) => {
-  res.json({ notice: (await getSetting('signup_notice')) || '' });
+  const open = await isSignupOpen();
+  res.json({ open, notice: open ? (await getSetting('signup_notice')) || '' : '' });
 });
 
 // 회원가입: { username, password, contact, agree: true } — 캐릭터는 가입 후 마이페이지에서 작성
 router.post('/signup', authLimiter, async (req, res) => {
+  if (!(await isSignupOpen())) throw new HttpError(403, '지금은 회원가입을 받지 않습니다.');
   if (req.body?.agree !== true) throw new HttpError(400, '가입 안내에 동의해야 가입할 수 있습니다.');
   const username = parseUsername(req.body?.username);
   const password = parseNewPassword(req.body?.password);

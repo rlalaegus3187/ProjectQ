@@ -347,3 +347,4 @@ strong.off { color: var(--color-muted); }
 .theme-dir { font-family: ui-monospace, monospace; }
 .preview-note { margin: 8px 0 0; padding: 8px 12px; border-radius: 6px; background: #fef9c3; color: #854d0e; font-size: 14px; }
 .theme-info .badge { align-self: flex-start; }
+.signup-closed { margin: 8px 0; padding: 12px 16px; border-radius: 8px; background: var(--color-primary-soft); font-weight: 600; }

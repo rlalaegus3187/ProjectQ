@@ -16,6 +16,7 @@ const musicInvalid = computed(() => !!form.value?.siteMusic && !parseYouTubeId(f
 
 const toForm = (s) => ({
   sitePrivate: !!s.sitePrivate,
+  signupOpen: s.signupOpen !== false,
   signupNotice: s.signupNotice || '',
   siteName: s.siteName, siteFavicon: s.siteFavicon || '', qnaGuestWrite: !!s.qnaGuestWrite, siteMusic: youtubeUrl(s.siteMusic),
 });
@@ -52,7 +53,7 @@ onMounted(async () => {
     <p v-if="!form && !error" class="muted">불러오는 중…</p>
     <form v-else-if="form" class="form" @submit.prevent="save">
       <fieldset class="fieldset stack">
-        <legend>사이트 공개 상태</legend>
+        <legend>사이트 공개 · 회원가입</legend>
         <label class="switch-row">
           <span class="switch">
             <input v-model="form.sitePrivate" type="checkbox" role="switch" :aria-checked="form.sitePrivate" />
@@ -61,7 +62,17 @@ onMounted(async () => {
           <span>
             회원 전용 <strong :class="form.sitePrivate ? 'on' : 'off'">{{ form.sitePrivate ? '켜짐 (클로즈)' : '꺼짐 (오픈)' }}</strong>
             <span class="muted">— 켜면 로그인해야 메인 페이지를 포함한 모든 화면을 볼 수 있고, 로그인하지 않은 방문자에게는 로그인 화면만 보입니다.
-              회원가입은 계속 할 수 있습니다(가입하면 신청자). Q&amp;A 비회원 글쓰기도 함께 막힙니다.</span>
+              회원가입은 아래 '회원가입' 스위치를 따릅니다. Q&amp;A 비회원 글쓰기도 함께 막힙니다.</span>
+          </span>
+        </label>
+        <label class="switch-row">
+          <span class="switch">
+            <input v-model="form.signupOpen" type="checkbox" role="switch" :aria-checked="form.signupOpen" />
+            <span class="slider" />
+          </span>
+          <span>
+            회원가입 <strong :class="form.signupOpen ? 'on' : 'off'">{{ form.signupOpen ? '허용' : '막음' }}</strong>
+            <span class="muted">— 끄면 회원가입 화면에 "지금은 회원가입을 받지 않습니다"가 보이고 가입 버튼·링크가 사라집니다. 이미 가입한 회원은 그대로 로그인할 수 있습니다.</span>
           </span>
         </label>
       </fieldset>
