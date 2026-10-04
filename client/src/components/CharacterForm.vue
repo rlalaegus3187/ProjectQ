@@ -31,7 +31,8 @@ const remaining = computed(() => totalPoints.value - usedPoints.value);
     <label>HP <input v-model="form.hp" type="number" min="0" step="1" required /></label>
   </fieldset>
 
-  <fieldset class="fieldset">
+  <!-- 관리 → 캐릭터 항목에서 캐릭터 스탯을 '미사용'으로 두면 숨김 -->
+  <fieldset v-if="definitions.statsEnabled !== false" class="fieldset">
     <legend>캐릭터 스탯</legend>
     <p v-if="!definitions.stats.length" class="muted">등록된 캐릭터 스탯 항목이 없습니다.</p>
     <div v-if="pointStats.length" class="points-bar" :class="{ over: remaining < 0 }">

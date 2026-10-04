@@ -36,7 +36,8 @@ Vue 3 + Node.js/Express + MySQL 로 만든 SPA 로그인 샘플입니다.
 - **회원가입 허용 / 막음**: 관리 → 사이트 설정의 스위치. 막으면 가입 화면에 안내만 보이고 가입 링크가 사라지며 서버도 가입을 거부 (기존 회원 로그인은 그대로)
 - **사이트 오픈 / 클로즈 (회원 전용)**: 관리 → 사이트 설정의 스위치. 켜면 로그인하지 않은 방문자는 메뉴 없는 입장(로그인) 화면만 보고, 서버 API 도 로그인·회원가입 등 일부만 허용
 - **사이트 공개 / 비공개**: 관리 → 사이트 설정의 '사이트 공개' 스위치. 끄면 관리자 말고는 아무도 로그인할 수 없고(이미 로그인한 회원 포함) 어느 주소로 들어와도 설정한 문구(마크다운, 기본 "홈페이지 비공개 상태입니다.")만 보임. 서버 API 도 403 `{ siteClosed }` 로 막음. 관리자는 그 화면의 '관리자 로그인'으로 입장
-- **신청서 제출**: 신청자는 마이페이지에서 자유롭게 저장하고, 처음 [신청서 제출] 때 '신청서 제출 동의사항'(관리 → 사이트 설정에서 작성)에 동의해야 제출됨. 제출 후에도 수정 가능
+- **신청서 제출**: 신청자는 마이페이지에서 자유롭게 저장하고, [신청서 제출] 때 '신청서 제출 동의사항'(관리 → 사이트 설정에서 작성)에 동의해야 제출됨. 제출 후 수정해서 저장하거나 [제출 취소]하면 작성중으로 돌아가 다시 제출해야 함
+- **캐릭터 스탯 사용 / 미사용**: 관리 → 캐릭터 항목의 스위치. 미사용이면 마이페이지·캐릭터 화면·입력 폼에서 스탯이 보이지 않고 서버도 스탯 값을 받지 않음 (저장된 값은 남음)
 - **사이트 이름 · 파비콘**: 관리 → 사이트 설정에서 이름(상단 로고·탭 제목)과 파비콘(ico/png 업로드, 브라우저 탭 아이콘)을 설정
 - EC2(m6id Instance Store) 배포 스크립트와 **`deploy.js` 한 번으로 전체 업데이트**
 
@@ -119,7 +120,7 @@ ProjectQ/
 | PUT | `/api/auth/me/preferences` | 계정 음악 설정 `{ musicVolume(0~100), musicEnabled }` |
 | GET | `/api/settings` | 공개 설정 `{ siteName, siteFavicon, siteMusic, qnaGuestWrite, sitePrivate, siteClosed, siteClosedMessage }` (회원 전용 모드에서도 로그인 없이 조회 가능) (사이트 이름·파비콘, 사이트 전체 음악 영상 ID) |
 | GET | `/api/auth/me` | 현재 로그인 사용자 `{ id, username, contact, role }` (401 이면 비로그인) |
-| GET | `/api/attributes` | 현재 입력받는 항목 + 투자 포인트 `{ stats, details, statPoints }` |
+| GET | `/api/attributes` | 현재 입력받는 항목 + 투자 포인트 `{ stats, details, statPoints, statsEnabled }` |
 | GET | `/api/characters/me` | 내 캐릭터 (없으면 `character: null`) |
 | POST | `/api/characters` | 캐릭터 등록 `{ name, hp, stats, details }` → 대표 프로필(캐릭터 이름으로 표시) 함께 생성 (계정당 1개) |
 | PUT | `/api/characters/me` | 기본정보 + 스탯 수정 `{ name, hp, stats }` |
@@ -127,7 +128,8 @@ ProjectQ/
 | PUT/DELETE | `/api/characters/me/profiles/:id` | 프로필 수정 `{ name, details }` (대표는 name 없음) / 삭제 (대표는 삭제 불가) |
 | PUT | `/api/characters/me/profiles/:id/main` | 대표 프로필 지정 |
 | GET | `/api/characters/me/application-notice` | (신청자) 신청서 제출 동의사항 `{ notice }` |
-| POST | `/api/characters/me/application/submit` | (신청자) 신청서 제출 `{ agree: true }` — 처음 한 번만(이미 제출이면 409), 관리자에게 알림. 제출 후에도 수정 가능 |
+| POST | `/api/characters/me/application/submit` | (신청자) 신청서 제출 `{ agree: true }` — 작성중일 때만(이미 제출이면 409), 관리자에게 알림 |
+| POST | `/api/characters/me/application/cancel` | (신청자) 제출 취소 → 작성중, 관리자에게 알림. 제출한 뒤 캐릭터·프로필을 수정해 저장해도 같은 방식으로 작성중이 됨 |
 | GET | `/api/menu` | 상단 메뉴 (보이게 한 항목만, 순서대로) `[{ key, label, to, isPublic? }]` |
 | GET | `/api/contents/:slug` | 콘텐츠 페이지 `{ slug, title, musicVideoId, isPublic, sections: [{ id, title, body }] }` — 비공개는 관리자만(403) |
 | GET/POST | `/api/admin/contents` | (관리자) 페이지 목록(+소탭) / 새 페이지 `{ slug, title, showInMenu }` |
@@ -142,7 +144,7 @@ ProjectQ/
 | PATCH | `/api/admin/items/bulk` | (관리자) `{ ids, isBound?, isSellable? }` |
 | PUT/PATCH | `/api/admin/shop/bulk` | (관리자) 일괄 저장 `{ items: [{ id, price, stock, isActive, sortOrder }] }` / 판매 켜기·끄기 `{ ids, isActive }` |
 | GET | `/api/admin/themes` | (관리자) CSS 테마 목록 `{ themes: [{ id, name, description, author, css, preview }], active }` — 적용은 settings 의 `siteTheme` |
-| GET/PUT | `/api/admin/settings` | (관리자) `{ statPoints, siteName, siteFavicon(업로드한 이미지 경로 — ico/png 등, 빈 값=없음), qnaGuestWrite(Q&A 비회원 글쓰기), sitePrivate(회원 전용), signupOpen(회원가입 허용), siteClosed(사이트 비공개), siteClosedMessage(비공개 문구), applicationNotice(신청서 제출 동의사항), profileAddOpen, profileEditOpen(프로필 추가/수정 허용), siteMusic(유튜브 링크, 빈 값=끔) }` 조회/변경 (보낸 값만) |
+| GET/PUT | `/api/admin/settings` | (관리자) `{ statPoints, siteName, siteFavicon(업로드한 이미지 경로 — ico/png 등, 빈 값=없음), qnaGuestWrite(Q&A 비회원 글쓰기), sitePrivate(회원 전용), signupOpen(회원가입 허용), siteClosed(사이트 비공개), siteClosedMessage(비공개 문구), applicationNotice(신청서 제출 동의사항), profileAddOpen, profileEditOpen(프로필 추가/수정 허용), statsEnabled(캐릭터 스탯 사용), siteMusic(유튜브 링크, 빈 값=끔) }` 조회/변경 (보낸 값만) |
 | GET | `/api/admin/attributes` | (관리자) 전체 항목, 비활성 포함 |
 | POST | `/api/admin/attributes` | (관리자) `{ category: stat/detail, code, label, valueType, options, isRequired, sortOrder }` 항목 추가 |
 | PATCH | `/api/admin/attributes/:id` | (관리자) `{ label, valueType, options, isRequired, sortOrder, isActive }` 수정 |

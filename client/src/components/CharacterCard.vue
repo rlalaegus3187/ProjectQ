@@ -1,6 +1,7 @@
 <script setup>
-// 캐릭터 정보 표시 (기본정보 / 캐릭터 스탯) — 프로필은 ProfileSection
+// 캐릭터 정보 표시 (기본정보 / 캐릭터 스탯 — 스탯 미사용이면 기본정보만) — 프로필은 ProfileSection
 import AttributeValue from './AttributeValue.vue';
+import { site } from '../site';
 
 defineProps({
   character: { type: Object, required: true },
@@ -17,7 +18,8 @@ defineProps({
       </dl>
     </section>
 
-    <section>
+    <!-- 관리 → 캐릭터 항목에서 캐릭터 스탯을 '미사용'으로 두면 숨김 -->
+    <section v-if="site.statsEnabled">
       <h3>캐릭터 스탯</h3>
       <div v-if="character.statPoints" class="points-bar" :class="{ over: character.statPoints.used > character.statPoints.total }">
         투자 포인트 <strong>{{ character.statPoints.used }}</strong> / {{ character.statPoints.total }}

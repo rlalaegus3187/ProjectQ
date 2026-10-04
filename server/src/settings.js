@@ -82,6 +82,11 @@ async function isProfileEditOpen(conn = pool) {
   return (await getSetting('profile_edit_open', conn)) !== '0';
 }
 
+// 캐릭터 스탯 사용 (settings.stats_enabled = '0' 이면 미사용 — 입력·표시 모두 숨김, 저장된 값은 남음)
+async function isStatsEnabled(conn = pool) {
+  return (await getSetting('stats_enabled', conn)) !== '0';
+}
+
 // 공개 설정 (로그인 없이 GET /api/settings, 관리자 설정 화면)
 async function getSiteSettings(conn = pool) {
   return {
@@ -95,13 +100,14 @@ async function getSiteSettings(conn = pool) {
     signupOpen: await isSignupOpen(conn),
     profileAddOpen: await isProfileAddOpen(conn),
     profileEditOpen: await isProfileEditOpen(conn),
+    statsEnabled: await isStatsEnabled(conn),
     // 지금 적용된 CSS 테마 { id, css(덮어쓸 css 주소, basic 이면 null) }
     siteTheme: await require('./themes').getActiveTheme(conn),
   };
 }
 
 module.exports = {
-  getSetting, setSetting, parseSiteName, parseFavicon, getSiteSettings, isGuestWriteAllowed, isSitePrivate, isSiteClosed, getClosedMessage, isSignupOpen, isProfileAddOpen, isProfileEditOpen,
+  getSetting, setSetting, parseSiteName, parseFavicon, getSiteSettings, isGuestWriteAllowed, isSitePrivate, isSiteClosed, getClosedMessage, isSignupOpen, isProfileAddOpen, isProfileEditOpen, isStatsEnabled,
   clearSitePrivateCache,
   DEFAULT_SITE_NAME,
 };

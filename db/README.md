@@ -57,6 +57,7 @@ settings.site_menu                  상단 메뉴 구성 JSON [{ key: 'page:noti
 settings.site_theme                 CSS 테마 폴더 이름 (client/public/css/<이름>, 없거나 폴더가 없으면 basic)
 settings.profile_add_open           프로필 추가 허용 ('0' = 막음, 기본 허용 — 관리자는 항상 가능)
 settings.profile_edit_open          프로필 수정·삭제·대표 지정 허용 ('0' = 막음, 기본 허용)
+settings.stats_enabled              캐릭터 스탯 사용 ('0' = 미사용 — 입력·표시 숨김, 저장된 값은 남음 / 기본 사용)
 settings.signup_open                회원가입 허용 ('0' = 막음, 없거나 '1' = 허용)
 settings.site_closed                사이트 비공개 ('1' = 관리자만 로그인·이용, 없거나 '0' = 공개)
 settings.site_closed_message        비공개일 때 보일 문구 (마크다운, 없으면 "홈페이지 비공개 상태입니다.")
@@ -94,7 +95,7 @@ sessions  (express-mysql-session 로그인 세션)
 - 회원가입 안내(주의문구)는 `settings.signup_notice` (마크다운). 회원이 동의하면 `users.agreed_at`(시각)과 `users.agreed_notice`(그때 안내 내용, 기록용)를 저장. 마이페이지에서는 지금 안내를 보여줌
 - 권한(`users.role`): `admin` 관리자 / `member` 멤버 / `applicant` 신청자. 가입 시 권한은 서버 설정 `SIGNUP_ROLE` (기본 `applicant`)
   - 멤버란에는 `admin`, `member` 의 캐릭터만 보임. 신청자는 프로필 1개만
-  - `characters.application_status`: `draft` 작성중 / `submitted` 제출 완료 (신청자만 의미, 제출 후에도 수정 가능), `submitted_at` 제출 시각
+  - `characters.application_status`: `draft` 작성중 / `submitted` 제출 완료 (신청자만 의미, 제출 후 수정하거나 제출 취소하면 다시 draft), `submitted_at` 제출 시각
   - 관리자가 멤버로 전환하면 `role = 'member'`, 신청 프로필이 대표 프로필. 삭제하면 캐릭터·프로필만 삭제(계정은 남음)
   - 기존 `user`(일반) 계정은 011 마이그레이션에서 `member` 로 바뀜
 

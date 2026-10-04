@@ -4,6 +4,7 @@
 // 저장하면 서버가 돌려준 최신 캐릭터를 saved 로 보냄 (새 프로필이면 newProfileId 도 함께)
 import { ref, computed } from 'vue';
 import { api } from '../api';
+import { isSubmittedApplication, RESUBMIT_NOTICE } from '../auth';
 import { toProfileForm } from '../character';
 import ModalDialog from './ModalDialog.vue';
 import ProfileFields from './ProfileFields.vue';
@@ -50,6 +51,7 @@ function close() {
 <template>
   <ModalDialog :title="title" @close="close">
     <form class="form" @submit.prevent="save">
+      <p v-if="isSubmittedApplication(character)" class="applicant-note">{{ RESUBMIT_NOTICE }}</p>
       <ProfileFields v-model:name="form.name" v-model:details="form.details" v-model:music="form.music"
         :definitions="definitions" :legend="isMain ? '대표 프로필 (캐릭터 이름으로 표시)' : '프로필'" :show-name="!isMain" />
       <p v-if="error" class="error">{{ error }}</p>

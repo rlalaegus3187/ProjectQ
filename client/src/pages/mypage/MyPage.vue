@@ -1,7 +1,8 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue';
 import { api } from '../../api';
-import { auth, APPLICATION_LABELS } from '../../auth';
+import { auth, isSubmittedApplication, RESUBMIT_NOTICE } from '../../auth';
+import { site } from '../../site';
 import { fetchAttributes, toCharacterForm } from '../../character';
 import CharacterCard from '../../components/CharacterCard.vue';
 import CharacterForm from '../../components/CharacterForm.vue';
@@ -28,7 +29,7 @@ async function load() {
   loaded.value = true;
 }
 
-// 수정하기: 기본정보 + 스탯만 (프로필은 아래 프로필 카드에서)
+// 수정하기: 기본정보 + 스탯만(스탯 미사용이면 기본정보만) (프로필은 아래 프로필 카드에서)
 function startEdit() {
   error.value = '';
   form.value = toCharacterForm(definitions.value, character.value);
@@ -51,7 +52,7 @@ async function save() {
 }
 
 // 신청자: 프로필은 [저장]만 하면 되고(동의 필요 없음), 처음 [신청서 제출]할 때 제출 동의사항 팝업에 동의
-// 제출한 뒤에도 계속 수정할 수 있음
+// 제출한 뒤에 수정해서 저장하거나 [제출 취소]하면 작성중으로 돌아감 (다시 제출해야 함)
 const isApplicant = computed(() => auth.user?.role === 'applicant');
 const submitting = ref(null);   // 제출 팝업 { notice, agree, error }
 
@@ -78,6 +79,19 @@ async function submitApplication() {
   }
 }
 
+async function cancelSubmit() {
+  if (!confirm('신청서 제출을 취소할까요?\n작성중으로 돌아가며, 다시 [신청서 제출]을 눌러야 합니다.')) return;
+  error.value = '';
+  saving.value = true;
+  try {
+    character.value = (await api('/characters/me/application/cancel', { method: 'POST' })).character;
+  } catch (e) {
+    error.value = e.message;
+  } finally {
+    saving.value = false;
+  }
+}
+
 onMounted(() => load().catch((e) => { error.value = e.message; loaded.value = true; }));
 </script>
 
@@ -96,16 +110,22 @@ onMounted(() => load().catch((e) => { error.value = e.message; loaded.value = tr
     <template v-else-if="character.applicationStatus === 'draft'">
       <p class="muted">
         아래 캐릭터와 프로필을 작성하고 <strong>저장</strong>해 두세요. 다 작성했으면 <strong>신청서 제출</strong>을 눌러주세요.
-        제출한 뒤에도 내용은 계속 수정할 수 있습니다.
+        제출한 뒤에도 수정할 수 있지만, 수정하면 제출이 취소되어 다시 제출해야 합니다.
       </p>
       <div class="actions">
         <button type="button" :disabled="saving || !!form" @click="openSubmit">신청서 제출</button>
       </div>
     </template>
-    <p v-else class="muted">
-      <template v-if="character.submittedAt">{{ new Date(character.submittedAt).toLocaleString('ko-KR') }}에 </template>신청서를 제출했습니다.
-      관리자가 검토 중이며, 멤버로 전환되면 알림으로 알려드립니다. 내용은 계속 수정할 수 있습니다.
-    </p>
+    <template v-else>
+      <p class="muted">
+        <template v-if="character.submittedAt">{{ new Date(character.submittedAt).toLocaleString('ko-KR') }}에 </template>신청서를 제출했습니다.
+        관리자가 검토 중이며, 멤버로 전환되면 알림으로 알려드립니다.
+        내용을 <strong>수정해서 저장하거나 제출을 취소하면 작성중</strong>으로 돌아가니, 다시 제출해주세요.
+      </p>
+      <div class="actions">
+        <button type="button" class="secondary" :disabled="saving" @click="cancelSubmit">제출 취소</button>
+      </div>
+    </template>
   </section>
 
   <!-- 신청서 제출 동의 (관리 → 사이트 설정 → 신청서 제출 동의사항) -->
@@ -153,8 +173,9 @@ onMounted(() => load().catch((e) => { error.value = e.message; loaded.value = tr
   </section>
 
   <!-- 수정하기: 기본정보 + 스탯 (프로필 수정과 같은 팝업 폼) -->
-  <ModalDialog v-if="form && character" title="캐릭터 수정 — 기본정보 · 스탯" @close="form = null">
+  <ModalDialog v-if="form && character" :title="site.statsEnabled ? '캐릭터 수정 — 기본정보 · 스탯' : '캐릭터 수정 — 기본정보'" @close="form = null">
     <form class="form" @submit.prevent="save">
+      <p v-if="isSubmittedApplication(character)" class="applicant-note">{{ RESUBMIT_NOTICE }}</p>
       <CharacterForm v-model="form" :definitions="definitions" />
       <p v-if="error" class="error">{{ error }}</p>
       <div class="actions">

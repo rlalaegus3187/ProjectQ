@@ -1,6 +1,7 @@
 <script setup>
 import { ref, reactive, onMounted } from 'vue';
 import { api } from '../../api';
+import { setSite } from '../../site';
 import { VALUE_TYPES } from '../../character';
 import { useSelection } from '../../selection';
 import BulkBar from '../../components/BulkBar.vue';
@@ -13,6 +14,7 @@ const CATEGORIES = [
 const lists = ref({ stats: [], details: [] });
 const statPoints = ref(0);        // 저장된 초기 투자 포인트
 const statPointsDraft = ref(0);   // 입력 중인 값
+const statsEnabled = ref(true);   // 캐릭터 스탯 사용 여부 (끄면 회원가입·마이페이지·캐릭터 화면에서 스탯이 숨겨짐)
 const drafts = reactive({});   // id → 수정 중인 값
 const error = ref('');
 const message = ref('');
@@ -43,6 +45,7 @@ async function load() {
   lists.value = attrs;
   statPoints.value = settings.statPoints;
   statPointsDraft.value = settings.statPoints;
+  statsEnabled.value = settings.statsEnabled !== false;
   for (const item of [...lists.value.stats, ...lists.value.details]) drafts[item.id] = toDraft(item);
 }
 
@@ -140,6 +143,15 @@ function bulkRemove(c) {
   });
 }
 
+// 캐릭터 스탯 사용 / 미사용 — 스위치를 누르면 바로 저장
+function toggleStats() {
+  const on = statsEnabled.value;
+  return run(async () => {
+    setSite(await api('/admin/settings', { method: 'PUT', body: { statsEnabled: on } }));
+    return on ? '캐릭터 스탯을 사용합니다.' : '캐릭터 스탯을 사용하지 않습니다. (저장된 값은 남아 있음)';
+  });
+}
+
 function saveStatPoints() {
   return run(
     () => api('/admin/settings', { method: 'PUT', body: { statPoints: statPointsDraft.value } }),
@@ -172,6 +184,18 @@ onMounted(() => load().catch((e) => { error.value = e.message; }));
 
   <section v-for="c in CATEGORIES" :key="c.key" class="card">
     <h2>{{ c.title }}</h2>
+    <div v-if="c.category === 'stat'" class="form">
+      <label class="switch-row">
+        <span class="switch">
+          <input v-model="statsEnabled" type="checkbox" role="switch" :aria-checked="statsEnabled" @change="toggleStats" />
+          <span class="slider" />
+        </span>
+        <span>
+          캐릭터 스탯 <strong :class="statsEnabled ? 'on' : 'off'">{{ statsEnabled ? '사용' : '미사용' }}</strong>
+          <span class="muted">— 미사용이면 회원가입·마이페이지·캐릭터 화면에서 캐릭터 스탯이 아예 보이지 않고 입력도 받지 않습니다. 이미 저장된 값은 남아 있어 다시 켜면 그대로 보입니다.</span>
+        </span>
+      </label>
+    </div>
     <form v-if="c.category === 'stat'" class="points-setting" @submit.prevent="saveStatPoints">
       <label>
         초기 투자 포인트

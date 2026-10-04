@@ -64,6 +64,9 @@ export const roleLabel = (role) => ROLE_LABELS[role] ?? role;
 
 // 신청서 상태 (신청자)
 export const APPLICATION_LABELS = { draft: '작성중', submitted: '제출 완료' };
+// 제출한 신청서를 고치면 제출이 취소되고 작성중으로 돌아감 (수정 팝업에 안내)
+export const isSubmittedApplication = (character) => auth.user?.role === 'applicant' && character?.applicationStatus === 'submitted';
+export const RESUBMIT_NOTICE = '제출한 신청서입니다. 수정해서 저장하면 제출이 취소되고 작성중으로 돌아가니, 다 고친 뒤 다시 [신청서 제출]을 눌러주세요.';
 
 export async function logout() {
   await api('/auth/logout', { method: 'POST' });
