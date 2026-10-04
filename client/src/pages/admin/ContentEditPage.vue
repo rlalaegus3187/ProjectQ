@@ -179,7 +179,7 @@ onMounted(() => load().catch((e) => { error.value = e.message; }));
         </div>
       </fieldset>
 
-      <h2 class="section-title">본문 — 소탭 {{ form.sections.length }}개</h2>
+      <h2 class="section-title">본문</h2>
       <p v-if="!form.sections.length" class="muted">소탭이 없습니다. 아래 [+ 소탭 추가]로 내용을 작성하세요.</p>
       <fieldset v-for="(s, i) in form.sections" :key="s.key" class="fieldset section-edit">
         <legend>소탭 {{ i + 1 }}<template v-if="s.title"> · {{ s.title }}</template></legend>
