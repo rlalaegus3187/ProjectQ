@@ -164,10 +164,7 @@ onMounted(() => load().catch((e) => { error.value = e.message; }));
           <input id="page-title" v-model="form.title" required maxlength="100" />
         </div>
         <label class="switch-row">
-          <span class="switch">
-            <input v-model="form.isPublic" type="checkbox" role="switch" :aria-checked="form.isPublic" />
-            <span class="slider" />
-          </span>
+          <ToggleSwitch v-model="form.isPublic" />
           <span>
             공개 여부 <strong :class="form.isPublic ? 'on' : 'off'">{{ form.isPublic ? '공개' : '비공개' }}</strong>
             <span class="muted">— 비공개면 관리자만 볼 수 있습니다. 메뉴에 있어도 다른 사람은 '비공개 페이지입니다'만 보입니다.</span>

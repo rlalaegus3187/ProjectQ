@@ -224,10 +224,7 @@ onMounted(() => load().catch((e) => { error.value = e.message; }));
     <h2>{{ c.title }}</h2>
     <div v-if="c.category === 'stat'" class="form">
       <label class="switch-row">
-        <span class="switch">
-          <input v-model="statsEnabled" type="checkbox" role="switch" :aria-checked="statsEnabled" @change="toggleStats" />
-          <span class="slider" />
-        </span>
+        <ToggleSwitch v-model="statsEnabled" @change="toggleStats" />
         <span>
           캐릭터 스탯 <strong :class="statsEnabled ? 'on' : 'off'">{{ statsEnabled ? '사용' : '미사용' }}</strong>
           <span class="muted">— 미사용이면 회원가입·마이페이지·캐릭터 화면에서 캐릭터 스탯이 아예 보이지 않고 입력도 받지 않습니다. 이미 저장된 값은 남아 있어 다시 켜면 그대로 보입니다.</span>

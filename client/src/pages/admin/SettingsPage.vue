@@ -2,6 +2,7 @@
 // 관리자: 사이트 설정 — 사이트 공개 상태(회원 전용), 사이트 이름(상단 로고, 브라우저 탭 제목), 파비콘(브라우저 탭 아이콘), Q&A 비회원 글쓰기, 사이트 전체 음악
 import { ref, computed, onMounted } from 'vue';
 import { api } from '../../api';
+import ToggleSwitch from '../../components/ToggleSwitch.vue';
 import { parseYouTubeId, setSiteMusic, youtubeUrl } from '../../music';
 import { setSite } from '../../site';
 import ImageField from '../../components/ImageField.vue';
@@ -62,10 +63,7 @@ onMounted(async () => {
       <fieldset class="fieldset stack">
         <legend>사이트 공개 · 회원가입</legend>
         <label class="switch-row">
-          <span class="switch">
-            <input v-model="form.sitePrivate" type="checkbox" role="switch" :aria-checked="form.sitePrivate" />
-            <span class="slider" />
-          </span>
+          <ToggleSwitch v-model="form.sitePrivate" />
           <span>
             회원 전용 <strong :class="form.sitePrivate ? 'on' : 'off'">{{ form.sitePrivate ? '켜짐 (클로즈)' : '꺼짐 (오픈)' }}</strong>
             <span class="muted">— 켜면 로그인해야 메인 페이지를 포함한 모든 화면을 볼 수 있고, 로그인하지 않은 방문자에게는 로그인 화면만 보입니다.
@@ -73,20 +71,14 @@ onMounted(async () => {
           </span>
         </label>
         <label class="switch-row">
-          <span class="switch">
-            <input v-model="form.signupOpen" type="checkbox" role="switch" :aria-checked="form.signupOpen" />
-            <span class="slider" />
-          </span>
+          <ToggleSwitch v-model="form.signupOpen" />
           <span>
             회원가입 <strong :class="form.signupOpen ? 'on' : 'off'">{{ form.signupOpen ? '허용' : '막음' }}</strong>
             <span class="muted">— 끄면 회원가입 화면에 "지금은 회원가입을 받지 않습니다"가 보이고 가입 버튼·링크가 사라집니다. 이미 가입한 회원은 그대로 로그인할 수 있습니다.</span>
           </span>
         </label>
         <label class="switch-row">
-          <span class="switch">
-            <input v-model="form.siteOpen" type="checkbox" role="switch" :aria-checked="form.siteOpen" />
-            <span class="slider" />
-          </span>
+          <ToggleSwitch v-model="form.siteOpen" />
           <span>
             사이트 공개 <strong :class="form.siteOpen ? 'on' : 'off'">{{ form.siteOpen ? '공개' : '비공개' }}</strong>
             <span class="muted">— 끄면 <strong>관리자 말고는 아무도</strong> 로그인할 수 없고, 어느 주소로 들어와도 아래 문구만 보입니다. 이미 로그인한 회원도 막힙니다.
@@ -126,20 +118,14 @@ onMounted(async () => {
       <fieldset class="fieldset stack">
         <legend>프로필</legend>
         <label class="switch-row">
-          <span class="switch">
-            <input v-model="form.profileAddOpen" type="checkbox" role="switch" :aria-checked="form.profileAddOpen" />
-            <span class="slider" />
-          </span>
+          <ToggleSwitch v-model="form.profileAddOpen" />
           <span>
             프로필 추가 <strong :class="form.profileAddOpen ? 'on' : 'off'">{{ form.profileAddOpen ? '허용' : '막음' }}</strong>
             <span class="muted">— 끄면 회원이 새 프로필을 만들 수 없습니다. (신청자의 캐릭터·신청서 작성은 막지 않음)</span>
           </span>
         </label>
         <label class="switch-row">
-          <span class="switch">
-            <input v-model="form.profileEditOpen" type="checkbox" role="switch" :aria-checked="form.profileEditOpen" />
-            <span class="slider" />
-          </span>
+          <ToggleSwitch v-model="form.profileEditOpen" />
           <span>
             프로필 수정 <strong :class="form.profileEditOpen ? 'on' : 'off'">{{ form.profileEditOpen ? '허용' : '막음' }}</strong>
             <span class="muted">— 끄면 회원이 프로필을 수정·삭제하거나 대표 프로필을 바꿀 수 없습니다. 관리자는 항상 가능합니다.</span>
@@ -164,10 +150,7 @@ onMounted(async () => {
       <fieldset class="fieldset stack">
         <legend>Q&amp;A</legend>
         <label class="switch-row">
-          <span class="switch">
-            <input v-model="form.qnaGuestWrite" type="checkbox" role="switch" :aria-checked="form.qnaGuestWrite" />
-            <span class="slider" />
-          </span>
+          <ToggleSwitch v-model="form.qnaGuestWrite" />
           <span>
             비회원 글쓰기 <strong :class="form.qnaGuestWrite ? 'on' : 'off'">{{ form.qnaGuestWrite ? '켜짐' : '꺼짐' }}</strong>
             <span class="muted">— 켜면 로그인하지 않아도 이름·비밀번호로 Q&amp;A 질문을 남길 수 있습니다. 끄면 새 글만 막히고, 이미 쓴 비회원 글은 비밀번호로 계속 보기·수정·삭제할 수 있습니다.</span>
