@@ -1,78 +1,178 @@
-// 콘텐츠 페이지 (공지 / 세계관 / 시스템 / 캐릭터 가이드)
-//   공개:   GET /api/contents, GET /api/contents/:slug  (비공개 페이지는 관리자만 — 다른 사람에겐 목록에서 빠지고 404)
-//   관리자: GET /api/admin/contents, PUT /api/admin/contents/:slug
+// 콘텐츠 페이지 (공지 / 세계관 / 시스템 / 캐릭터 가이드 + 관리자가 추가한 페이지) — 페이지마다 소탭(섹션) 여러 개
+//   공개:   GET /api/menu                상단 메뉴 (관리 → 메뉴 관리에서 고른 항목만, 순서대로)
+//           GET /api/contents/:slug      페이지 + 소탭들 (비공개 페이지는 관리자만, 다른 사람에겐 403)
+//   관리자: GET  /api/admin/contents            페이지 목록 + 소탭
+//           POST /api/admin/contents            새 페이지 { slug, title, showInMenu }
+//           PUT  /api/admin/contents/:slug      저장 { title, description, music, isPublic, sections: [{ id?, title, body }] }
+//           DELETE /api/admin/contents/:slug    페이지 삭제 (소탭도 함께)
+//           GET/PUT /api/admin/menu             메뉴 구성 [{ key, visible }]
 const express = require('express');
 const pool = require('../db');
 const requireAdmin = require('../middleware/requireAdmin');
+const loadViewer = require('../middleware/loadViewer');
 const { HttpError } = require('../errors');
 const { parseYouTubeId } = require('../youtube');
-const loadViewer = require('../middleware/loadViewer');
+const { withTransaction } = require('../characters');
+const { getMenu, saveMenu, setMenuItem } = require('../menu');
 
-const MAX_BODY = 100000;
-const COLUMNS = 'slug, title, description, body, music_video_id, is_public, sort_order, updated_at';
+const MAX_SECTIONS = 50;
+const MAX_SECTION_BODY = 100000;
+const SLUG_RE = /^[a-z][a-z0-9-]{1,29}$/;
+// 다른 화면 주소와 겹치면 안 되는 이름
+const RESERVED = new Set([
+  'login', 'signup', 'mypage', 'notifications', 'inventory', 'admin', 'members', 'shop', 'qna', 'api', 'css', 'assets',
+]);
+const PAGE_COLUMNS = 'slug, title, description, music_video_id, is_public, sort_order, updated_at';
 
-const toPage = (r) => ({
+const toPage = (r, sections) => ({
   slug: r.slug,
   title: r.title,
   description: r.description,
-  body: r.body ?? '',
   musicVideoId: r.music_video_id,
   isPublic: !!r.is_public,
   updatedAt: r.updated_at,
+  sections,
 });
+const toSection = (r) => ({ id: r.id, title: r.title, body: r.body ?? '' });
 
-async function findPage(slug) {
-  const [rows] = await pool.execute(`SELECT ${COLUMNS} FROM content_pages WHERE slug = ?`, [String(slug)]);
-  if (!rows[0]) throw new HttpError(404, '페이지를 찾을 수 없습니다.');
-  return toPage(rows[0]);
+async function sectionsOf(slugs, conn = pool) {
+  if (!slugs.length) return new Map();
+  const [rows] = await conn.query(
+    'SELECT id, page_slug, title, body FROM content_sections WHERE page_slug IN (?) ORDER BY sort_order, id',
+    [slugs],
+  );
+  const map = new Map(slugs.map((s) => [s, []]));
+  for (const r of rows) map.get(r.page_slug).push(toSection(r));
+  return map;
 }
 
-// 공개
+async function findPage(slug, conn = pool) {
+  const [rows] = await conn.execute(`SELECT ${PAGE_COLUMNS} FROM content_pages WHERE slug = ?`, [String(slug)]);
+  if (!rows[0]) throw new HttpError(404, '페이지를 찾을 수 없습니다.');
+  return toPage(rows[0], (await sectionsOf([rows[0].slug], conn)).get(rows[0].slug));
+}
+
+// ---------- 공개 ----------
 const publicRouter = express.Router();
 publicRouter.use(loadViewer);
-// 목록 (메뉴 이름 표시용): [{ slug, title, description, isPublic }] — 비공개 페이지는 관리자에게만
-publicRouter.get('/', async (req, res) => {
-  const [rows] = await pool.query(
-    `SELECT slug, title, description, is_public FROM content_pages
-      ${req.viewer?.isAdmin ? '' : 'WHERE is_public = 1'}
-      ORDER BY sort_order, slug`,
-  );
-  res.json({ pages: rows.map((r) => ({ slug: r.slug, title: r.title, description: r.description, isPublic: !!r.is_public })) });
-});
-// 비공개 페이지는 관리자만 — 다른 사람에겐 없는 페이지처럼 404
+
+// 페이지 + 소탭. 비공개 페이지는 관리자만 (메뉴에는 보일 수 있으므로 '비공개'라고 알려줌)
 publicRouter.get('/:slug', async (req, res) => {
   const page = await findPage(req.params.slug);
-  if (!page.isPublic && !req.viewer?.isAdmin) throw new HttpError(404, '페이지를 찾을 수 없습니다.');
+  if (!page.isPublic && !req.viewer?.isAdmin) throw new HttpError(403, '비공개 페이지입니다.');
   res.json({ page });
 });
 
-// 관리자
-const adminRouter = express.Router();
-adminRouter.use('/contents', requireAdmin);
-
-adminRouter.get('/contents', async (req, res) => {
-  const [rows] = await pool.query(`SELECT ${COLUMNS} FROM content_pages ORDER BY sort_order, slug`);
-  res.json({ pages: rows.map(toPage) });
+// 상단 메뉴: 보이게 한 항목만 [{ key, label, to, isPublic? }]
+const menuRouter = express.Router();
+menuRouter.get('/', async (req, res) => {
+  const menu = (await getMenu()).filter((m) => m.visible).map(({ key, label, to, isPublic }) => ({ key, label, to, isPublic }));
+  res.json({ menu });
 });
 
-// { title, description, body(마크다운), music(유튜브 링크, 비우면 없음), isPublic?(공개 여부) }
+// ---------- 관리자 ----------
+const adminRouter = express.Router();
+adminRouter.use(['/contents', '/menu'], requireAdmin);
+
+adminRouter.get('/contents', async (req, res) => {
+  const [rows] = await pool.query(`SELECT ${PAGE_COLUMNS} FROM content_pages ORDER BY sort_order, slug`);
+  const sections = await sectionsOf(rows.map((r) => r.slug));
+  res.json({ pages: rows.map((r) => toPage(r, sections.get(r.slug))) });
+});
+
+function parseTitle(value, label = '제목') {
+  const title = String(value ?? '').trim();
+  if (!title || title.length > 100) throw new HttpError(400, `${label}은 1~100자로 입력해주세요.`);
+  return title;
+}
+
+// 새 페이지: { slug(주소), title, showInMenu }
+adminRouter.post('/contents', async (req, res) => {
+  const slug = String(req.body?.slug ?? '').trim().toLowerCase();
+  if (!SLUG_RE.test(slug)) throw new HttpError(400, '주소는 영문 소문자로 시작하고 영문 소문자·숫자·- 로 2~30자여야 합니다.');
+  if (RESERVED.has(slug)) throw new HttpError(400, `'${slug}' 는 다른 화면이 쓰는 주소라 쓸 수 없습니다.`);
+  const title = parseTitle(req.body?.title);
+  await withTransaction(async (conn) => {
+    const [[{ maxOrder }]] = await conn.query('SELECT COALESCE(MAX(sort_order), 0) AS maxOrder FROM content_pages');
+    try {
+      await conn.execute(
+        'INSERT INTO content_pages (slug, title, sort_order, updated_by) VALUES (?, ?, ?, ?)',
+        [slug, title, Number(maxOrder) + 10, req.session.userId],
+      );
+    } catch (err) {
+      if (err.code === 'ER_DUP_ENTRY') throw new HttpError(409, `'/${slug}' 주소의 페이지가 이미 있습니다.`);
+      throw err;
+    }
+    await setMenuItem(`page:${slug}`, req.body?.showInMenu !== false, conn);
+  });
+  res.status(201).json({ page: await findPage(slug) });
+});
+
+// 저장: { title, description, music, isPublic?, sections: [{ id?(기존 소탭), title, body }] } — 소탭은 보낸 목록·순서 그대로
 adminRouter.put('/contents/:slug', async (req, res) => {
-  const title = String(req.body?.title ?? '').trim();
-  if (!title || title.length > 100) throw new HttpError(400, '제목은 1~100자로 입력해주세요.');
+  const slug = String(req.params.slug);
+  const title = parseTitle(req.body?.title);
   const description = String(req.body?.description ?? '').trim();
   if (description.length > 255) throw new HttpError(400, '설명은 255자 이내로 입력해주세요.');
-  const body = String(req.body?.body ?? '');
-  if (body.length > MAX_BODY) throw new HttpError(400, `내용은 ${MAX_BODY.toLocaleString()}자 이내로 입력해주세요.`);
   const musicVideoId = parseYouTubeId(req.body?.music, '페이지 음악');
   const isPublic = req.body?.isPublic === undefined ? null : (req.body.isPublic ? 1 : 0);   // 안 보내면 그대로
 
-  const [result] = await pool.execute(
-    `UPDATE content_pages SET title = ?, description = ?, body = ?, music_video_id = ?, is_public = COALESCE(?, is_public), updated_by = ?
-      WHERE slug = ?`,
-    [title, description, body, musicVideoId, isPublic, req.session.userId, String(req.params.slug)],
-  );
-  if (!result.affectedRows) throw new HttpError(404, '페이지를 찾을 수 없습니다.');
-  res.json({ page: await findPage(req.params.slug) });
+  const rawSections = req.body?.sections;
+  if (rawSections !== undefined && !Array.isArray(rawSections)) throw new HttpError(400, '소탭 목록이 올바르지 않습니다.');
+  if (rawSections && rawSections.length > MAX_SECTIONS) throw new HttpError(400, `소탭은 ${MAX_SECTIONS}개까지 만들 수 있습니다.`);
+  const sections = (rawSections || []).map((s, i) => {
+    const body = String(s?.body ?? '');
+    if (body.length > MAX_SECTION_BODY) throw new HttpError(400, `${i + 1}번째 소탭 내용은 ${MAX_SECTION_BODY.toLocaleString()}자 이내로 입력해주세요.`);
+    const id = s?.id === undefined || s?.id === null ? null : Number(s.id);
+    if (id !== null && (!Number.isInteger(id) || id <= 0)) throw new HttpError(400, '잘못된 소탭입니다.');
+    return { id, title: parseTitle(s?.title, `${i + 1}번째 소탭 제목`), body };
+  });
+
+  await withTransaction(async (conn) => {
+    const [result] = await conn.execute(
+      `UPDATE content_pages SET title = ?, description = ?, music_video_id = ?, is_public = COALESCE(?, is_public), updated_by = ?
+        WHERE slug = ?`,
+      [title, description, musicVideoId, isPublic, req.session.userId, slug],
+    );
+    if (!result.affectedRows) throw new HttpError(404, '페이지를 찾을 수 없습니다.');
+    if (rawSections === undefined) return;
+
+    // 소탭: 목록에 없는 기존 소탭은 삭제, 있는 건 수정(순서 포함), id 없는 건 새로
+    const [existing] = await conn.execute('SELECT id FROM content_sections WHERE page_slug = ? FOR UPDATE', [slug]);
+    const existingIds = new Set(existing.map((r) => r.id));
+    const keep = sections.filter((s) => s.id !== null).map((s) => s.id);
+    if (keep.some((id) => !existingIds.has(id))) throw new HttpError(400, '다른 페이지의 소탭이 섞여 있습니다. 새로고침 후 다시 시도해주세요.');
+    const remove = [...existingIds].filter((id) => !keep.includes(id));
+    if (remove.length) await conn.query('DELETE FROM content_sections WHERE id IN (?)', [remove]);
+    for (const [i, s] of sections.entries()) {
+      if (s.id) {
+        await conn.execute('UPDATE content_sections SET title = ?, body = ?, sort_order = ? WHERE id = ?', [s.title, s.body, i, s.id]);
+      } else {
+        await conn.execute('INSERT INTO content_sections (page_slug, title, body, sort_order) VALUES (?, ?, ?, ?)', [slug, s.title, s.body, i]);
+      }
+    }
+  });
+  res.json({ page: await findPage(slug) });
 });
 
-module.exports = { publicRouter, adminRouter };
+// 페이지 삭제 (소탭 함께, 메뉴에서도 빠짐)
+adminRouter.delete('/contents/:slug', async (req, res) => {
+  const slug = String(req.params.slug);
+  await withTransaction(async (conn) => {
+    const [result] = await conn.execute('DELETE FROM content_pages WHERE slug = ?', [slug]);
+    if (!result.affectedRows) throw new HttpError(404, '페이지를 찾을 수 없습니다.');
+    await setMenuItem(`page:${slug}`, null, conn);
+  });
+  res.status(204).end();
+});
+
+// 메뉴 구성 (전체 후보 + 표시 여부)
+adminRouter.get('/menu', async (req, res) => {
+  res.json({ menu: await getMenu() });
+});
+adminRouter.put('/menu', async (req, res) => {
+  await saveMenu(req.body?.menu);
+  res.json({ menu: await getMenu() });
+});
+
+module.exports = { publicRouter, menuRouter, adminRouter };

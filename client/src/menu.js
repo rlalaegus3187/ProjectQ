@@ -1,21 +1,20 @@
-// 상단 메뉴 / 홈 화면 바로가기 목록 — 페이지를 추가하면 여기와 router.js 에 한 줄씩 추가
-// slug 가 있는 항목 = 콘텐츠 페이지: 관리 → 페이지 관리에서 바꾼 제목이 메뉴 이름이 됨 (label 은 불러오기 전 기본값)
-import { contentTitles, contentMenu } from './contents';
+// 상단 메뉴 / 홈 화면 바로가기 — 관리 → 메뉴 관리에서 고른 항목이 순서대로 (GET /api/menu)
+//   항목: 콘텐츠 페이지(공지·세계관 등, 관리 → 페이지 관리에서 추가) + 멤버 / 상점 / Q&A
+import { reactive } from 'vue';
+import { api } from './api';
+import { isAdmin } from './auth';
 
-export const SITE_MENU = [
-  { to: '/notice', slug: 'notice', label: '공지' },
-  { to: '/world', slug: 'world', label: '세계관' },
-  { to: '/system', slug: 'system', label: '시스템' },
-  { to: '/guide', slug: 'guide', label: '캐릭터 가이드' },
-  { to: '/members', label: '멤버' },
-  { to: '/shop', label: '상점' },
-  { to: '/qna', label: 'Q&A' },
-];
+// items: [{ key, label, to, isPublic? }]
+export const siteMenu = reactive({ loaded: false, items: [] });
 
-export const menuLabel = (m) => {
-  const label = (m.slug && contentTitles[m.slug]) || m.label;
-  return m.slug && contentMenu.private[m.slug] ? `${label} 🔒` : label;   // 비공개 페이지 (관리자에게만 보임)
-};
+export async function loadMenu() {
+  try {
+    siteMenu.items = (await api('/menu')).menu;
+  } catch {
+    siteMenu.items = [];   // 회원 전용 모드에서 로그인 전 등
+  }
+  siteMenu.loaded = true;
+}
 
-// 지금 보여줄 메뉴: 비공개 콘텐츠 페이지는 관리자 말고는 빠짐 (불러오기 전에는 콘텐츠 페이지를 잠시 숨김)
-export const visibleMenu = () => SITE_MENU.filter((m) => !m.slug || (contentMenu.loaded && contentMenu.visible[m.slug]));
+// 비공개 페이지는 관리자에게 🔒 표시 (메뉴에는 그대로 보이고, 들어가면 '비공개 페이지입니다')
+export const menuLabel = (m) => (m.isPublic === false && isAdmin() ? `${m.label} 🔒` : m.label);

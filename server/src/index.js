@@ -51,6 +51,7 @@ app.use('/api/admin', require('./routes/adminShop'));
 app.use('/api/admin', require('./routes/adminApplicants'));
 app.use('/api/admin', require('./routes/adminUsers'));
 app.use('/api/contents', require('./routes/contents').publicRouter);
+app.use('/api/menu', require('./routes/contents').menuRouter);
 app.use('/api/admin', require('./routes/contents').adminRouter);
 
 app.use('/api', (req, res) => res.status(404).json({ message: 'Not Found' }));

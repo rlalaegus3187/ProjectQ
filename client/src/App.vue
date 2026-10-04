@@ -1,8 +1,7 @@
 <script setup>
 import { useRouter } from 'vue-router';
 import { auth, isAdmin, logout } from './auth';
-import { visibleMenu, menuLabel } from './menu';
-import { loadContentTitles } from './contents';
+import { siteMenu, loadMenu, menuLabel } from './menu';
 import { site, loadSite } from './site';
 import { notifications, refreshUnread } from './notifications';
 import { computed, onMounted, watch } from 'vue';
@@ -24,8 +23,8 @@ onMounted(async () => {
 // 회원 전용 모드에서 로그인 전: 상단 메뉴 없이 로그인/회원가입 화면만 (layouts 대신 App 에서 처리)
 const gate = computed(() => site.private && !auth.user);
 
-// 콘텐츠 페이지 제목 (메뉴 이름) — 회원 전용이면 로그인한 뒤에 불러와짐
-watch(() => auth.user?.id, () => loadContentTitles().catch(() => { /* 실패하면 기본 이름 */ }), { immediate: true });
+// 상단 메뉴 (관리 → 메뉴 관리) — 로그인/로그아웃하면 다시 불러옴 (회원 전용·관리자 표시)
+watch(() => auth.user?.id, loadMenu, { immediate: true });
 
 async function onLogout() {
   await logout();
@@ -39,7 +38,7 @@ async function onLogout() {
     <div class="nav-left">
       <RouterLink to="/" class="brand">{{ site.name }}</RouterLink>
       <nav class="board-links">
-        <RouterLink v-for="m in visibleMenu()" :key="m.to" :to="m.to">{{ menuLabel(m) }}</RouterLink>
+        <RouterLink v-for="m in siteMenu.items" :key="m.key" :to="m.to">{{ menuLabel(m) }}</RouterLink>
       </nav>
     </div>
     <nav>
@@ -58,8 +57,8 @@ async function onLogout() {
       </template>
     </nav>
   </header>
-  <!-- 관리 페이지는 왼쪽 메뉴가 있어서 넓게 -->
-  <main class="container" :class="{ gate, wide: route.path.startsWith('/admin') }">
+  <!-- 왼쪽 목록이 있는 화면(관리, 콘텐츠 페이지)은 넓게 — router.js 의 meta.wide -->
+  <main class="container" :class="{ gate, wide: route.meta.wide }">
     <RouterView />
   </main>
   <MusicPlayer />

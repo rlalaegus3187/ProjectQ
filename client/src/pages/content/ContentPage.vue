@@ -1,13 +1,14 @@
 <script setup>
-// 콘텐츠 페이지 (공지 / 세계관 / 시스템 / 캐릭터 가이드) — 페이지마다 파일을 두지 않고 이 파일 하나가
-// 주소의 slug(/notice, /world ...)로 DB 내용을 불러와 표시. 내용은 관리 → 페이지 관리에서 작성
+// 콘텐츠 페이지 (/notice, /world ... + 관리자가 추가한 페이지) — 이 파일 하나가 주소의 slug 로 DB 내용을 불러옴
+// 모양(왼쪽 소탭 목록, 스크롤)은 layouts/ContentLayout.vue, 여기는 데이터와 소탭 내용(마크다운)만
+// 내용은 관리 → 페이지 관리에서 작성
 import { ref, watch } from 'vue';
 import { useRoute } from 'vue-router';
 import { api } from '../../api';
 import { isAdmin } from '../../auth';
 import { MarkdownView } from '../../markdown';
 import { usePageMusic } from '../../music';
-import PageContainer from '../../components/PageContainer.vue';
+import ContentLayout from '../../layouts/ContentLayout.vue';
 
 const route = useRoute();
 const page = ref(null);
@@ -30,14 +31,18 @@ watch(() => route.params.slug, (slug) => { if (slug) load(slug); }, { immediate:
 </script>
 
 <template>
-  <p v-if="error" class="error">{{ error }}</p>
+  <p v-if="error" class="card error">{{ error }}</p>
   <p v-else-if="!page" class="muted">불러오는 중…</p>
-  <PageContainer v-else :title="page.title" :description="page.description">
-    <template v-if="isAdmin()" #actions>
-      <RouterLink :to="`/admin/contents/${page.slug}`" class="button secondary">페이지 수정</RouterLink>
+  <ContentLayout v-else :key="page.slug" :title="page.title" :description="page.description" :sections="page.sections">
+    <template #actions>
+      <RouterLink v-if="isAdmin()" :to="`/admin/contents/${page.slug}`" class="button secondary">페이지 수정</RouterLink>
     </template>
-    <p v-if="!page.isPublic" class="applicant-note">🔒 비공개 페이지입니다. 관리자에게만 보입니다.</p>
-    <MarkdownView v-if="page.body.trim()" :source="page.body" />
-    <p v-else class="muted">준비 중입니다.</p>
-  </PageContainer>
+    <template #notice>
+      <p v-if="!page.isPublic" class="applicant-note">🔒 비공개 페이지입니다. 관리자에게만 보입니다.</p>
+    </template>
+    <template #section="{ section }">
+      <MarkdownView v-if="section.body.trim()" :source="section.body" />
+      <p v-else class="muted">준비 중입니다.</p>
+    </template>
+  </ContentLayout>
 </template>

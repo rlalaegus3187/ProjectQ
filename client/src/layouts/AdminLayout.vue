@@ -12,7 +12,10 @@ const ADMIN_MENU = [
   },
   {
     group: '콘텐츠',
-    items: [{ to: '/admin/contents', label: '페이지 관리' }],
+    items: [
+      { to: '/admin/contents', label: '페이지 관리' },
+      { to: '/admin/menu', label: '메뉴 관리' },
+    ],
   },
   {
     group: '캐릭터 · 아이템',
