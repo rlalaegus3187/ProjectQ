@@ -62,7 +62,7 @@ settings.site_private               회원 전용 모드 ('1' = 로그인해야 
 settings.qna_guest_write            Q&A 비회원 글쓰기 허용 ('1' 허용, 없거나 '0' 막음)
 settings.site_favicon               파비콘(브라우저 탭 아이콘): 업로드 이미지 경로 ico/png 등 (없으면 없음)
 characters.money  소지금 (캐릭터 귀속)
-content_pages  콘텐츠 페이지  slug(PK = 주소), title, description, music_video_id, is_public(0 = 관리자만), sort_order (body 는 019 부터 안 씀)
+content_pages  콘텐츠 페이지  slug(PK = 주소), title(메뉴 이름), music_video_id, is_public(0 = 관리자만), sort_order (description·body 는 더 이상 안 씀)
 content_sections 소탭      page_slug → content_pages.slug (CASCADE), title, body(마크다운), sort_order
 item_logs      아이템 습득/사용 기록  character_id, item_id, amount(+/-), quantity_after, source(admin/shop/admin_take/discard/legacy ...),
                memo(획득처 상세), actor_user_id(처리한 사람), created_at(언제)

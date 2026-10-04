@@ -3,7 +3,7 @@
 //           GET /api/contents/:slug      페이지 + 소탭들 (비공개 페이지는 관리자만, 다른 사람에겐 403)
 //   관리자: GET  /api/admin/contents            페이지 목록 + 소탭
 //           POST /api/admin/contents            새 페이지 { slug, title, showInMenu }
-//           PUT  /api/admin/contents/:slug      저장 { title, description, music, isPublic, sections: [{ id?, title, body }] }
+//           PUT  /api/admin/contents/:slug      저장 { title(메뉴 이름), isPublic, music, sections: [{ id?, title, body }] }
 //           DELETE /api/admin/contents/:slug    페이지 삭제 (소탭도 함께)
 //           GET/PUT /api/admin/menu             메뉴 구성 [{ key, visible }]
 const express = require('express');
@@ -22,12 +22,11 @@ const SLUG_RE = /^[a-z][a-z0-9-]{1,29}$/;
 const RESERVED = new Set([
   'login', 'signup', 'mypage', 'notifications', 'inventory', 'admin', 'members', 'shop', 'qna', 'api', 'css', 'assets',
 ]);
-const PAGE_COLUMNS = 'slug, title, description, music_video_id, is_public, sort_order, updated_at';
+const PAGE_COLUMNS = 'slug, title, music_video_id, is_public, sort_order, updated_at';
 
 const toPage = (r, sections) => ({
   slug: r.slug,
   title: r.title,
-  description: r.description,
   musicVideoId: r.music_video_id,
   isPublic: !!r.is_public,
   updatedAt: r.updated_at,
@@ -108,12 +107,10 @@ adminRouter.post('/contents', async (req, res) => {
   res.status(201).json({ page: await findPage(slug) });
 });
 
-// 저장: { title, description, music, isPublic?, sections: [{ id?(기존 소탭), title, body }] } — 소탭은 보낸 목록·순서 그대로
+// 저장: { title(메뉴 이름), isPublic?, music, sections: [{ id?(기존 소탭), title, body }] } — 소탭은 보낸 목록·순서 그대로
 adminRouter.put('/contents/:slug', async (req, res) => {
   const slug = String(req.params.slug);
   const title = parseTitle(req.body?.title);
-  const description = String(req.body?.description ?? '').trim();
-  if (description.length > 255) throw new HttpError(400, '설명은 255자 이내로 입력해주세요.');
   const musicVideoId = parseYouTubeId(req.body?.music, '페이지 음악');
   const isPublic = req.body?.isPublic === undefined ? null : (req.body.isPublic ? 1 : 0);   // 안 보내면 그대로
 
@@ -130,9 +127,9 @@ adminRouter.put('/contents/:slug', async (req, res) => {
 
   await withTransaction(async (conn) => {
     const [result] = await conn.execute(
-      `UPDATE content_pages SET title = ?, description = ?, music_video_id = ?, is_public = COALESCE(?, is_public), updated_by = ?
+      `UPDATE content_pages SET title = ?, music_video_id = ?, is_public = COALESCE(?, is_public), updated_by = ?
         WHERE slug = ?`,
-      [title, description, musicVideoId, isPublic, req.session.userId, slug],
+      [title, musicVideoId, isPublic, req.session.userId, slug],
     );
     if (!result.affectedRows) throw new HttpError(404, '페이지를 찾을 수 없습니다.');
     if (rawSections === undefined) return;

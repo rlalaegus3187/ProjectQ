@@ -33,7 +33,7 @@ watch(() => route.params.slug, (slug) => { if (slug) load(slug); }, { immediate:
 <template>
   <p v-if="error" class="card error">{{ error }}</p>
   <p v-else-if="!page" class="muted">불러오는 중…</p>
-  <ContentLayout v-else :key="page.slug" :title="page.title" :description="page.description" :sections="page.sections">
+  <ContentLayout v-else :key="page.slug" :title="page.title" :sections="page.sections">
     <template #actions>
       <RouterLink v-if="isAdmin()" :to="`/admin/contents/${page.slug}`" class="button secondary">페이지 수정</RouterLink>
     </template>

@@ -14,7 +14,7 @@ import ModalDialog from '../../components/ModalDialog.vue';
 const route = useRoute();
 const router = useRouter();
 const pages = ref([]);
-const form = ref(null);       // 편집 중인 값 { title, description, music, isPublic, sections: [{ id?, key, title, body }] }
+const form = ref(null);       // 편집 중인 값 { title, isPublic, music, sections: [{ id?, key, title, body }] }
 const saved = ref('');        // 마지막으로 저장된 값 (JSON) — 바뀐 게 있는지 비교
 const saving = ref(false);
 const error = ref('');
@@ -28,9 +28,8 @@ const musicInvalid = computed(() => !!form.value?.music && !parseYouTubeId(form.
 
 const toForm = (p) => ({
   title: p.title,
-  description: p.description,
-  music: youtubeUrl(p.musicVideoId),
   isPublic: p.isPublic,
+  music: youtubeUrl(p.musicVideoId),
   sections: p.sections.map((s) => ({ id: s.id, key: `s${s.id}`, title: s.title, body: s.body })),
 });
 
@@ -156,20 +155,12 @@ onMounted(() => load().catch((e) => { error.value = e.message; }));
 
     <p v-if="!pages.length && !error" class="muted">페이지가 없습니다. [+ 새 페이지]로 만들어주세요.</p>
     <form v-else-if="form" class="form" @submit.prevent="save">
+      <!-- 순서: 메뉴 이름 → 공개 여부 → 음악 → 본문(소탭) -->
       <fieldset class="fieldset">
         <legend>페이지 <span class="muted">/{{ current.slug }}</span></legend>
         <div class="field">
-          <label for="page-title">제목 <span class="muted">(메뉴 이름)</span></label>
+          <label for="page-title">메뉴 이름 <span class="muted">(상단 메뉴와 페이지 제목)</span></label>
           <input id="page-title" v-model="form.title" required maxlength="100" />
-        </div>
-        <div class="field">
-          <label for="page-desc">설명 <span class="muted">(제목 아래 한 줄, 선택)</span></label>
-          <input id="page-desc" v-model="form.description" maxlength="255" />
-        </div>
-        <div class="field">
-          <label for="page-music">페이지 음악 <span class="muted">(유튜브 링크, 비우면 사이트 음악)</span></label>
-          <input id="page-music" v-model="form.music" type="url" maxlength="300" placeholder="https://www.youtube.com/watch?v=…" :class="{ invalid: musicInvalid }" />
-          <span v-if="musicInvalid" class="error">유튜브 영상 링크가 아닙니다.</span>
         </div>
         <label class="switch-row">
           <span class="switch">
@@ -177,13 +168,18 @@ onMounted(() => load().catch((e) => { error.value = e.message; }));
             <span class="slider" />
           </span>
           <span>
-            공개 <strong :class="form.isPublic ? 'on' : 'off'">{{ form.isPublic ? '공개' : '비공개' }}</strong>
+            공개 여부 <strong :class="form.isPublic ? 'on' : 'off'">{{ form.isPublic ? '공개' : '비공개' }}</strong>
             <span class="muted">— 비공개면 관리자만 볼 수 있습니다. 메뉴에 있어도 다른 사람은 '비공개 페이지입니다'만 보입니다.</span>
           </span>
         </label>
+        <div class="field">
+          <label for="page-music">음악 <span class="muted">(유튜브 링크, 비우면 사이트 음악)</span></label>
+          <input id="page-music" v-model="form.music" type="url" maxlength="300" placeholder="https://www.youtube.com/watch?v=…" :class="{ invalid: musicInvalid }" />
+          <span v-if="musicInvalid" class="error">유튜브 영상 링크가 아닙니다.</span>
+        </div>
       </fieldset>
 
-      <h2 class="section-title">소탭 {{ form.sections.length }}개</h2>
+      <h2 class="section-title">본문 — 소탭 {{ form.sections.length }}개</h2>
       <p v-if="!form.sections.length" class="muted">소탭이 없습니다. 아래 [+ 소탭 추가]로 내용을 작성하세요.</p>
       <fieldset v-for="(s, i) in form.sections" :key="s.key" class="fieldset section-edit">
         <legend>소탭 {{ i + 1 }}<template v-if="s.title"> · {{ s.title }}</template></legend>
@@ -215,7 +211,7 @@ onMounted(() => load().catch((e) => { error.value = e.message; }));
       <fieldset class="fieldset">
         <legend>페이지</legend>
         <div class="field">
-          <label for="new-title">제목 (메뉴 이름)</label>
+          <label for="new-title">메뉴 이름</label>
           <input id="new-title" v-model="creating.title" required maxlength="100" placeholder="예: 이벤트" />
         </div>
         <div class="field">

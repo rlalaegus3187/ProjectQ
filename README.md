@@ -8,7 +8,7 @@ Vue 3 + Node.js/Express + MySQL 로 만든 SPA 로그인 샘플입니다.
   - 마이페이지 **계정 삭제**: 비밀번호 확인 + '복구할 수 없음' 동의 후 영구 삭제 (캐릭터·인벤토리·기록·Q&A 글·알림 함께 삭제, 마지막 관리자는 삭제 불가)
   - 아이디는 바꿀 수 없음, 비밀번호·소통 계정은 마이페이지에서 변경. 관리 → 회원 관리에서 비밀번호 강제 변경
   - 캐릭터는 가입한 뒤 마이페이지에서 작성
-- **콘텐츠 페이지**: 공지 · 세계관 · 시스템 · 캐릭터 가이드 + **관리자가 추가한 페이지** — 내용은 DB, **관리 → 페이지 관리**에서 페이지 추가·삭제, 페이지마다 **소탭** 여러 개(마크다운), 음악·공개/비공개. 화면은 왼쪽 소탭 목록 + 순서대로 내용(누르면 그 소탭으로 스크롤) — `layouts/ContentLayout.vue`
+- **콘텐츠 페이지**: 공지 · 세계관 · 시스템 · 캐릭터 가이드 + **관리자가 추가한 페이지** — 내용은 DB, **관리 → 페이지 관리**에서 페이지 추가·삭제, 페이지마다 **소탭** 여러 개(마크다운), 공개/비공개·음악. 화면은 왼쪽 소탭 목록 + 순서대로 내용(누르면 그 소탭으로 스크롤) — `layouts/ContentLayout.vue`
 - **메뉴 관리**: 관리 → 메뉴 관리에서 상단 메뉴(홈 바로가기)에 보일 탭과 순서 (콘텐츠 페이지 + 멤버·상점·Q&A)
 - **CSS 테마**: `client/public/css/basic/` 이 기본 테마(항상 적용, 색·글꼴은 CSS 변수). `css/<테마>/style.css` 폴더를 추가하면 **관리 → 테마** 목록에 나타나고, 미리보기 후 적용 (basic 위에 덮어씀, DB `settings.site_theme`) — `client/public/css/README.md`
 - **마크다운 편집기**: 제목·굵게·기울임·취소선·목록·인용·링크·이미지 (`client/src/markdown/README.md`)
@@ -53,11 +53,11 @@ ProjectQ/
 │     ├─ markdown/         ★ 마크다운 모듈 (renderMarkdown, MarkdownEditor, MarkdownView) — markdown/README.md
 │     ├─ music/            ★ 음악 모듈 (MusicPlayer, usePageMusic, setSiteMusic, 볼륨/정지) — music/README.md
 │     ├─ upload.js         이미지 업로드
-│     ├─ contents.js       콘텐츠 페이지 slug 목록 + 메뉴 제목
+│     ├─ menu.js           상단 메뉴 (관리 → 메뉴 관리, GET /api/menu)
 │     ├─ site.js           사이트 이름·파비콘 (상단 로고, 브라우저 탭)
 │     ├─ layouts/          여러 페이지 공통 바깥 틀 (AdminLayout = 관리 메뉴)
 │     ├─ pages/            주소 1개 = *Page.vue 1개, 기능별 폴더 (home, auth, mypage, members, shop, board, content, admin) — pages/README.md
-│     └─ components/       여러 페이지에서 쓰는 부품 (PageContainer, CharacterForm/Card, AttributeInput/Value, PostEditor ...)
+│     └─ components/       여러 페이지에서 쓰는 부품 (CharacterForm/Card, ProfileFormModal, ModalDialog, PostEditor ...)
 ├─ server/                 Express API
 │  ├─ src/
 │  │  ├─ index.js          앱 진입점 (세션, 라우트)
@@ -72,7 +72,8 @@ ProjectQ/
 │  │  ├─ routes/shop.js        /api/shop (상점 목록·구매)
 │  │  ├─ routes/adminShop.js   /api/admin/shop (상점 관리)
 │  │  ├─ routes/adminApplicants.js  /api/admin/applicants (신청자 관리)
-│  │  ├─ routes/contents.js    /api/contents, /api/admin/contents (콘텐츠 페이지)
+│  │  ├─ routes/contents.js    /api/contents, /api/menu, /api/admin/contents, /api/admin/menu (콘텐츠 페이지·소탭·메뉴)
+│  │  ├─ menu.js           상단 메뉴 구성 (settings.site_menu)
 │  │  ├─ routes/auth.js    /api/auth/signup, login, logout, me, me/password
 │  │  ├─ routes/adminUsers.js  /api/admin/users (회원 관리, 비밀번호 강제 변경)
 │  │  ├─ accounts.js       아이디·비밀번호·소통 계정 검증, 회원 세션 정리
@@ -122,9 +123,9 @@ ProjectQ/
 | PUT | `/api/characters/me/profiles/:id/main` | 대표 프로필 지정 |
 | PUT | `/api/characters/me/application` | (신청자) 신청 상태 `{ status: draft(작성중) / submitted(작성완료) }` — 작성완료면 캐릭터·프로필 수정 불가(409), 관리자에게 알림 |
 | GET | `/api/menu` | 상단 메뉴 (보이게 한 항목만, 순서대로) `[{ key, label, to, isPublic? }]` |
-| GET | `/api/contents/:slug` | 콘텐츠 페이지 `{ slug, title, description, musicVideoId, isPublic, sections: [{ id, title, body }] }` — 비공개는 관리자만(403) |
+| GET | `/api/contents/:slug` | 콘텐츠 페이지 `{ slug, title, musicVideoId, isPublic, sections: [{ id, title, body }] }` — 비공개는 관리자만(403) |
 | GET/POST | `/api/admin/contents` | (관리자) 페이지 목록(+소탭) / 새 페이지 `{ slug, title, showInMenu }` |
-| PUT/DELETE | `/api/admin/contents/:slug` | (관리자) 저장 `{ title, description, music, isPublic, sections: [{ id?, title, body }] }` / 삭제 |
+| PUT/DELETE | `/api/admin/contents/:slug` | (관리자) 저장 `{ title(메뉴 이름), isPublic, music, sections: [{ id?, title, body }] }` / 삭제 |
 | GET/PUT | `/api/admin/menu` | (관리자) 메뉴 구성 `{ menu: [{ key, visible }] }` (순서대로) |
 | GET | `/api/admin/applicants?status=&q=` | (관리자) 신청자 캐릭터 목록 + 상태별 개수 |
 | GET | `/api/admin/applicants/:id` | (관리자) 신청자 캐릭터·프로필 보기 |
