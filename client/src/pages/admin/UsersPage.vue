@@ -192,7 +192,11 @@ onMounted(load);
   </section>
 
   <ModalDialog v-if="resetting" :title="`비밀번호 강제 변경 — ${resetting.user.username}`" @close="resetting = null">
-    <form class="form" @submit.prevent="reset">
+    <template #actions>
+      <button type="submit" form="reset-form" class="danger" :disabled="busy">비밀번호 변경</button>
+      <button type="button" class="secondary" @click="resetting = null">취소</button>
+    </template>
+    <form id="reset-form" class="form" @submit.prevent="reset">
       <p class="muted">새 비밀번호로 바뀌고, 이 회원은 로그인된 모든 기기에서 로그아웃됩니다. 바꾼 비밀번호를 회원에게 전달해주세요.</p>
       <label>
         새 비밀번호 <span class="muted">(8자 이상)</span>
@@ -201,10 +205,6 @@ onMounted(load);
           <button type="button" class="secondary" @click="resetting.password = randomPassword()">임시 비밀번호 생성</button>
         </div>
       </label>
-      <div class="actions">
-        <button type="submit" class="danger" :disabled="busy">비밀번호 변경</button>
-        <button type="button" class="secondary" @click="resetting = null">취소</button>
-      </div>
     </form>
   </ModalDialog>
 </template>

@@ -130,7 +130,11 @@ onMounted(() => load().catch((e) => { error.value = e.message; loaded.value = tr
 
   <!-- 신청서 제출 동의 (관리 → 사이트 설정 → 신청서 제출 동의사항) -->
   <ModalDialog v-if="submitting" title="신청서 제출" @close="submitting = null">
-    <form class="form" @submit.prevent="submitApplication">
+    <template #actions>
+      <button type="submit" form="submit-form" :disabled="saving || !submitting.agree">{{ saving ? '제출 중…' : '제출' }}</button>
+      <button type="button" class="secondary" @click="submitting = null">취소</button>
+    </template>
+    <form id="submit-form" class="form" @submit.prevent="submitApplication">
       <p v-if="submitting.notice === null" class="muted">불러오는 중…</p>
       <div v-else-if="submitting.notice" class="signup-notice"><MarkdownView :source="submitting.notice" /></div>
       <label class="inline agree">
@@ -138,10 +142,6 @@ onMounted(() => load().catch((e) => { error.value = e.message; loaded.value = tr
         {{ submitting.notice ? '위 동의사항을 모두 읽었으며 동의합니다.' : '신청서 제출에 동의합니다.' }}
       </label>
       <p v-if="submitting.error" class="error">{{ submitting.error }}</p>
-      <div class="actions">
-        <button type="submit" :disabled="saving || !submitting.agree">{{ saving ? '제출 중…' : '제출' }}</button>
-        <button type="button" class="secondary" @click="submitting = null">취소</button>
-      </div>
     </form>
   </ModalDialog>
 
@@ -174,14 +174,14 @@ onMounted(() => load().catch((e) => { error.value = e.message; loaded.value = tr
 
   <!-- 수정하기: 기본정보 + 스탯 (프로필 수정과 같은 팝업 폼) -->
   <ModalDialog v-if="form && character" :title="site.statsEnabled ? '캐릭터 수정 — 기본정보 · 스탯' : '캐릭터 수정 — 기본정보'" @close="form = null">
-    <form class="form" @submit.prevent="save">
+    <template #actions>
+      <button type="submit" form="character-form" :disabled="saving">{{ saving ? '저장 중…' : '저장' }}</button>
+      <button type="button" class="secondary" @click="form = null">취소</button>
+    </template>
+    <form id="character-form" class="form" @submit.prevent="save">
       <p v-if="isSubmittedApplication(character)" class="applicant-note">{{ RESUBMIT_NOTICE }}</p>
       <CharacterForm v-model="form" :definitions="definitions" />
       <p v-if="error" class="error">{{ error }}</p>
-      <div class="actions">
-        <button type="submit" :disabled="saving">{{ saving ? '저장 중…' : '저장' }}</button>
-        <button type="button" class="secondary" @click="form = null">취소</button>
-      </div>
     </form>
   </ModalDialog>
 

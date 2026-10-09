@@ -19,11 +19,13 @@ Vue 3 + Node.js/Express + MySQL 로 만든 SPA 로그인 샘플입니다.
 - **음악**: 프로필별 유튜브 음악, 사이트 전체 음악(관리 → 사이트 설정), 페이지별 음악(`usePageMusic`) — 오른쪽 아래 플레이어, 볼륨/정지는 계정별 저장 (`client/src/music/README.md`)
 - **소지금 / 상점**: 캐릭터 소지금(내역 기록), 관리자가 소지금 지급·회수, `상점 관리`에서 등록된 아이템을 골라 가격·재고 설정, 회원은 `상점`에서 구매
 - **아이템 / 인벤토리**: 관리자가 아이템 등록(이미지·효과·귀속·판매가능) 후 캐릭터에게 지급/회수, 회원은 `인벤토리` 에서 확인·버리기
+  - 관리 → **아이템 관리** 아래 소탭 3개: **아이템 목록**(검색 · 정렬: uid 최신/오래된·가나다 · 효과별 보기), **캐릭터 아이템 관리**(캐릭터별 보유 종류·개수·소지금, '이 아이템을 가진 캐릭터만', 지급·회수), **아이템 효과**(효과 종류 추가·수정·삭제 — DB `item_effects`)
   - **습득 기록**: 모든 습득·사용이 `item_logs` 에 언제·어디서(관리자 지급/상점 구매/버림 ...)·메모·처리한 사람과 함께 남음. 관리자 지급 때 획득처(예: 이벤트 보상) 입력
 - **계정당 캐릭터 1개** — 가입할 때 함께 등록, 마이페이지에서 기본정보·캐릭터 스탯 표시·수정
 - **멤버란** (`/members`): 멤버·관리자의 캐릭터만. 신청자의 캐릭터(신청서)는 목록에 없고, 주소(`/members/:id`)로 들어와도 **관리자만** 볼 수 있음 (다른 사람에겐 '찾을 수 없음'). 전체 캐릭터 목록(대표 프로필 이미지·검색) + 캐릭터 상세(기본정보·스탯·프로필, 보기 전용, 로그인 없이 공개)
 - **캐릭터 프로필 여러 개** (최대 10): 마이페이지엔 내 프로필 **목록**(대표 표시, 보기·수정·대표로·삭제), 수정·추가는 **팝업 폼**. 캐릭터 페이지(`/members/:id`)는 대표 프로필이 먼저 보이고 위쪽 목록에서 다른 프로필 선택(`?profile=<번호>` 로 바로 열기), 프로필마다 음악이 바뀜. 본인은 그 자리에서 '이 프로필 수정'
   - 입력 폼은 모두 같은 모양(팝업 + 칸 묶음 + 한 줄에 한 칸): 프로필, 캐릭터 수정, 아이템 등록·수정
+  - 팝업의 저장/취소 버튼은 늘 **우측 상단**(머리글, 스크롤해도 붙어 있음) — `ModalDialog` 의 `#actions` 슬롯
   - 프로필 양식 값만 프로필마다 따로 (기본정보·스탯·인벤토리는 캐릭터에 하나)
 - **권한 3단계: 관리자 / 멤버 / 신청자** — 가입하면 신청자(프로필 1개, 멤버란에 안 보임). 신청자는 마이페이지에서 신청서를 `작성중 ↔ 작성완료` 로 바꾸고(작성완료면 수정 잠금),
   관리자는 `관리 → 신청자 관리`에서 신청 프로필을 보고 **체크해서 한꺼번에 멤버로 전환**(신청 프로필이 대표 프로필, 멤버란 공개, 알림) 또는 **한꺼번에 삭제**
@@ -71,6 +73,7 @@ ProjectQ/
 │  │  ├─ notify.js         ★ 알림 보내기 공용 함수 (notify / notifyUsers / notifyAdmins)
 │  │  ├─ inventory.js      ★ 아이템/인벤토리 공용 함수 (giveItem / takeItem / getInventory)
 │  │  ├─ routes/adminItems.js  /api/admin/items, /api/admin/characters (관리자)
+│  │  ├─ routes/itemEffects.js /api/item-effects, /api/admin/item-effects (아이템 효과 종류)
 │  │  ├─ routes/inventory.js   /api/inventory (내 인벤토리)
 │  │  ├─ routes/members.js     /api/members (멤버란, 공개)
 │  │  ├─ money.js          ★ 소지금 공용 함수 (getMoney / changeMoney / getMoneyLogs)
@@ -161,7 +164,9 @@ ProjectQ/
 | POST | `/api/boards/qna/posts/:id/replies` | (관리자) 답변 → 질문자에게 알림 |
 | PUT/DELETE | `/api/boards/qna/replies/:id` | (관리자) 답변 수정/삭제 |
 | GET/POST/PUT/DELETE | `/api/admin/items[/:id]` | (관리자) 아이템 목록/등록/수정/삭제 |
-| GET | `/api/admin/characters?q=` | (관리자) 캐릭터 검색 |
+| GET | `/api/admin/characters?q=&itemId=` | (관리자) 캐릭터 목록·검색 + 보유 아이템 종류·총 개수·소지금 (itemId: 그 아이템을 가진 캐릭터만, 보유 수량 포함) |
+| GET | `/api/item-effects` | 아이템 효과 종류 `[{ code, label, example, description }]` |
+| GET/POST/PUT/DELETE | `/api/admin/item-effects[/:code]` | (관리자) 효과 목록(+쓰는 아이템 수)/추가 `{ code, label, example, description, sortOrder }`/수정/삭제 (쓰던 아이템은 '효과 없음'으로) |
 | GET/POST | `/api/admin/characters/:id/inventory` | (관리자) 인벤토리 조회 / 지급 `{ itemId, quantity, memo(획득처) }` (알림 발송, 조회 응답에 itemLogs 포함) |
 | DELETE | `/api/admin/characters/:id/inventory/:itemId?quantity=&memo=` | (관리자) 회수 (memo: 사유) |
 | GET | `/api/inventory/:itemId/logs` | 내 아이템 하나의 습득/사용 기록 |

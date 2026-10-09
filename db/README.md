@@ -47,7 +47,8 @@ post_replies   Q&A 답변 (관리자)  post_id FK → posts.id (글 삭제 시 �
 notifications  계정별 알림  user_id, type, post_id, link(이동 주소), message, is_read, is_archived(보관함 — 삭제 안 됨), archived_at
                → 추가는 server/src/notify.js 의 notify()/notifyUsers()/notifyAdmins() 사용
 items          아이템 (uid=id, name, description(마크다운), small_image, large_image,
-               effect ENUM(none/hp_recover/stat_bonus/custom), effect_values JSON, is_bound 귀속, is_sellable 판매가능)
+               effect → item_effects.code (FK), effect_values JSON, is_bound 귀속, is_sellable 판매가능)
+item_effects   아이템 효과 종류  code(PK, 영문 키), label(화면 이름), example(효과수치 JSON 예시), description, sort_order — 'none'(효과 없음)은 지울 수 없음
 inventory      캐릭터 인벤토리 (캐릭터 귀속)  character_id, item_id, quantity — (character_id, item_id) UNIQUE, 수량으로 쌓임
                → 지급/회수는 server/src/inventory.js 의 giveItem()/takeItem()/getInventory() 사용
 character_profiles.music_video_id  프로필 음악 (유튜브 영상 ID, NULL = 없음)

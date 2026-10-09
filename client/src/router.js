@@ -45,7 +45,11 @@ const router = createRouter({
         { path: 'contents/:slug?', component: () => import('./pages/admin/ContentEditPage.vue') },
         { path: 'menu', component: () => import('./pages/admin/MenuPage.vue') },
         { path: 'attributes', component: () => import('./pages/admin/AttributesPage.vue') },
-        { path: 'items', component: () => import('./pages/admin/ItemsPage.vue') },
+        // 아이템 관리 → 아이템 목록 / 캐릭터 아이템 관리 / 아이템 효과
+        { path: 'items', redirect: '/admin/items/list' },
+        { path: 'items/list', component: () => import('./pages/admin/ItemListPage.vue') },
+        { path: 'items/characters', component: () => import('./pages/admin/CharacterItemsPage.vue') },
+        { path: 'items/effects', component: () => import('./pages/admin/ItemEffectsPage.vue') },
         { path: 'shop', component: () => import('./pages/admin/ShopPage.vue') },
         { path: 'settings', component: () => import('./pages/admin/SettingsPage.vue') },
         { path: 'themes', component: () => import('./pages/admin/ThemesPage.vue') },

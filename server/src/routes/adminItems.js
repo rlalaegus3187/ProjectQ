@@ -9,6 +9,7 @@ const {
 const { getMoney, changeMoney, getMoneyLogs } = require('../money');
 const { notify } = require('../notify');
 const { parseIds, pickFlags } = require('../bulk');
+const { assertEffect } = require('../itemEffects');
 
 const router = express.Router();
 router.use(requireAdmin);
@@ -25,6 +26,7 @@ router.get('/items', async (req, res) => {
 
 router.post('/items', async (req, res) => {
   const d = validateItemInput(req.body);
+  await assertEffect(d.effect);
   const [result] = await pool.execute(
     `INSERT INTO items (name, description, small_image, large_image, effect, effect_values, is_bound, is_sellable)
      VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
@@ -50,6 +52,7 @@ router.post('/items/bulk-delete', async (req, res) => {
 
 router.put('/items/:id', async (req, res) => {
   const d = validateItemInput(req.body);
+  await assertEffect(d.effect);
   const [result] = await pool.execute(
     `UPDATE items SET name = ?, description = ?, small_image = ?, large_image = ?, effect = ?, effect_values = ?,
             is_bound = ?, is_sellable = ? WHERE id = ?`,
@@ -66,17 +69,34 @@ router.delete('/items/:id', async (req, res) => {
   res.status(204).end();
 });
 
-// 캐릭터 검색 (캐릭터 이름 / 회원 아이디 / 소통 계정)
+// 캐릭터 목록·검색 (캐릭터 이름 / 회원 아이디 / 소통 계정) + 보유 아이템 종류·총 개수·소지금
+//   ?itemId= 를 주면 그 아이템을 가진 캐릭터만 (보유 수량 포함)
 router.get('/characters', async (req, res) => {
   const q = `%${String(req.query.q ?? '').trim()}%`;
+  const itemId = req.query.itemId ? parseId(req.query.itemId, '아이템을') : null;
   const [rows] = await pool.query(
-    `SELECT c.id, c.name, u.username, u.contact
+    `SELECT c.id, c.name, c.money, u.username, u.contact,
+            (SELECT COUNT(*) FROM inventory inv WHERE inv.character_id = c.id) AS item_kinds,
+            (SELECT COALESCE(SUM(inv.quantity), 0) FROM inventory inv WHERE inv.character_id = c.id) AS item_total
+            ${itemId ? ', own.quantity AS item_quantity' : ''}
        FROM characters c JOIN users u ON u.id = c.user_id
+       ${itemId ? 'JOIN inventory own ON own.character_id = c.id AND own.item_id = ?' : ''}
       WHERE c.name LIKE ? OR u.username LIKE ? OR u.contact LIKE ?
-      ORDER BY c.id DESC LIMIT 20`,
-    [q, q, q],
+      ORDER BY c.name LIMIT 200`,
+    itemId ? [itemId, q, q, q] : [q, q, q],
   );
-  res.json({ characters: rows.map((r) => ({ id: r.id, name: r.name, username: r.username, contact: r.contact })) });
+  res.json({
+    characters: rows.map((r) => ({
+      id: r.id,
+      name: r.name,
+      username: r.username,
+      contact: r.contact,
+      money: Number(r.money),
+      itemKinds: Number(r.item_kinds),
+      itemTotal: Number(r.item_total),
+      ...(itemId ? { itemQuantity: Number(r.item_quantity) } : {}),
+    })),
+  });
 });
 
 // 인벤토리 + 아이템 습득/사용 기록 + 소지금 + 최근 소지금 내역

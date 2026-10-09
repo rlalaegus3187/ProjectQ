@@ -130,6 +130,10 @@ const savePassword = () => run(async () => {
     </dl>
 
     <ModalDialog v-if="agreement" title="회원가입 안내 (약관)" @close="agreement = null">
+      <template #actions>
+        <button v-if="!agreement.loading && !agreement.agreedAt" type="submit" form="agreement-form" :disabled="busy || !agreeChecked">동의하기</button>
+        <button type="button" class="secondary" @click="agreement = null">{{ agreement.agreedAt ? '닫기' : '취소' }}</button>
+      </template>
       <p v-if="agreement.loading" class="muted">불러오는 중…</p>
       <template v-else>
         <p v-if="agreement.agreedAt" class="ok">{{ formatTime(agreement.agreedAt) }}에 동의했습니다.</p>
@@ -138,13 +142,9 @@ const savePassword = () => run(async () => {
           <MarkdownView v-if="agreement.notice" :source="agreement.notice" />
           <p v-else class="muted">등록된 안내가 없습니다.</p>
         </div>
-        <form v-if="!agreement.agreedAt" class="form" @submit.prevent="confirmAgreement">
+        <form v-if="!agreement.agreedAt" id="agreement-form" class="form" @submit.prevent="confirmAgreement">
           <label class="inline agree"><input v-model="agreeChecked" type="checkbox" /> 위 안내를 모두 읽었으며 동의합니다.</label>
-          <button type="submit" :disabled="busy || !agreeChecked">동의하기</button>
         </form>
-        <div v-else class="actions">
-          <button type="button" class="secondary" @click="agreement = null">닫기</button>
-        </div>
       </template>
     </ModalDialog>
 
@@ -181,7 +181,11 @@ const savePassword = () => run(async () => {
     </div>
 
     <ModalDialog v-if="removing" title="계정 삭제" @close="removing = null">
-      <form class="form" @submit.prevent="confirmDelete">
+      <template #actions>
+        <button type="submit" form="delete-account-form" class="danger" :disabled="busy || !removing.understood || !removing.password">계정 영구 삭제</button>
+        <button type="button" class="secondary" @click="removing = null">취소</button>
+      </template>
+      <form id="delete-account-form" class="form" @submit.prevent="confirmDelete">
         <div class="delete-warning">
           <p><strong>삭제한 계정은 복구할 수 없습니다.</strong> 아래 내용이 모두 즉시 삭제되며, 관리자도 되돌릴 수 없습니다.</p>
           <ul>
@@ -200,10 +204,6 @@ const savePassword = () => run(async () => {
           <input v-model="removing.understood" type="checkbox" /> 복구할 수 없다는 것을 이해했으며 계정을 삭제합니다.
         </label>
         <p v-if="removing.error" class="error">{{ removing.error }}</p>
-        <div class="actions">
-          <button type="submit" class="danger" :disabled="busy || !removing.understood || !removing.password">계정 영구 삭제</button>
-          <button type="button" class="secondary" @click="removing = null">취소</button>
-        </div>
       </form>
     </ModalDialog>
   </section>

@@ -175,7 +175,11 @@ onMounted(() => load().catch((e) => { error.value = e.message; }));
   </section>
 
   <ModalDialog v-if="creating" title="새 페이지" @close="creating = null">
-    <form class="form" @submit.prevent="createPage">
+    <template #actions>
+      <button type="submit" form="new-page-form">만들기</button>
+      <button type="button" class="secondary" @click="creating = null">취소</button>
+    </template>
+    <form id="new-page-form" class="form" @submit.prevent="createPage">
       <fieldset class="fieldset">
         <legend>페이지</legend>
         <div class="field">
@@ -189,10 +193,6 @@ onMounted(() => load().catch((e) => { error.value = e.message; }));
         <label class="toggle"><ToggleSwitch v-model="creating.showInMenu" /> 상단 메뉴에 보이기</label>
       </fieldset>
       <p v-if="creating.error" class="error">{{ creating.error }}</p>
-      <div class="actions">
-        <button type="submit">만들기</button>
-        <button type="button" class="secondary" @click="creating = null">취소</button>
-      </div>
     </form>
   </ModalDialog>
 </template>

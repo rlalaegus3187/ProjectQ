@@ -84,7 +84,7 @@ onMounted(() => load().catch((e) => { error.value = e.message; }));
   <section class="card">
     <h1>상점 관리</h1>
     <p class="muted">
-      <RouterLink to="/admin/items">아이템 관리</RouterLink>에 등록된 아이템을 골라 가격을 붙여 <RouterLink to="/shop">상점</RouterLink>에 올립니다.
+      <RouterLink to="/admin/items/list">아이템 관리</RouterLink>에 등록된 아이템을 골라 가격을 붙여 <RouterLink to="/shop">상점</RouterLink>에 올립니다.
       재고를 비워두면 무제한, 0 이면 품절입니다. '판매'를 끄면 상점에서 숨겨집니다.
     </p>
     <p v-if="error" class="error">{{ error }}</p>

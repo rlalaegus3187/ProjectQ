@@ -21,8 +21,6 @@ const pool = require('./db');
 const { HttpError, UPLOAD_URL_RE } = require('./characters');
 const { notify } = require('./notify');
 
-// 효과 종류 (DB ENUM 과 같아야 함)
-const EFFECTS = ['none', 'hp_recover', 'stat_bonus', 'custom'];
 const MAX_QUANTITY = 99999;
 // 획득처/사유 코드: admin, shop, admin_take, discard, legacy ... (영문 소문자·숫자·_ 30자)
 const SOURCE_RE = /^[a-z][a-z0-9_]{0,29}$/;
@@ -92,8 +90,8 @@ function validateItemInput(body) {
     return v;
   };
 
-  const effect = body?.effect ?? 'none';
-  if (!EFFECTS.includes(effect)) throw new HttpError(400, `효과는 ${EFFECTS.join(', ')} 중 하나여야 합니다.`);
+  // 효과 종류는 item_effects 테이블 (있는지는 저장할 때 assertEffect 로 확인)
+  const effect = String(body?.effect ?? 'none');
 
   // 효과수치: JSON 객체 (문자열로 와도 파싱)
   let values = body?.effectValues ?? {};
@@ -267,7 +265,6 @@ async function getItemLogs(characterId, { itemId = null, limit = 20 } = {}, conn
 }
 
 module.exports = {
-  EFFECTS,
   MAX_QUANTITY,
   toItem,
   getItem,

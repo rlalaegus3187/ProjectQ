@@ -44,7 +44,7 @@ layouts/ 는 여러 페이지가 같이 쓰는 **큰 틀**입니다. 쓰는 방�
 **② 라우터 부모로 쓰기** (AdminLayout) — 틀 안의 `<RouterView />` 에 자식 페이지가 바뀌어 들어감. 메뉴 같은 틀이 그대로 남아야 할 때
 ```js
 { path: '/admin', component: () => import('./layouts/AdminLayout.vue'), meta: { requiresAdmin: true },
-  children: [{ path: 'items', component: () => import('./pages/admin/ItemsPage.vue') }] }
+  children: [{ path: 'items/list', component: () => import('./pages/admin/ItemListPage.vue') }] }
 ```
 부모의 `meta`(권한 검사 등)는 자식 모두에게 적용됩니다.
 

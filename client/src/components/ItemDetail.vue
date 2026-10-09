@@ -1,7 +1,7 @@
 <script setup>
 // 아이템 상세 (큰 이미지, 설명, 효과, 귀속/판매 여부)
 import { MarkdownView } from '../markdown';
-import { effectLabel, formatEffectValues, itemSourceLabel } from '../items';
+import { effectLabel, formatEffectValues, itemSourceLabel, loadItemEffects } from '../items';
 
 defineProps({
   item: { type: Object, required: true },
@@ -9,6 +9,7 @@ defineProps({
   entry: { type: Object, default: null },   // 인벤토리 항목이면 습득 정보 표시 { acquiredAt, lastAcquiredAt, lastSource, lastMemo }
 });
 const formatTime = (v) => new Date(v).toLocaleString('ko-KR');
+loadItemEffects().catch(() => {});   // 효과 이름 표시용
 </script>
 
 <template>

@@ -1,11 +1,18 @@
-// 아이템 효과 종류 (서버 inventory.js EFFECTS / DB ENUM 과 같아야 함)
-export const EFFECTS = [
-  { value: 'none', label: '효과 없음', example: '{}' },
-  { value: 'hp_recover', label: 'HP 회복', example: '{"amount": 50}' },
-  { value: 'stat_bonus', label: '스탯 증가', example: '{"str": 2, "int": 1}' },
-  { value: 'custom', label: '기타', example: '{"note": "설명"}' },
-];
-export const effectLabel = (value) => EFFECTS.find((e) => e.value === value)?.label ?? value;
+import { reactive } from 'vue';
+import { api } from './api';
+
+// 아이템 효과 종류 — 관리 → 아이템 관리 → 아이템 효과에서 추가·삭제 (DB item_effects)
+//   await loadItemEffects()  → [{ code, label, example, description }] (한 번 불러오면 재사용, force 로 다시)
+//   effectLabel('hp_recover') → 'HP 회복'
+export const itemEffects = reactive({ list: [], loaded: false });
+export async function loadItemEffects({ force = false } = {}) {
+  if (!itemEffects.loaded || force) {
+    itemEffects.list = (await api('/item-effects')).effects;
+    itemEffects.loaded = true;
+  }
+  return itemEffects.list;
+}
+export const effectLabel = (code) => itemEffects.list.find((e) => e.code === code)?.label ?? code;
 
 // 효과수치를 사람이 읽기 좋게: {"amount":50} → "amount 50"
 export function formatEffectValues(values) {

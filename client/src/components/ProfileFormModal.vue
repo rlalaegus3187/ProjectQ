@@ -50,15 +50,15 @@ function close() {
 
 <template>
   <ModalDialog :title="title" @close="close">
-    <form class="form" @submit.prevent="save">
+    <template #actions>
+      <button type="submit" form="profile-form" :disabled="busy">{{ busy ? '저장 중…' : isNew ? '프로필 추가' : '저장' }}</button>
+      <button type="button" class="secondary" @click="close">취소</button>
+    </template>
+    <form id="profile-form" class="form" @submit.prevent="save">
       <p v-if="isSubmittedApplication(character)" class="applicant-note">{{ RESUBMIT_NOTICE }}</p>
       <ProfileFields v-model:name="form.name" v-model:details="form.details" v-model:music="form.music"
         :definitions="definitions" :legend="isMain ? '대표 프로필 (캐릭터 이름으로 표시)' : '프로필'" :show-name="!isMain" />
       <p v-if="error" class="error">{{ error }}</p>
-      <div class="actions">
-        <button type="submit" :disabled="busy">{{ busy ? '저장 중…' : isNew ? '프로필 추가' : '저장' }}</button>
-        <button type="button" class="secondary" @click="close">취소</button>
-      </div>
     </form>
   </ModalDialog>
 </template>

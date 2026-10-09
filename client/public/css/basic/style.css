@@ -193,9 +193,13 @@ a.button.small, .row-actions a.button { padding: 6px 10px; font-size: 13px; }
 /* 팝업 */
 .modal-backdrop { position: fixed; inset: 0; background: rgba(17, 24, 39, .45); display: flex; align-items: flex-start; justify-content: center; padding: 40px 16px; overflow-y: auto; z-index: 50; }
 .modal { background: var(--color-surface); border-radius: 12px; width: 100%; max-width: 640px; padding: 20px 24px; box-shadow: 0 20px 40px rgba(0,0,0,.2); }
-.modal-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
-.modal-head h2 { margin: 0; }
-.modal-head button { font-size: 18px; color: var(--color-muted); }
+.modal { padding-top: 0; }
+/* 머리글: 제목 + 우측 상단 버튼(저장/취소) — 스크롤해도 위에 붙어 있음 */
+.modal-head { position: sticky; top: 0; z-index: 5; display: flex; justify-content: space-between; align-items: center; gap: 12px;
+  margin: 0 -24px 12px; padding: 16px 24px 12px; background: var(--color-surface); border-bottom: 1px solid var(--color-border-light); border-radius: 12px 12px 0 0; }
+.modal-head h2 { margin: 0; font-size: 18px; min-width: 0; overflow-wrap: anywhere; }
+.modal-actions { display: flex; gap: 8px; flex: none; align-items: center; }
+.modal-close { font-size: 18px; color: var(--color-muted); }
 /* 인벤토리 */
 .item-grid { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(88px, 1fr)); gap: 10px; }
 .item-slot { position: relative; width: 100%; aspect-ratio: 1; padding: 6px; background: #f9fafb; border: 1px solid var(--color-border); border-radius: 10px; color: inherit; display: flex; align-items: center; justify-content: center; }
@@ -364,6 +368,12 @@ strong.off { color: var(--color-muted); }
 .admin-nav a { padding: 8px 10px; border-radius: 6px; color: var(--color-text-sub); font-size: 14px; }
 .admin-nav a:hover { background: var(--color-bg); }
 .admin-nav a.router-link-active { background: var(--color-primary); color: var(--color-on-primary); font-weight: 600; }
+/* 소탭이 있는 항목(아이템 관리): 위 항목은 글자만 강조, 아래 소탭을 들여 써서 */
+.admin-nav a.has-sub.router-link-active { background: none; color: var(--color-text-sub); font-weight: normal; }
+.admin-nav a.has-sub.open { color: var(--color-text); font-weight: 600; }
+.admin-nav-sub { display: flex; flex-direction: column; gap: 2px; margin: 0 0 4px 12px; padding-left: 8px; border-left: 2px solid var(--color-border-light); }
+.admin-nav-sub a { padding: 6px 10px; font-size: 13px; }
+.admin-nav-sub a.router-link-active { background: var(--color-primary-soft); color: var(--color-primary); }
 .admin-main { min-width: 0; }
 /* 좁은 화면: 메뉴를 위쪽 가로 줄로 (좌우로 밀어서 이동) */
 @media (max-width: 800px) {
@@ -374,6 +384,7 @@ strong.off { color: var(--color-muted); }
   .admin-nav-group { flex-direction: row; gap: 4px; }
   .admin-nav-label { display: none; }
   .admin-nav a { white-space: nowrap; }
+  .admin-nav-sub { flex-direction: row; margin: 0; padding-left: 4px; }
 }
 
 /* 회원 관리 */
@@ -411,3 +422,9 @@ strong.off { color: var(--color-muted); }
 /* 사이트 비공개 화면 */
 .closed-message { text-align: center; padding: 32px 24px; }
 .closed-foot { text-align: center; margin: 8px 0; }
+
+/* 목록 위 검색 · 정렬 · 필터 줄 (아이템 목록, 캐릭터 아이템 관리) */
+.filter-bar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin: 12px 0; }
+.filter-bar input[type=search] { flex: 1 1 220px; min-width: 0; }
+.filter-bar select { flex: 0 1 auto; max-width: 100%; }
+.add-row .narrow-search { flex: 0 1 160px; min-width: 0; }
