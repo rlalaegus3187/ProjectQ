@@ -225,7 +225,7 @@ onMounted(() => Promise.all([loadItems(), loadItemEffects({ force: true })]).cat
       </fieldset>
       <fieldset class="fieldset">
         <legend>이미지</legend>
-        <div class="field"><label for="item-image">/label><ImageField id="item-image" v-model="editing.image" /></div>
+        <div class="field"><label for="item-image"></label><ImageField id="item-image" v-model="editing.image" /></div>
       </fieldset>
       <fieldset class="fieldset">
         <legend>효과</legend>
