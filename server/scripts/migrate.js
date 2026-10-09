@@ -11,7 +11,7 @@ const MIGRATIONS_DIR = path.join(__dirname, '..', '..', 'db', 'migrations');
 const REQUIRED_TABLES = [
   'users', 'sessions', 'posts', 'post_replies', 'notifications', 'settings',
   'attribute_definitions', 'characters', 'character_stats', 'character_profiles', 'character_details',
-  'items', 'inventory', 'item_logs', 'money_logs', 'shop_items', 'content_pages', 'content_sections',
+  'items', 'inventory', 'item_logs', 'money_logs', 'shop_items', 'content_pages',
 ];
 
 async function checkTables(conn) {

@@ -1,6 +1,6 @@
 <script setup>
 // 콘텐츠 페이지 (/notice, /world ... + 관리자가 추가한 페이지) — 이 파일 하나가 주소의 slug 로 DB 내용을 불러옴
-// 모양(왼쪽 소탭 목록, 스크롤)은 layouts/ContentLayout.vue, 여기는 데이터와 소탭 내용(마크다운)만
+// 모양은 layouts/ContentLayout.vue, 여기는 데이터와 본문(마크다운)만
 // 내용은 관리 → 페이지 관리에서 작성
 import { ref, watch } from 'vue';
 import { useRoute } from 'vue-router';
@@ -33,16 +33,14 @@ watch(() => route.params.slug, (slug) => { if (slug) load(slug); }, { immediate:
 <template>
   <p v-if="error" class="card error">{{ error }}</p>
   <p v-else-if="!page" class="muted">불러오는 중…</p>
-  <ContentLayout v-else :key="page.slug" :title="page.title" :sections="page.sections">
+  <ContentLayout v-else :key="page.slug" :title="page.title">
     <template #actions>
       <RouterLink v-if="isAdmin()" :to="`/admin/contents/${page.slug}`" class="button secondary">페이지 수정</RouterLink>
     </template>
     <template #notice>
       <p v-if="!page.isPublic" class="applicant-note">🔒 비공개 페이지입니다. 관리자에게만 보입니다.</p>
     </template>
-    <template #section="{ section }">
-      <MarkdownView v-if="section.body.trim()" :source="section.body" />
-      <p v-else class="muted">준비 중입니다.</p>
-    </template>
+    <MarkdownView v-if="page.body.trim()" :source="page.body" />
+    <p v-else class="muted">준비 중입니다.</p>
   </ContentLayout>
 </template>

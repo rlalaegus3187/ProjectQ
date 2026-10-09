@@ -8,7 +8,7 @@ src/
 ├─ App.vue            사이트 전체 틀 (상단 메뉴, 음악 플레이어)
 ├─ layouts/           여러 페이지가 같이 쓰는 큰 틀
 │  ├─ AdminLayout.vue   관리 화면: 왼쪽 관리 메뉴 + <RouterView /> (router.js 에서 /admin 의 부모 라우트)
-│  └─ ContentLayout.vue 콘텐츠 페이지: 제목 + 왼쪽 소탭 목록 + 소탭 내용 (스크롤 이동·현재 소탭 표시) — 페이지가 감싸서 씀
+│  └─ ContentLayout.vue 콘텐츠 페이지: 제목 + 본문 — 페이지가 감싸서 씀
 ├─ pages/             주소 1개 = 파일 1개 (*Page.vue), 기능별 폴더
 │  ├─ home/  auth/  mypage/  members/  shop/
 │  ├─ board/          게시판 공용 (목록/글보기/글쓰기) — /qna 등 게시판 이름을 주소로 받아 동작
@@ -18,11 +18,10 @@ src/
 ```
 
 ## 콘텐츠 페이지 (공지 / 세계관 / 시스템 / 캐릭터 가이드 / 직접 만든 페이지)
-코드 없이 관리 화면에서 만듭니다. 내용은 DB(`content_pages` + 소탭 `content_sections`).
-- **관리 → 페이지 관리**: 페이지 추가(주소 `/<영문>`)·삭제, 메뉴 이름·공개 여부·음악, 본문은 **소탭** 추가·순서·삭제 (소탭마다 마크다운)
+코드 없이 관리 화면에서 만듭니다. 내용은 DB(`content_pages.body`, 마크다운).
+- **관리 → 페이지 관리**: 페이지 추가(주소 `/<영문>`)·삭제, 메뉴 이름·공개 여부·음악, 본문(마크다운) 하나
 - **관리 → 메뉴 관리**: 상단 메뉴(와 홈 바로가기)에 보일 탭과 순서 (멤버·상점·Q&A 포함)
 - 화면: `/<slug>` → `pages/content/ContentPage.vue` 가 불러와서 `layouts/ContentLayout.vue` 로 표시
-  (왼쪽 소탭 목록을 누르면 그 소탭으로 스크롤, 주소 `#s-<번호>` 로 그 소탭부터 열기)
 
 ## 새 기능 페이지 추가
 1. `pages/<기능>/<이름>Page.vue` 생성
@@ -35,10 +34,10 @@ src/
 ## 공통 틀(레이아웃) 만들기
 layouts/ 는 여러 페이지가 같이 쓰는 **큰 틀**입니다. 쓰는 방법은 두 가지:
 
-**① 감싸서 쓰기** (ContentLayout) — 페이지가 틀을 불러 내용을 슬롯에 채움. 틀이 데이터(제목·소탭 목록)를 받아야 할 때
+**① 감싸서 쓰기** (ContentLayout) — 페이지가 틀을 불러 내용을 슬롯에 채움. 틀이 데이터(제목)를 받아야 할 때
 ```vue
-<ContentLayout :title="page.title" :sections="page.sections">
-  <template #section="{ section }"> 소탭 내용 </template>
+<ContentLayout :title="page.title">
+  <MarkdownView :source="page.body" />
 </ContentLayout>
 ```
 

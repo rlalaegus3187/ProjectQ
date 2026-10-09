@@ -65,7 +65,7 @@ const router = createRouter({
     { path: `/${CONTENT}`, component: () => import('./pages/content/ContentPage.vue'), meta: { wide: true } },
     { path: '/:pathMatch(.*)*', redirect: '/' },
   ],
-  // 다른 화면으로 가면 맨 위로. 같은 화면에서 #소탭 / ?profile= 만 바뀌면 지금 위치 그대로 (소탭 스크롤은 화면이 직접),
+  // 다른 화면으로 가면 맨 위로. 같은 화면에서 ?profile= 등만 바뀌면 지금 위치 그대로,
   // 뒤로 가기면 예전 위치로
   scrollBehavior: (to, from, savedPosition) => {
     if (savedPosition) return savedPosition;
