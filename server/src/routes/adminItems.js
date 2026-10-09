@@ -28,9 +28,9 @@ router.post('/items', async (req, res) => {
   const d = validateItemInput(req.body);
   await assertEffect(d.effect);
   const [result] = await pool.execute(
-    `INSERT INTO items (name, description, small_image, large_image, effect, effect_values, is_bound, is_sellable)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-    [d.name, d.description, d.smallImage, d.largeImage, d.effect, d.effectValues, d.isBound, d.isSellable],
+    `INSERT INTO items (name, description, image, effect, effect_values, is_bound, is_sellable)
+     VALUES (?, ?, ?, ?, ?, ?, ?)`,
+    [d.name, d.description, d.image, d.effect, d.effectValues, d.isBound, d.isSellable],
   );
   res.status(201).json({ item: await getItem(result.insertId) });
 });
@@ -54,9 +54,9 @@ router.put('/items/:id', async (req, res) => {
   const d = validateItemInput(req.body);
   await assertEffect(d.effect);
   const [result] = await pool.execute(
-    `UPDATE items SET name = ?, description = ?, small_image = ?, large_image = ?, effect = ?, effect_values = ?,
+    `UPDATE items SET name = ?, description = ?, image = ?, effect = ?, effect_values = ?,
             is_bound = ?, is_sellable = ? WHERE id = ?`,
-    [d.name, d.description, d.smallImage, d.largeImage, d.effect, d.effectValues, d.isBound, d.isSellable, Number(req.params.id)],
+    [d.name, d.description, d.image, d.effect, d.effectValues, d.isBound, d.isSellable, Number(req.params.id)],
   );
   if (!result.affectedRows) throw new HttpError(404, '아이템을 찾을 수 없습니다.');
   res.json({ item: await getItem(req.params.id) });

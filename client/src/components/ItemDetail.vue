@@ -14,7 +14,7 @@ loadItemEffects().catch(() => {});   // 효과 이름 표시용
 
 <template>
   <div class="item-detail">
-    <img v-if="item.largeImage || item.smallImage" :src="item.largeImage || item.smallImage" :alt="item.name" class="item-large" />
+    <img v-if="item.image" :src="item.image" :alt="item.name" class="item-large" />
     <div class="item-badges">
       <span v-if="quantity !== null" class="badge">보유 {{ quantity }}개</span>
       <span class="badge" :class="item.isBound ? 'lock' : 'answered'">{{ item.isBound ? '귀속' : '양도 가능' }}</span>

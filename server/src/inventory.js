@@ -12,7 +12,7 @@
 //
 //   // 인벤토리 조회 → [{ item, quantity, acquiredAt(처음), lastAcquiredAt, lastSource, lastMemo }]
 //   await getInventory(3);
-//   // 습득/사용 기록 → [{ id, item: { id, name, smallImage }, amount, quantityAfter, source, memo, createdAt }]
+//   // 습득/사용 기록 → [{ id, item: { id, name, image }, amount, quantityAfter, source, memo, createdAt }]
 //   await getItemLogs(3, { itemId: 10, limit: 20 });
 //
 //   // 트랜잭션 안에서는 마지막 인자로 커넥션 → 함께 커밋/롤백
@@ -57,8 +57,7 @@ function toItem(row) {
     id: row.id,
     name: row.name,
     description: row.description || '',
-    smallImage: row.small_image,
-    largeImage: row.large_image,
+    image: row.image,   // 아이템 이미지 하나 (목록·인벤토리 칸·상세 모두)
     effect: row.effect,
     effectValues: parseJson(row.effect_values),
     isBound: !!row.is_bound,
@@ -68,7 +67,7 @@ function toItem(row) {
   };
 }
 
-const ITEM_COLUMNS = 'id, name, description, small_image, large_image, effect, effect_values, is_bound, is_sellable, created_at, updated_at';
+const ITEM_COLUMNS = 'id, name, description, image, effect, effect_values, is_bound, is_sellable, created_at, updated_at';
 
 async function getItem(itemId, conn = pool) {
   const [rows] = await conn.execute(`SELECT ${ITEM_COLUMNS} FROM items WHERE id = ?`, [parseId(itemId, '아이템을')]);
@@ -107,8 +106,7 @@ function validateItemInput(body) {
   return {
     name,
     description: description || null,
-    smallImage: image(body?.smallImage, '작은 이미지'),
-    largeImage: image(body?.largeImage, '큰 이미지'),
+    image: image(body?.image, '이미지'),
     effect,
     effectValues: json,
     isBound: body?.isBound ? 1 : 0,
@@ -243,7 +241,7 @@ async function getItemLogs(characterId, { itemId = null, limit = 20 } = {}, conn
   if (itemId !== null && itemId !== undefined) { where += ' AND l.item_id = ?'; params.push(parseId(itemId, '아이템을')); }
   params.push(Math.min(Math.max(Number(limit) || 20, 1), 100));
   const [rows] = await conn.query(
-    `SELECT l.id, l.item_id, i.name, i.small_image, l.amount, l.quantity_after, l.source, l.memo, l.created_at,
+    `SELECT l.id, l.item_id, i.name, i.image, l.amount, l.quantity_after, l.source, l.memo, l.created_at,
             u.username AS actor_name
        FROM item_logs l
        JOIN items i ON i.id = l.item_id
@@ -254,7 +252,7 @@ async function getItemLogs(characterId, { itemId = null, limit = 20 } = {}, conn
   );
   return rows.map((r) => ({
     id: r.id,
-    item: { id: r.item_id, name: r.name, smallImage: r.small_image },
+    item: { id: r.item_id, name: r.name, image: r.image },
     amount: r.amount,
     quantityAfter: r.quantity_after,
     source: r.source,

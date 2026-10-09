@@ -1,6 +1,6 @@
 <script setup>
 // 이미지 업로드 입력: 파일 선택 → 업로드 → 경로(/api/uploads/...)를 v-model 로
-//   <ImageField v-model="item.smallImage" id="small" />
+//   <ImageField v-model="item.image" id="item-image" />
 import { ref } from 'vue';
 import { uploadImage } from '../upload';
 

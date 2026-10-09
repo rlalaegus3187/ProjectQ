@@ -49,7 +49,7 @@ const panelError = ref('');
 
 const giveChoices = computed(() => {
   const q = giveQuery.value.trim().toLowerCase();
-  return itemsByName.value.filter((i) => !q || i.name.toLowerCase().includes(q) || String(i.id) === q);
+  return itemsByName.value.filter((i) => !q || i.name.toLowerCase().includes(q));
 });
 // 검색 결과가 하나면 바로 선택
 watch(giveChoices, (list) => { if (list.length === 1) give.value.itemId = list[0].id; });
@@ -181,7 +181,7 @@ onMounted(async () => {
       <input v-model="giveQuery" type="search" class="narrow-search" placeholder="아이템 검색" aria-label="지급할 아이템 검색" />
       <select v-model="give.itemId" required aria-label="지급할 아이템">
         <option value="" disabled>{{ giveChoices.length ? `지급할 아이템 선택 (${giveChoices.length}개)` : '검색 결과 없음' }}</option>
-        <option v-for="item in giveChoices" :key="item.id" :value="item.id">[{{ item.id }}] {{ item.name }}</option>
+        <option v-for="item in giveChoices" :key="item.id" :value="item.id">{{ item.name }}</option>
       </select>
       <input v-model.number="give.quantity" class="narrow" type="number" min="1" max="99999" step="1" required title="수량" aria-label="수량" />
       <input v-model="give.memo" maxlength="100" placeholder="획득처 (예: 1차 이벤트 보상)" title="어디서 얻었는지 — 기록과 알림에 표시" />
@@ -192,7 +192,7 @@ onMounted(async () => {
     <p v-if="!inventory.length" class="muted">아이템이 없습니다.</p>
     <ul v-else class="post-list">
       <li v-for="entry in inventory" :key="entry.item.id" class="inv-row">
-        <img v-if="entry.item.smallImage" :src="entry.item.smallImage" :alt="entry.item.name" class="item-icon" />
+        <img v-if="entry.item.image" :src="entry.item.image" :alt="entry.item.name" class="item-icon" />
         <span class="post-title">{{ entry.item.name }} <span class="muted">x {{ entry.quantity }}</span>
           <span class="muted inv-acquired">최근 습득 {{ new Date(entry.lastAcquiredAt).toLocaleString('ko-KR') }} · {{ itemSourceLabel(entry.lastSource) }}<template v-if="entry.lastMemo"> ({{ entry.lastMemo }})</template></span>
         </span>

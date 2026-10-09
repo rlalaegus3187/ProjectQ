@@ -95,7 +95,7 @@ onMounted(() => load().catch((e) => { error.value = e.message; }));
       <div class="add-row">
         <select v-model="newListing.itemId" required>
           <option value="" disabled>{{ available.length ? '아이템 선택' : '추가할 아이템이 없습니다' }}</option>
-          <option v-for="i in available" :key="i.id" :value="i.id">[{{ i.id }}] {{ i.name }}</option>
+          <option v-for="i in available" :key="i.id" :value="i.id">{{ i.name }}</option>
         </select>
         <label class="inline">가격 <input v-model.number="newListing.price" class="money-input" type="number" min="0" step="1" required /></label>
         <label class="inline">재고 <input v-model="newListing.stock" class="narrow" type="number" min="0" step="1" placeholder="무제한" /></label>
@@ -120,14 +120,14 @@ onMounted(() => load().catch((e) => { error.value = e.message; }));
         <thead>
           <tr>
             <th class="check"><input type="checkbox" aria-label="전체 선택" :checked="sel.allChecked.value" :indeterminate="sel.someChecked.value" @change="sel.toggleAll()" /></th>
-            <th></th><th>아이템</th><th>가격</th><th>재고</th><th>순서</th><th>판매</th><th></th>
+            <th>이미지</th><th>아이템</th><th>가격</th><th>재고</th><th>순서</th><th>판매</th><th></th>
           </tr>
         </thead>
         <tbody>
           <tr v-for="l in listings" :key="l.id" :class="{ inactive: !drafts[l.id]?.isActive, dirty: drafts[l.id] && isDirty(l), checked: sel.has(l.id) }">
             <td class="check"><input type="checkbox" :aria-label="`${l.item.name} 선택`" :checked="sel.has(l.id)" @change="sel.toggle(l.id)" /></td>
-            <td><img v-if="l.item.smallImage" :src="l.item.smallImage" :alt="l.item.name" class="item-icon" /></td>
-            <td class="title-cell">{{ l.item.name }} <span class="muted">uid {{ l.item.id }}</span></td>
+            <td><img v-if="l.item.image" :src="l.item.image" :alt="l.item.name" class="item-icon" /></td>
+            <td class="title-cell">{{ l.item.name }}</td>
             <td><input v-model.number="drafts[l.id].price" class="money-input" type="number" min="0" step="1" :title="formatMoney(drafts[l.id].price)" /></td>
             <td><input v-model="drafts[l.id].stock" class="narrow" type="number" min="0" step="1" placeholder="무제한" /></td>
             <td><input v-model.number="drafts[l.id].sortOrder" class="narrow" type="number" step="1" /></td>

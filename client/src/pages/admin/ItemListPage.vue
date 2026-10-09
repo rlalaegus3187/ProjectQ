@@ -25,8 +25,8 @@ async function loadItems() {
 
 // ---------- 검색 · 정렬 · 효과별 ----------
 const SORTS = [
-  { value: 'new', label: '최근 만든 순 (uid ↓)' },
-  { value: 'old', label: '먼저 만든 순 (uid ↑)' },
+  { value: 'new', label: '최근 만든 순' },
+  { value: 'old', label: '먼저 만든 순' },
   { value: 'name', label: '가나다순' },
   { value: 'name_desc', label: '가나다 역순' },
 ];
@@ -42,12 +42,12 @@ const SORTERS = {
   name_desc: (a, b) => byName(b, a),
 };
 
-// 검색어: 이름 · 설명 · uid (숫자만 쓰면 uid 도 찾음)
+// 검색어: 이름 · 설명
 const shown = computed(() => {
   const q = query.value.trim().toLowerCase();
   return items.value
     .filter((i) => !effectFilter.value || i.effect === effectFilter.value)
-    .filter((i) => !q || i.name.toLowerCase().includes(q) || i.description.toLowerCase().includes(q) || String(i.id) === q)
+    .filter((i) => !q || i.name.toLowerCase().includes(q) || i.description.toLowerCase().includes(q))
     .sort(SORTERS[sort.value]);
 });
 const filtered = computed(() => !!query.value.trim() || !!effectFilter.value);
@@ -58,14 +58,14 @@ function resetFilters() {
 }
 
 // ---------- 아이템 편집 ----------
-const editing = ref(null);   // { id?, name, description, smallImage, largeImage, effect, effectValuesText, isBound, isSellable }
+const editing = ref(null);   // { id?, name, description, image, effect, effectValuesText, isBound, isSellable }
 const saving = ref(false);
 const editError = ref('');
 
 function newItem() {
   editError.value = '';
   editing.value = {
-    name: '', description: '', smallImage: '', largeImage: '',
+    name: '', description: '', image: '',
     effect: 'none', effectValuesText: '{}', isBound: false, isSellable: true,
   };
 }
@@ -76,8 +76,7 @@ function editItem(item) {
     id: item.id,
     name: item.name,
     description: item.description,
-    smallImage: item.smallImage || '',
-    largeImage: item.largeImage || '',
+    image: item.image || '',
     effect: item.effect,
     effectValuesText: JSON.stringify(item.effectValues, null, 2),
     isBound: item.isBound,
@@ -161,7 +160,7 @@ onMounted(() => Promise.all([loadItems(), loadItemEffects({ force: true })]).cat
 
     <!-- 검색 · 정렬 · 효과별 -->
     <div class="filter-bar">
-      <input v-model="query" type="search" placeholder="아이템 검색 (이름 · 설명 · uid)" aria-label="아이템 검색" />
+      <input v-model="query" type="search" placeholder="아이템 검색 (이름 · 설명)" aria-label="아이템 검색" />
       <select v-model="sort" aria-label="정렬">
         <option v-for="s in SORTS" :key="s.value" :value="s.value">{{ s.label }}</option>
       </select>
@@ -187,22 +186,17 @@ onMounted(() => Promise.all([loadItems(), loadItemEffects({ force: true })]).cat
         <thead>
           <tr>
             <th class="check"><input type="checkbox" aria-label="전체 선택" :checked="sel.allChecked.value" :indeterminate="sel.someChecked.value" @change="sel.toggleAll()" /></th>
-            <th>uid</th><th></th><th>이름</th><th>효과</th><th>귀속</th><th>판매</th><th>보유</th><th></th>
+            <th>이미지</th><th>이름</th><th>효과</th><th>귀속</th><th>판매</th><th></th>
           </tr>
         </thead>
         <tbody>
           <tr v-for="item in shown" :key="item.id" :class="{ checked: sel.has(item.id) }">
             <td class="check"><input type="checkbox" :aria-label="`${item.name} 선택`" :checked="sel.has(item.id)" @change="sel.toggle(item.id)" /></td>
-            <td>{{ item.id }}</td>
-            <td><img v-if="item.smallImage" :src="item.smallImage" :alt="item.name" class="item-icon" /></td>
+            <td><img v-if="item.image" :src="item.image" :alt="item.name" class="item-icon" /></td>
             <td class="title-cell">{{ item.name }}</td>
             <td class="title-cell">{{ effectLabel(item.effect) }} <span class="muted">{{ formatEffectValues(item.effectValues) }}</span></td>
             <td>{{ item.isBound ? '귀속' : '-' }}</td>
             <td>{{ item.isSellable ? '가능' : '불가' }}</td>
-            <td>
-              <RouterLink v-if="item.ownerCount" :to="{ path: '/admin/items/characters', query: { itemId: item.id } }" title="이 아이템을 가진 캐릭터 보기">{{ item.ownerCount }}명</RouterLink>
-              <span v-else class="muted">0명</span>
-            </td>
             <td class="row-actions">
               <button type="button" class="secondary" @click="editItem(item)">수정</button>
               <button type="button" class="danger" @click="removeItem(item)">삭제</button>
@@ -213,7 +207,7 @@ onMounted(() => Promise.all([loadItems(), loadItemEffects({ force: true })]).cat
     </div>
   </section>
 
-  <ModalDialog v-if="editing" :title="editing.id ? `아이템 수정 (uid ${editing.id})` : '새 아이템'" @close="editing = null">
+  <ModalDialog v-if="editing" :title="editing.id ? '아이템 수정' : '새 아이템'" @close="editing = null">
     <template #actions>
       <button type="submit" form="item-form" :disabled="saving">{{ saving ? '저장 중…' : '저장' }}</button>
       <button type="button" class="secondary" @click="editing = null">취소</button>
@@ -232,8 +226,7 @@ onMounted(() => Promise.all([loadItems(), loadItemEffects({ force: true })]).cat
       </fieldset>
       <fieldset class="fieldset">
         <legend>이미지</legend>
-        <div class="field"><label for="item-small">작은 이미지 (인벤토리 칸)</label><ImageField id="item-small" v-model="editing.smallImage" /></div>
-        <div class="field"><label for="item-large">큰 이미지 (상세 보기)</label><ImageField id="item-large" v-model="editing.largeImage" /></div>
+        <div class="field"><label for="item-image">이미지 <span class="muted">(목록·인벤토리 칸·상세 보기에 모두 쓰임)</span></label><ImageField id="item-image" v-model="editing.image" /></div>
       </fieldset>
       <fieldset class="fieldset">
         <legend>효과</legend>

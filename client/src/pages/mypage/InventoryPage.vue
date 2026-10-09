@@ -77,7 +77,7 @@ onMounted(load);
     <ul v-else class="item-grid">
       <li v-for="entry in inventory" :key="entry.item.id">
         <button type="button" class="item-slot" :title="entry.item.name" @click="open(entry)">
-          <img v-if="entry.item.smallImage" :src="entry.item.smallImage" :alt="entry.item.name" />
+          <img v-if="entry.item.image" :src="entry.item.image" :alt="entry.item.name" />
           <span v-else class="item-noimg">{{ entry.item.name.slice(0, 2) }}</span>
           <span v-if="entry.quantity > 1" class="item-qty">{{ entry.quantity }}</span>
           <span v-if="entry.item.isBound" class="item-bound" title="귀속">귀속</span>

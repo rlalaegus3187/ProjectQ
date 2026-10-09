@@ -46,7 +46,7 @@ posts          게시글  board: qna(Q&A) — 화면에서 쓰는 게시판은 Q
 post_replies   Q&A 답변 (관리자)  post_id FK → posts.id (글 삭제 시 함께 삭제), user_id(FK 없음, 계정 삭제 시 NULL), author_name
 notifications  계정별 알림  user_id, type, post_id, link(이동 주소), message, is_read, is_archived(보관함 — 삭제 안 됨), archived_at
                → 추가는 server/src/notify.js 의 notify()/notifyUsers()/notifyAdmins() 사용
-items          아이템 (uid=id, name, description(마크다운), small_image, large_image,
+items          아이템 (id, name, description(마크다운), image(이미지 하나 — 목록·인벤토리·상세 공용),
                effect → item_effects.code (FK), effect_values JSON, is_bound 귀속, is_sellable 판매가능)
 item_effects   아이템 효과 종류  code(PK, 영문 키), label(화면 이름), example(효과수치 JSON 예시), description, sort_order — 'none'(효과 없음)은 지울 수 없음
 inventory      캐릭터 인벤토리 (캐릭터 귀속)  character_id, item_id, quantity — (character_id, item_id) UNIQUE, 수량으로 쌓임

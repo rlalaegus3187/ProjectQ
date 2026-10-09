@@ -71,7 +71,7 @@ onMounted(load);
       <li v-for="l in listings" :key="l.id">
         <button type="button" class="shop-card" :class="{ soldout: l.stock === 0 }" @click="open(l)">
           <span class="shop-thumb">
-            <img v-if="l.item.smallImage" :src="l.item.smallImage" :alt="l.item.name" />
+            <img v-if="l.item.image" :src="l.item.image" :alt="l.item.name" />
             <span v-else class="item-noimg">{{ l.item.name.slice(0, 2) }}</span>
           </span>
           <strong class="shop-name">{{ l.item.name }}</strong>
