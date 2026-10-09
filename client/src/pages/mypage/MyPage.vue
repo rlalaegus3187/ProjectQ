@@ -5,6 +5,7 @@ import { auth, isSubmittedApplication, RESUBMIT_NOTICE } from '../../auth';
 import { site } from '../../site';
 import { fetchAttributes, toCharacterForm } from '../../character';
 import CharacterCard from '../../components/CharacterCard.vue';
+import TitleBadge from '../../components/TitleBadge.vue';
 import CharacterForm from '../../components/CharacterForm.vue';
 import { MarkdownView } from '../../markdown';
 import ProfileList from '../../components/ProfileList.vue';
@@ -92,6 +93,17 @@ async function cancelSubmit() {
   }
 }
 
+// 대표 칭호 고르기 / 해제 (titleId = null 이면 해제)
+const titleError = ref('');
+async function setMainTitle(titleId) {
+  titleError.value = '';
+  try {
+    character.value = (await api('/characters/me/main-title', { method: 'PUT', body: { titleId } })).character;
+  } catch (e) {
+    titleError.value = e.message;
+  }
+}
+
 onMounted(() => load().catch((e) => { error.value = e.message; loaded.value = true; }));
 </script>
 
@@ -167,9 +179,31 @@ onMounted(() => load().catch((e) => { error.value = e.message; loaded.value = tr
       </div>
     </form>
 
-    <CharacterCard v-else-if="character" :character="character" />
+    <CharacterCard v-else-if="character" :character="character" hide-titles />
 
     <p v-if="error && !form" class="error">{{ error }}</p>
+  </section>
+
+  <!-- 칭호: 운영진이 부여, 하나를 대표로 고르면 멤버 목록·캐릭터 페이지에서 이름 옆에 보임 -->
+  <section v-if="character" class="card">
+    <h2>칭호 <span class="muted">{{ character.titles.length }}개</span></h2>
+    <p v-if="!character.titles.length" class="muted">아직 받은 칭호가 없습니다. 칭호는 운영진이 부여합니다.</p>
+    <template v-else>
+      <p class="muted">대표 칭호는 멤버 목록과 캐릭터 페이지에서 이름 옆에 보입니다.</p>
+      <ul class="my-titles">
+        <li v-for="t in character.titles" :key="t.id" :class="{ main: character.mainTitle?.id === t.id }">
+          <span class="my-title-info">
+            <span><TitleBadge :title="t" /><span v-if="character.mainTitle?.id === t.id" class="badge pin">대표</span></span>
+            <span class="muted">
+              <template v-if="t.description">{{ t.description }} · </template>{{ new Date(t.grantedAt).toLocaleDateString('ko-KR') }} 받음<template v-if="t.memo"> ({{ t.memo }})</template>
+            </span>
+          </span>
+          <button v-if="character.mainTitle?.id === t.id" type="button" class="secondary small" @click="setMainTitle(null)">대표 해제</button>
+          <button v-else type="button" class="secondary small" @click="setMainTitle(t.id)">대표로</button>
+        </li>
+      </ul>
+    </template>
+    <p v-if="titleError" class="error">{{ titleError }}</p>
   </section>
 
   <!-- 수정하기: 기본정보 + 스탯 (프로필 수정과 같은 팝업 폼) -->

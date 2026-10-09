@@ -48,6 +48,9 @@ notifications  계정별 알림  user_id, type, post_id, link(이동 주소), me
                → 추가는 server/src/notify.js 의 notify()/notifyUsers()/notifyAdmins() 사용
 items          아이템 (id, name, description(마크다운), image(이미지 하나 — 목록·인벤토리·상세 공용),
                effect → item_effects.code (FK), effect_values JSON, is_bound 귀속, is_sellable 판매가능)
+titles         칭호  name(UNIQUE), description, color(#rrggbb, 없으면 기본색), sort_order
+character_titles 캐릭터가 가진 칭호  (character_id, title_id) PK — 캐릭터·칭호 삭제 시 함께 삭제, memo(부여 사유), granted_by, granted_at
+characters.main_title_id  대표 칭호 → titles.id (칭호를 지우면 NULL, 회수하면 코드에서 NULL)
 item_effects   아이템 효과 종류  code(PK, 영문 키), label(화면 이름), example(효과수치 JSON 예시), description, sort_order — 'none'(효과 없음)은 지울 수 없음
 inventory      캐릭터 인벤토리 (캐릭터 귀속)  character_id, item_id, quantity — (character_id, item_id) UNIQUE, 수량으로 쌓임
                → 지급/회수는 server/src/inventory.js 의 giveItem()/takeItem()/getInventory() 사용

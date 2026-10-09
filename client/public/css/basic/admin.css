@@ -114,3 +114,8 @@ strong.off { color: var(--color-muted); }
 .filter-bar input[type=search] { flex: 1 1 220px; min-width: 0; }
 .filter-bar select { flex: 0 1 auto; max-width: 100%; }
 .add-row .narrow-search { flex: 0 1 160px; min-width: 0; }
+
+/* 칭호 관리 */
+.title-color-row { display: flex; align-items: center; gap: 10px; }
+.title-color-row input[type=color] { width: 48px; height: 32px; padding: 2px; }
+.bulk-bar .bulk-memo { flex: 1 1 220px; min-width: 0; padding: 6px 8px; font-size: 13px; }

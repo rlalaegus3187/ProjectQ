@@ -55,6 +55,10 @@ const router = createRouter({
         { path: 'items/characters', component: () => import('./pages/admin/CharacterItemsPage.vue') },
         { path: 'items/effects', component: () => import('./pages/admin/ItemEffectsPage.vue') },
         { path: 'shop', component: () => import('./pages/admin/ShopPage.vue') },
+        // 칭호 관리 → 칭호 목록 / 칭호 부여
+        { path: 'titles', redirect: '/admin/titles/list' },
+        { path: 'titles/list', component: () => import('./pages/admin/TitleListPage.vue') },
+        { path: 'titles/grant', component: () => import('./pages/admin/TitleGrantPage.vue') },
         { path: 'settings', component: () => import('./pages/admin/SettingsPage.vue') },
         { path: 'themes', component: () => import('./pages/admin/ThemesPage.vue') },
       ],

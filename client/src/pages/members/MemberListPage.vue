@@ -3,6 +3,7 @@
 import { ref, computed, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { api } from '../../api';
+import TitleBadge from '../../components/TitleBadge.vue';
 
 const route = useRoute();
 const router = useRouter();
@@ -55,6 +56,7 @@ watch(() => route.fullPath, load, { immediate: true });
               <img v-if="m.thumbnail" :src="m.thumbnail" :alt="m.name" loading="lazy" />
               <span v-else class="member-initial">{{ m.name.slice(0, 1) }}</span>
             </span>
+            <TitleBadge v-if="m.mainTitle" :title="m.mainTitle" />
             <strong class="member-name">{{ m.name }}</strong>
           </RouterLink>
         </li>

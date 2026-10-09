@@ -18,6 +18,7 @@ Vue 3 + Node.js/Express + MySQL 로 만든 SPA 로그인 샘플입니다.
 - **알림**: 내 Q&A 질문에 답변이 달리면 상단 `알림` 에 표시. **알림 / 보관함** 탭 — 알림마다 [보관] [삭제], '모두 삭제'. 보관한 알림은 삭제되지 않음 (보관 해제 후 삭제)
 - **음악**: 프로필별 유튜브 음악, 사이트 전체 음악(관리 → 사이트 설정), 페이지별 음악(`usePageMusic`) — 오른쪽 아래 플레이어, 볼륨/정지는 계정별 저장 (`client/src/music/README.md`)
 - **소지금 / 상점**: 캐릭터 소지금(내역 기록), 관리자가 소지금 지급·회수, `상점 관리`에서 등록된 아이템을 골라 가격·재고 설정, 회원은 `상점`에서 구매
+- **칭호(타이틀)**: 관리 → **칭호 관리** 아래 소탭 2개 — **칭호 목록**(추가·수정·삭제, 배지 색·설명·순서) / **칭호 부여**(칭호를 고르고 캐릭터를 체크해 한 번에 부여·회수, 사유 기록, 받은 회원에게 알림). 회원은 마이페이지 **칭호** 칸에서 대표 칭호를 고름 → 멤버 목록·캐릭터 페이지에서 이름 옆에 표시 (`components/TitleBadge.vue`, `server/src/titles.js`)
 - **아이템 / 인벤토리**: 관리자가 아이템 등록(이미지·효과·귀속·판매가능) 후 캐릭터에게 지급/회수, 회원은 `인벤토리` 에서 확인·버리기
   - 관리 → **아이템 관리** 아래 소탭 3개: **아이템 목록**(검색 · 정렬: 최근·먼저 만든 순·가나다 · 효과별 보기, 이미지는 하나), **캐릭터 아이템 관리**(캐릭터별 보유 종류·개수·소지금, '이 아이템을 가진 캐릭터만', 지급·회수), **아이템 효과**(효과 종류 추가·수정·삭제 — DB `item_effects`)
   - **습득 기록**: 모든 습득·사용이 `item_logs` 에 언제·어디서(관리자 지급/상점 구매/버림 ...)·메모·처리한 사람과 함께 남음. 관리자 지급 때 획득처(예: 이벤트 보상) 입력
@@ -75,6 +76,7 @@ ProjectQ/
 │  │  ├─ inventory.js      ★ 아이템/인벤토리 공용 함수 (giveItem / takeItem / getInventory)
 │  │  ├─ routes/adminItems.js  /api/admin/items, /api/admin/characters (관리자)
 │  │  ├─ routes/itemEffects.js /api/item-effects, /api/admin/item-effects (아이템 효과 종류)
+│  │  ├─ routes/titles.js      /api/admin/titles (칭호 관리·부여), /api/characters/me/main-title
 │  │  ├─ routes/inventory.js   /api/inventory (내 인벤토리)
 │  │  ├─ routes/members.js     /api/members (멤버란, 공개)
 │  │  ├─ money.js          ★ 소지금 공용 함수 (getMoney / changeMoney / getMoneyLogs)
@@ -166,6 +168,11 @@ ProjectQ/
 | PUT/DELETE | `/api/boards/qna/replies/:id` | (관리자) 답변 수정/삭제 |
 | GET/POST/PUT/DELETE | `/api/admin/items[/:id]` | (관리자) 아이템 목록/등록/수정/삭제 |
 | GET | `/api/admin/characters?q=&itemId=` | (관리자) 캐릭터 목록·검색 + 보유 아이템 종류·총 개수·소지금 (itemId: 그 아이템을 가진 캐릭터만, 보유 수량 포함) |
+| GET/POST | `/api/admin/titles` | (관리자) 칭호 목록(+가진 캐릭터 수) / 추가 `{ name, description, color(#rrggbb), sortOrder }` |
+| PUT/DELETE | `/api/admin/titles/:id` | (관리자) 칭호 수정 / 삭제 (가진 캐릭터에게서도 사라짐), `POST /api/admin/titles/bulk-delete { ids }` 일괄 삭제 |
+| GET | `/api/admin/titles/:id/holders` | (관리자) 이 칭호를 가진 캐릭터 |
+| POST | `/api/admin/titles/:id/grant` · `/revoke` | (관리자) 부여 `{ characterIds, memo }` (알림, 이미 가진 캐릭터는 건너뜀) / 회수 `{ characterIds }` (대표 칭호였으면 해제) |
+| PUT | `/api/characters/me/main-title` | 대표 칭호 `{ titleId \| null }` (가진 칭호만) — 캐릭터 응답에 `titles`, `mainTitle` 포함 |
 | GET | `/api/item-effects` | 아이템 효과 종류 `[{ code, label, example, description }]` |
 | GET/POST/PUT/DELETE | `/api/admin/item-effects[/:code]` | (관리자) 효과 목록(+쓰는 아이템 수)/추가 `{ code, label, example, description, sortOrder }`/수정/삭제 (쓰던 아이템은 '효과 없음'으로) |
 | GET/POST | `/api/admin/characters/:id/inventory` | (관리자) 인벤토리 조회 / 지급 `{ itemId, quantity, memo(획득처) }` (알림 발송, 조회 응답에 itemLogs 포함) |

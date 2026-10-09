@@ -35,6 +35,13 @@ const ADMIN_MENU = [
         ],
       },
       { to: '/admin/shop', label: '상점 관리' },
+      {
+        to: '/admin/titles', label: '칭호 관리',
+        children: [
+          { to: '/admin/titles/list', label: '칭호 목록' },
+          { to: '/admin/titles/grant', label: '칭호 부여' },
+        ],
+      },
     ],
   },
   {

@@ -1,10 +1,20 @@
 <script setup>
-// 캐릭터 정보 표시 (기본정보 / 캐릭터 스탯 — 스탯 미사용이면 기본정보만) — 프로필은 ProfileSection
+// 캐릭터 정보 표시 (기본정보 · 칭호 / 캐릭터 스탯 — 스탯 미사용이면 기본정보만) — 프로필은 ProfileSection
+//   hide-titles: 칭호 줄 숨김 (마이페이지는 칭호 칸이 따로 있음)
+import { computed } from 'vue';
 import AttributeValue from './AttributeValue.vue';
+import TitleBadge from './TitleBadge.vue';
 import { site } from '../site';
 
-defineProps({
+const props = defineProps({
   character: { type: Object, required: true },
+  hideTitles: { type: Boolean, default: false },
+});
+// 대표 칭호를 맨 앞에
+const titles = computed(() => {
+  const list = props.character.titles || [];
+  const mainId = props.character.mainTitle?.id;
+  return [...list].sort((a, b) => (b.id === mainId) - (a.id === mainId));
 });
 </script>
 
@@ -14,6 +24,10 @@ defineProps({
       <h3>기본정보</h3>
       <dl class="kv">
         <dt>캐릭터 이름</dt><dd>{{ character.name }}</dd>
+        <template v-if="!hideTitles && titles.length">
+          <dt>칭호</dt>
+          <dd class="title-list"><TitleBadge v-for="t in titles" :key="t.id" :title="t" /></dd>
+        </template>
         <template v-for="s in character.costs || []" :key="s.slot">
           <dt>{{ s.name }}</dt><dd>{{ s.current ?? '—' }} / {{ s.max ?? '—' }}</dd>
         </template>

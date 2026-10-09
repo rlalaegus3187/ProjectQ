@@ -239,3 +239,10 @@ label.toggle, .form label.toggle { display: inline-flex; flex-direction: row; al
 /* 사이트 비공개 화면 */
 .closed-message { text-align: center; padding: 32px 24px; }
 .closed-foot { text-align: center; margin: 8px 0; }
+
+/* 칭호 배지 (components/TitleBadge.vue) — 칭호마다 색 (--title-color), 없으면 강조색 */
+.title-badge { display: inline-block; padding: 2px 10px; border-radius: 999px; font-size: 12px; font-weight: 600; line-height: 1.5; white-space: nowrap; vertical-align: middle;
+  color: var(--title-color, var(--color-primary)); border: 1px solid var(--title-color, var(--color-primary));
+  background: color-mix(in srgb, var(--title-color, var(--color-primary)) 10%, var(--color-surface)); }
+h1 .title-badge, h2 .title-badge { margin-right: 8px; font-size: 13px; }
+.title-list { display: flex; flex-wrap: wrap; gap: 6px; }

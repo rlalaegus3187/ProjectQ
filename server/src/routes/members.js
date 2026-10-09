@@ -23,7 +23,7 @@ router.get('/', async (req, res) => {
     params,
   );
   const [rows] = await pool.query(
-    `SELECT c.id, c.name, c.created_at,
+    `SELECT c.id, c.name, c.created_at, mt.name AS main_title_name, mt.color AS main_title_color,
             (SELECT d.value
                FROM character_details d
                JOIN attribute_definitions ad ON ad.id = d.definition_id
@@ -33,6 +33,7 @@ router.get('/', async (req, res) => {
        FROM characters c
        JOIN users u ON u.id = c.user_id
        LEFT JOIN character_profiles p ON p.character_id = c.id AND p.is_main = 1
+       LEFT JOIN titles mt ON mt.id = c.main_title_id
        ${where}
       ORDER BY c.id DESC
       LIMIT ? OFFSET ?`,
@@ -44,6 +45,7 @@ router.get('/', async (req, res) => {
       id: r.id,
       name: r.name,
       thumbnail: r.thumbnail,
+      mainTitle: r.main_title_name ? { name: r.main_title_name, color: r.main_title_color } : null,   // 대표 칭호
       profileCount: Number(r.profile_count),
       createdAt: r.created_at,
     })),

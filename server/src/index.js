@@ -45,6 +45,8 @@ app.use('/api/admin', require('./routes/admin'));
 app.use('/api/admin', require('./routes/adminItems'));
 app.use('/api/item-effects', require('./routes/itemEffects').publicRouter);
 app.use('/api/admin', require('./routes/itemEffects').adminRouter);
+app.use('/api/admin', require('./routes/titles').adminRouter);
+app.use('/api', require('./routes/titles').memberRouter);
 app.use('/api/inventory', require('./routes/inventory'));
 app.use('/api/members', require('./routes/members'));
 app.use('/api/shop', require('./routes/shop'));

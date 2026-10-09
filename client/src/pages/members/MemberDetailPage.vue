@@ -9,6 +9,7 @@ import { auth, isAdmin } from '../../auth';
 import { site } from '../../site';
 import { fetchAttributes } from '../../character';
 import CharacterCard from '../../components/CharacterCard.vue';
+import TitleBadge from '../../components/TitleBadge.vue';
 import ProfileSection from '../../components/ProfileSection.vue';
 import ProfileFormModal from '../../components/ProfileFormModal.vue';
 
@@ -76,7 +77,7 @@ watch(() => route.params.id, () => load(), { immediate: true });
         아직 멤버가 아닌 신청자의 신청서입니다. 관리자만 볼 수 있습니다.
         <RouterLink to="/admin/applicants">신청자 관리로</RouterLink>
       </p>
-      <h1>{{ character.name }}</h1>
+      <h1><TitleBadge v-if="character.mainTitle" :title="character.mainTitle" />{{ character.name }}</h1>
       <CharacterCard :character="character" />
     </template>
   </section>

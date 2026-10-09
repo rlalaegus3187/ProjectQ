@@ -12,6 +12,7 @@ const UPLOAD_URL_RE = /^\/api\/uploads\/[a-f0-9]{32}\.(png|jpg|gif|webp)$/;
 const { HttpError } = require('./errors');
 const { parseYouTubeId } = require('./youtube');
 const { COST_COLUMNS, getEnabledCosts, validateCostValues, costsOf } = require('./costs');
+const { getCharacterTitles } = require('./titles');
 
 // 숫자형 캐릭터 스탯 = 투자 포인트를 분배하는 스탯 (0 이상의 정수, 합계 ≤ 투자 포인트)
 const isPointStat = (def) => def.category === 'stat' && def.valueType === 'number';
@@ -304,7 +305,7 @@ async function getCharacterByUserId(userId, conn = pool) {
 // { userId } 또는 { characterId } 로 조회 (멤버란은 characterId)
 async function getCharacter({ userId, characterId }, conn = pool) {
   const [rows] = await conn.execute(
-    `SELECT c.id, c.name, ${COST_COLUMNS}, c.money, c.application_status, c.submitted_at, c.created_at, c.updated_at, u.role
+    `SELECT c.id, c.name, c.main_title_id, ${COST_COLUMNS}, c.money, c.application_status, c.submitted_at, c.created_at, c.updated_at, u.role
        FROM characters c JOIN users u ON u.id = c.user_id
       WHERE c.${userId !== undefined ? 'user_id' : 'id'} = ?`,
     [Number(userId !== undefined ? userId : characterId)],
@@ -312,7 +313,9 @@ async function getCharacter({ userId, characterId }, conn = pool) {
   const character = rows[0];
   if (!character) return null;
 
-  const [defs, totalPoints, enabledCosts] = await Promise.all([getDefinitions(conn), getStatPoints(conn), getEnabledCosts(conn)]);
+  const [defs, totalPoints, enabledCosts, titles] = await Promise.all([
+    getDefinitions(conn), getStatPoints(conn), getEnabledCosts(conn), getCharacterTitles(character.id, conn),
+  ]);
   const [statRows] = await conn.execute('SELECT definition_id, value FROM character_stats WHERE character_id = ?', [character.id]);
   const [profileRows] = await conn.execute(
     'SELECT id, name, music_video_id, is_main, created_at, updated_at FROM character_profiles WHERE character_id = ? ORDER BY is_main DESC, sort_order, id',
@@ -335,6 +338,9 @@ async function getCharacter({ userId, characterId }, conn = pool) {
   return {
     id: character.id,
     name: character.name,
+    // 칭호: 가진 칭호 전부 + 대표 칭호 (이름 옆에 표시)
+    titles,
+    mainTitle: titles.find((t) => t.id === character.main_title_id) ?? null,
     costs: costsOf(character, enabledCosts),   // 사용 중인 코스트 [{ slot, name, current, max }]
     money: Number(character.money),
     stats: stats.map(withValue(statValues)),
