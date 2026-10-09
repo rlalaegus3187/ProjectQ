@@ -371,6 +371,8 @@ strong.off { color: var(--color-muted); }
 /* 소탭이 있는 항목(아이템 관리): 위 항목은 글자만 강조, 아래 소탭을 들여 써서 */
 .admin-nav a.has-sub.router-link-active { background: none; color: var(--color-text-sub); font-weight: normal; }
 .admin-nav a.has-sub.open { color: var(--color-text); font-weight: 600; }
+.admin-nav a.has-sub::after { content: '▸'; float: right; color: var(--color-muted); font-size: 12px; }
+.admin-nav a.has-sub.open::after { content: '▾'; }
 .admin-nav-sub { display: flex; flex-direction: column; gap: 2px; margin: 0 0 4px 12px; padding-left: 8px; border-left: 2px solid var(--color-border-light); }
 .admin-nav-sub a { padding: 6px 10px; font-size: 13px; }
 .admin-nav-sub a.router-link-active { background: var(--color-primary-soft); color: var(--color-primary); }
