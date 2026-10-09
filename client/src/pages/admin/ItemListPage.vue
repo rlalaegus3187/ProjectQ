@@ -165,17 +165,16 @@ onMounted(() => Promise.all([loadItems(), loadItemEffects({ force: true })]).cat
         <option v-for="s in SORTS" :key="s.value" :value="s.value">{{ s.label }}</option>
       </select>
       <select v-model="effectFilter" aria-label="효과별 보기">
-        <option value="">효과: 전체</option>
-        <option v-for="e in itemEffects.list" :key="e.code" :value="e.code">효과: {{ e.label }}</option>
+        <option value="">전체</option>
+        <option v-for="e in itemEffects.list" :key="e.code" :value="e.code">{{ e.label }}</option>
       </select>
-      <button v-if="filtered || sort !== 'new'" type="button" class="secondary small" @click="resetFilters">초기화</button>
-      <span class="muted">{{ filtered ? `${shown.length} / ${items.length}개` : `${items.length}개` }}</span>
+      <button type="button" class="secondary small" @click="resetFilters">초기화</button>
     </div>
 
     <p v-if="!items.length" class="muted">등록된 아이템이 없습니다.</p>
     <p v-else-if="!shown.length" class="muted">조건에 맞는 아이템이 없습니다.</p>
     <BulkBar v-if="shown.length" :count="sel.ids.value.length" @clear="sel.clear()">
-      <button type="button" class="secondary" :disabled="!sel.ids.value.length" @click="bulkFlag({ isBound: true }, '귀속으로')">귀속으로</button>
+      <button type="button" class="secondary" :disabled="!sel.ids.value.length" @click="bulkFlag({ isBound: true }, '귀속 설정')">귀속 설정</button>
       <button type="button" class="secondary" :disabled="!sel.ids.value.length" @click="bulkFlag({ isBound: false }, '귀속 해제')">귀속 해제</button>
       <button type="button" class="secondary" :disabled="!sel.ids.value.length" @click="bulkFlag({ isSellable: true }, '판매 가능')">판매 가능</button>
       <button type="button" class="secondary" :disabled="!sel.ids.value.length" @click="bulkFlag({ isSellable: false }, '판매 불가')">판매 불가</button>
@@ -196,7 +195,7 @@ onMounted(() => Promise.all([loadItems(), loadItemEffects({ force: true })]).cat
             <td class="title-cell">{{ item.name }}</td>
             <td class="title-cell">{{ effectLabel(item.effect) }} <span class="muted">{{ formatEffectValues(item.effectValues) }}</span></td>
             <td>{{ item.isBound ? '귀속' : '-' }}</td>
-            <td>{{ item.isSellable ? '가능' : '불가' }}</td>
+            <td>{{ item.isSellable ? '판매가능' : '판매불가' }}</td>
             <td class="row-actions">
               <button type="button" class="secondary" @click="editItem(item)">수정</button>
               <button type="button" class="danger" @click="removeItem(item)">삭제</button>
@@ -226,25 +225,25 @@ onMounted(() => Promise.all([loadItems(), loadItemEffects({ force: true })]).cat
       </fieldset>
       <fieldset class="fieldset">
         <legend>이미지</legend>
-        <div class="field"><label for="item-image">이미지 <span class="muted">(목록·인벤토리 칸·상세 보기에 모두 쓰임)</span></label><ImageField id="item-image" v-model="editing.image" /></div>
+        <div class="field"><label for="item-image">/label><ImageField id="item-image" v-model="editing.image" /></div>
       </fieldset>
       <fieldset class="fieldset">
         <legend>효과</legend>
         <div class="field">
-          <label for="item-effect">효과 종류 <RouterLink to="/admin/items/effects" class="small-link">효과 관리</RouterLink></label>
+          <label for="item-effect">효과 종류</label>
           <select id="item-effect" v-model="editing.effect">
             <option v-for="e in itemEffects.list" :key="e.code" :value="e.code">{{ e.label }} ({{ e.code }})</option>
           </select>
           <span v-if="currentEffect?.description" class="muted">{{ currentEffect.description }}</span>
         </div>
         <div class="field">
-          <label for="item-values">효과수치 (JSON) <button type="button" class="link small-link" @click="useExample">예시 넣기</button></label>
+          <label for="item-values">효과 수치</label>
           <textarea id="item-values" v-model="editing.effectValuesText" rows="3" class="mono" />
         </div>
       </fieldset>
       <fieldset class="fieldset">
         <legend>설정</legend>
-        <label class="toggle"><ToggleSwitch v-model="editing.isBound" /> 귀속 (다른 캐릭터에게 넘길 수 없음)</label>
+        <label class="toggle"><ToggleSwitch v-model="editing.isBound" /> 귀속 아이템</label>
         <label class="toggle"><ToggleSwitch v-model="editing.isSellable" /> 판매 가능</label>
       </fieldset>
       <p v-if="editError" class="error">{{ editError }}</p>
