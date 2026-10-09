@@ -1,0 +1,116 @@
+/* =====================================================================
+   관리 화면 전용 (/admin/...) — 주소: /css/basic/admin.css
+   관리 화면에 들어가면 자동으로 붙고, 나가면 빠집니다 (router.js 의 /admin 에 meta: { layoutCss: 'admin' })
+   공통 스타일(style.css) 다음에 불러오므로 같은 선택자는 여기가 이김
+   ===================================================================== */
+
+/* 표 (관리 목록) */
+.table-wrap { overflow-x: auto; }
+.table { width: 100%; border-collapse: collapse; font-size: 14px; }
+.table th, .table td { text-align: left; padding: 6px 8px; border-bottom: 1px solid var(--color-border-light); white-space: nowrap; }
+.table td input:not([type=checkbox]) { padding: 6px; width: 100%; min-width: 120px; }
+.table td input.narrow { width: 72px; min-width: 0; }
+.table tr.inactive td { opacity: .5; }
+.row-actions { display: flex; gap: 6px; }
+/* 표 칸(td)은 flex 로 만들면 아래 줄이 어긋나므로 칸 그대로 두고 안의 버튼만 띄움 */
+.table td.row-actions { display: table-cell; white-space: nowrap; }
+.table td.row-actions > * + * { margin-left: 6px; }
+.row-actions button:not(.small) { padding: 6px 10px; font-size: 13px; }   /* .small 버튼은 공통(style.css)의 button.small 그대로 */
+.table select { padding: 6px; }
+.table tr.dirty td { background: #fffbeb; }
+.table tr.options-row td { border-bottom: 1px solid var(--color-border-light); padding-top: 0; }
+.options-label { display: flex; flex-direction: column; gap: 4px; font-size: 13px; color: var(--color-text-sub); white-space: normal; }
+.options-label textarea { font-size: 14px; }
+.add-form { margin-top: 16px; padding-top: 12px; border-top: 1px dashed var(--color-border); display: flex; flex-direction: column; gap: 8px; }
+.add-form h3 { margin: 0; }
+.points-setting { display: flex; flex-wrap: wrap; gap: 8px 12px; align-items: center; margin: 4px 0 12px; padding: 12px; border: 1px solid var(--color-border); border-radius: 8px; background: #f9fafb; }
+.points-setting label { display: flex; align-items: center; gap: 8px; font-size: 14px; font-weight: 600; }
+.points-setting .muted { flex-basis: 100%; margin: 0; }
+.title-cell { white-space: normal; }
+.item-icon { width: 32px; height: 32px; object-fit: contain; border-radius: 4px; }
+textarea.mono { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 13px; }
+.target-panel { margin-top: 12px; padding-top: 12px; border-top: 1px dashed var(--color-border); }
+.target-panel h3 { margin: 0 0 8px; }
+.inv-row { display: flex; align-items: center; gap: 10px; padding: 8px 4px; }
+.inv-row .post-title { flex: 1; }
+.money-input { width: 120px; }
+.money-details { margin: 8px 0 12px; }
+.money-details summary { cursor: pointer; color: var(--color-primary); font-size: 14px; }
+.table input.narrow[placeholder] { width: 88px; }
+.bulk-bar { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; padding: 8px 12px; margin-bottom: 12px; background: #f8fafc; border: 1px solid var(--color-border); border-radius: 8px; }
+.bulk-bar .count { margin-right: auto; font-size: 14px; }
+.applicant-thumb { width: 40px; height: 40px; object-fit: cover; border-radius: 6px; background: #f3f4f6; display: block; }
+.table td.check, .table th.check { width: 32px; }
+.link-button { background: none; border: 0; padding: 0; color: var(--color-primary); cursor: pointer; font: inherit; text-decoration: underline; }
+/* 사이트 설정 */
+.site-preview { display: flex; flex-direction: column; align-items: flex-start; gap: 6px; }
+.site-preview .tab { display: inline-flex; align-items: center; gap: 6px; max-width: 240px; padding: 6px 12px; background: var(--color-surface); border: 1px solid var(--color-border); border-radius: 8px 8px 0 0; font-size: 13px; }
+.site-preview .tab img { width: 16px; height: 16px; }
+.form label.switch-row { flex-direction: row; align-items: flex-start; gap: 12px; cursor: pointer; }
+strong.on { color: var(--color-primary); }
+strong.off { color: var(--color-muted); }
+.inv-acquired { display: block; font-size: 12px; font-weight: 400; }
+/* 관리 → 테마 */
+.theme-grid { list-style: none; margin: 16px 0 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 12px; }
+.theme-card { display: flex; flex-direction: column; gap: 8px; padding: 12px; border: 1px solid var(--color-border); border-radius: var(--radius); background: var(--color-surface); }
+.theme-card.active { border-color: var(--color-primary); box-shadow: 0 0 0 2px var(--color-primary-soft); }
+.theme-card.previewing { border-style: dashed; border-color: var(--color-primary); }
+.theme-preview { aspect-ratio: 16 / 9; display: flex; align-items: center; justify-content: center; overflow: hidden; border-radius: 6px; background: var(--color-bg); }
+.theme-preview img { width: 100%; height: 100%; object-fit: cover; }
+.theme-info { display: flex; flex-direction: column; gap: 2px; flex: 1; }
+.theme-info p { margin: 0; }
+.theme-dir { font-family: ui-monospace, monospace; }
+.preview-note { margin: 8px 0 0; padding: 8px 12px; border-radius: 6px; background: #fef9c3; color: #854d0e; font-size: 14px; }
+.theme-info .badge { align-self: flex-start; }
+/* 일괄 처리 (체크박스 + 막대) */
+.bulk-bar button { padding: 6px 10px; font-size: 13px; }
+.bulk-bar.empty .count { color: var(--color-muted); font-size: 13px; }
+.table tr.checked td { background: var(--color-primary-soft); }
+
+/* 관리 페이지: 왼쪽 메뉴 + 오른쪽 내용 */
+.admin-layout { display: grid; grid-template-columns: 200px minmax(0, 1fr); gap: 20px; align-items: start; }
+.admin-side { position: sticky; top: 16px; max-height: calc(100vh - 32px); overflow-y: auto; padding: 16px 12px; background: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius); }
+.admin-side-title { margin: 0 8px 8px; font-size: 16px; }
+.admin-nav { display: flex; flex-direction: column; gap: 12px; }
+.admin-nav-group { display: flex; flex-direction: column; gap: 2px; }
+.admin-nav-label { padding: 0 8px 2px; font-size: 12px; font-weight: 600; color: var(--color-muted); }
+.admin-nav a { padding: 8px 10px; border-radius: 6px; color: var(--color-text-sub); font-size: 14px; }
+.admin-nav a:hover { background: var(--color-bg); }
+.admin-nav a.router-link-active { background: var(--color-primary); color: var(--color-on-primary); font-weight: 600; }
+/* 소탭이 있는 항목(아이템 관리): 위 항목은 글자만 강조, 아래 소탭을 들여 써서 */
+.admin-nav a.has-sub.router-link-active { background: none; color: var(--color-text-sub); font-weight: normal; }
+.admin-nav a.has-sub.open { color: var(--color-text); font-weight: 600; }
+.admin-nav a.has-sub::after { content: '▸'; float: right; color: var(--color-muted); font-size: 12px; }
+.admin-nav a.has-sub.open::after { content: '▾'; }
+.admin-nav-sub { display: flex; flex-direction: column; gap: 2px; margin: 0 0 4px 12px; padding-left: 8px; border-left: 2px solid var(--color-border-light); }
+.admin-nav-sub a { padding: 6px 10px; font-size: 13px; }
+.admin-nav-sub a.router-link-active { background: var(--color-primary-soft); color: var(--color-primary); }
+.admin-main { min-width: 0; }
+/* 좁은 화면: 메뉴를 위쪽 가로 줄로 (좌우로 밀어서 이동) */
+@media (max-width: 800px) {
+  .admin-layout { grid-template-columns: minmax(0, 1fr); gap: 12px; }
+  .admin-side { position: static; max-height: none; padding: 8px; overflow-x: auto; }
+  .admin-side-title { display: none; }
+  .admin-nav { flex-direction: row; gap: 4px; }
+  .admin-nav-group { flex-direction: row; gap: 4px; }
+  .admin-nav-label { display: none; }
+  .admin-nav a { white-space: nowrap; }
+  .admin-nav-sub { flex-direction: row; margin: 0; padding-left: 4px; }
+}
+
+/* 회원 관리 */
+.role-select { padding: 4px 6px; font-size: 13px; }
+.bulk-select { padding: 5px 6px; font-size: 13px; }
+/* 관리 → 페이지 관리, 메뉴 관리 */
+.slug-input { display: flex; align-items: center; gap: 4px; }
+.slug-input input { flex: 1; }
+.menu-edit { list-style: none; margin: 12px 0; padding: 0; }
+.menu-edit li { display: flex; align-items: center; gap: 10px; padding: 8px 6px; border-top: 1px solid var(--color-border-light); flex-wrap: wrap; }
+.menu-edit li:first-child { border-top: 0; }
+.menu-edit li.hidden strong { color: var(--color-muted); text-decoration: line-through; }
+.menu-edit-actions { margin-left: auto; display: flex; gap: 4px; }
+/* 목록 위 검색 · 정렬 · 필터 줄 (아이템 목록, 캐릭터 아이템 관리) */
+.filter-bar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin: 12px 0; }
+.filter-bar input[type=search] { flex: 1 1 220px; min-width: 0; }
+.filter-bar select { flex: 0 1 auto; max-width: 100%; }
+.add-row .narrow-search { flex: 0 1 160px; min-width: 0; }

@@ -1,0 +1,5 @@
+/* 콘텐츠 페이지 (/notice, /world ... — layouts/ContentLayout.vue 포함) — 이 페이지에서만 불러옴 */
+.page-header { border-bottom: 1px solid var(--color-border-light); margin-bottom: 16px; }
+.page-header h1 { margin: 0 0 4px; }
+.page-header .muted { margin: 0 0 12px; }
+.content-body { margin-top: 12px; }

@@ -1,0 +1,6 @@
+/* 알림 / 보관함 (/notifications) — 이 페이지에서만 불러옴 */
+.notification.unread .post-title { font-weight: 600; }
+.dot { width: 8px; height: 8px; border-radius: 50%; background: var(--color-primary); flex: none; }
+.notification-list li { display: flex; align-items: center; gap: 8px; }
+.notification-list .post-link { flex: 1; min-width: 0; }
+.notification-actions { display: flex; gap: 4px; flex: none; }

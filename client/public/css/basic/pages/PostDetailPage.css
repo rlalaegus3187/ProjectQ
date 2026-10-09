@@ -1,0 +1,9 @@
+/* 게시글 보기 (/qna/:id) — 이 페이지에서만 불러옴 */
+.password-form { max-width: 360px; margin: 12px 0; }
+.post-head { border-bottom: 1px solid var(--color-border-light); padding-bottom: 12px; margin-bottom: 16px; }
+.post-head h1 { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; font-size: 24px; margin: 12px 0 4px; }
+.post-head .muted { margin: 0 0 8px; }
+.reply { border-top: 1px solid var(--color-border-light); padding: 12px 0; }
+.reply .muted { margin: 0 0 6px; }
+.reply-form { border-top: 1px dashed var(--color-border); padding-top: 12px; margin-top: 8px; }
+.reply-form h3 { margin: 0; }

@@ -10,7 +10,7 @@ Vue 3 + Node.js/Express + MySQL 로 만든 SPA 로그인 샘플입니다.
   - 캐릭터는 가입한 뒤 마이페이지에서 작성
 - **콘텐츠 페이지**: 공지 · 세계관 · 시스템 · 캐릭터 가이드 + **관리자가 추가한 페이지** — 내용은 DB, **관리 → 페이지 관리**에서 페이지 추가·삭제, 페이지마다 본문(마크다운) 하나, 공개/비공개·음악 — `layouts/ContentLayout.vue`
 - **메뉴 관리**: 관리 → 메뉴 관리에서 상단 메뉴(홈 바로가기)에 보일 탭과 순서 (콘텐츠 페이지 + 멤버·상점·Q&A)
-- **CSS 테마**: `client/public/css/basic/` 이 기본 테마(항상 적용, 색·글꼴은 CSS 변수). `css/<테마>/style.css` 폴더를 추가하면 **관리 → 테마** 목록에 나타나고, 미리보기 후 적용 (basic 위에 덮어씀, DB `settings.site_theme`) — `client/public/css/README.md`
+- **CSS 테마**: `client/public/css/basic/` 이 기본 테마 — `style.css`(모든 화면 공통, 항상 적용, 색·글꼴은 CSS 변수) · `admin.css`(관리 화면만) · `pages/<페이지>.css`(그 페이지만, router.js `meta.css`). `css/<테마>/style.css` 폴더를 추가하면 **관리 → 테마** 목록에 나타나고, 미리보기 후 적용 (basic 위에 덮어씀, DB `settings.site_theme`) — `client/public/css/README.md`
 - **마크다운 편집기**: 제목·굵게·기울임·취소선·목록·인용·링크·이미지 (`client/src/markdown/README.md`)
 - **Q&A 게시판**: 회원 질문·비밀글, 관리자 답변·메인 글 (마크다운 등록툴 + 이미지)
   - **비회원 질문**: 관리 → 사이트 설정의 스위치로 켜고 끔. 비회원은 이름 + 비밀번호로 작성(공개/비밀글), 비밀번호로 비밀글 보기·수정·삭제
@@ -51,6 +51,7 @@ Vue 3 + Node.js/Express + MySQL 로 만든 SPA 로그인 샘플입니다.
 ProjectQ/
 ├─ client/                 Vue 3 + Vite + vue-router
 │  ├─ public/css/          ★ CSS 테마 (basic = 기본, 폴더 추가 = 새 테마) — 배포하면 /css/ 로 올라감
+│  │                          basic/style.css 공통 · admin.css 관리 화면 · pages/<페이지>.css 페이지별 (src/pageCss.js 가 화면 따라 붙이고 뺌)
 │  └─ src/
 │     ├─ api.js            fetch 래퍼 (/api 호출)
 │     ├─ auth.js           로그인 상태(user) 관리

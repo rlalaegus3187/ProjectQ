@@ -1,0 +1,4 @@
+/* 메인 (/) — 이 페이지에서만 불러옴 */
+.board-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 12px; }
+.board-card { display: flex; flex-direction: column; gap: 4px; color: inherit; margin-bottom: 0; }
+.board-card:hover { border-color: #93c5fd; }

@@ -1,0 +1,2 @@
+/* 회원가입 (/signup) — 이 페이지에서만 불러옴 */
+.signup-closed { margin: 8px 0; padding: 12px 16px; border-radius: 8px; background: var(--color-primary-soft); font-weight: 600; }
