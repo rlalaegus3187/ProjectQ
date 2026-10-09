@@ -105,7 +105,7 @@ watch(() => route.fullPath, load, { immediate: true });
           {{ data.post.title }}
         </h1>
         <p class="muted">
-          {{ data.post.author }}<span v-if="data.post.isGuest" class="badge guest">비회원</span>
+          {{ data.post.author }}<span v-if="data.post.isGuest" class="badge guest">비회원</span><span v-else-if="data.post.isFormer" class="badge guest">탈퇴</span>
           · {{ new Date(data.post.createdAt).toLocaleString('ko-KR') }}
           <template v-if="data.post.updatedAt !== data.post.createdAt"> · 수정됨</template>
         </p>

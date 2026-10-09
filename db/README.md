@@ -40,9 +40,10 @@ PK(character_id, definition_id)    character_details (프로필 양식 값, 프�
 settings  (전역 설정 키-값)  stat_initial_points = 초기 투자 포인트
 posts          게시글  board: qna(Q&A) — 화면에서 쓰는 게시판은 Q&A 뿐
                (notice/world/guide/free 는 이전 버전 데이터용으로 남아 있음, 화면에 표시 안 함)
-               is_hidden(Q&A 비밀글), is_pinned(Q&A 메인 글), user_id FK → users.id (비회원 글이면 NULL)
-               guest_name(비회원 이름), password_hash(글 비밀번호, scrypt — 비회원 글 필수, 회원 비밀글 선택)
-post_replies   Q&A 답변 (관리자)  post_id FK → posts.id (글 삭제 시 함께 삭제)
+               is_hidden(Q&A 비밀글), is_pinned(Q&A 메인 글)
+               user_id 쓴 회원 번호 — users 와 FK 로 연결하지 않음 (비회원 글이면 NULL, 계정을 지우면 NULL 로 비우고 글은 남음)
+               author_name(쓸 때의 작성자 이름 — 회원 아이디 / 비회원 이름), guest_name(비회원 이름), password_hash(글 비밀번호, scrypt — 비회원 글 필수, 회원 비밀글 선택)
+post_replies   Q&A 답변 (관리자)  post_id FK → posts.id (글 삭제 시 함께 삭제), user_id(FK 없음, 계정 삭제 시 NULL), author_name
 notifications  계정별 알림  user_id, type, post_id, link(이동 주소), message, is_read, is_archived(보관함 — 삭제 안 됨), archived_at
                → 추가는 server/src/notify.js 의 notify()/notifyUsers()/notifyAdmins() 사용
 items          아이템 (uid=id, name, description(마크다운), small_image, large_image,

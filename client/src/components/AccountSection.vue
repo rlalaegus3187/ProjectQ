@@ -188,8 +188,9 @@ const savePassword = () => run(async () => {
             <li>계정 <strong>{{ auth.user.username }}</strong> (같은 아이디로 다시 가입할 수는 있습니다)</li>
             <li>캐릭터와 모든 프로필, 캐릭터 스탯</li>
             <li>인벤토리 아이템, 소지금, 아이템·소지금 기록</li>
-            <li>내가 쓴 Q&amp;A 글과 그 답변, 받은 알림</li>
+            <li>받은 알림</li>
           </ul>
+          <p class="muted">내가 쓴 Q&amp;A 글은 지워지지 않고 '탈퇴한 회원'의 글로 남습니다. 지우고 싶은 글은 계정을 삭제하기 전에 직접 삭제해주세요.</p>
         </div>
         <label>
           비밀번호 확인

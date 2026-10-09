@@ -67,6 +67,13 @@ const canView = (post, viewer, verified) => !post.is_hidden || !!viewer?.isAdmin
 // 수정/삭제: 관리자 전용 게시판은 관리자만. Q&A 는 관리자, 회원 글은 작성자, 비회원 글은 비밀번호를 확인한 사람
 const canEdit = (board, post, viewer, verified) => !!viewer?.isAdmin || (!board.adminOnly
   && (isAuthor(post, viewer) || (post.user_id === null && isVerified(post, verified))));
+// 작성자 표시: 글에 저장된 이름 (계정과 연결하지 않음 — 계정을 지워도 글은 남음)
+//   isGuest 비회원 글 / isFormer 탈퇴한 회원의 글 (계정 삭제로 user_id 가 비워짐)
+const authorOf = (row) => ({
+  author: row.author_name ?? row.guest_name ?? '알 수 없음',
+  isGuest: row.user_id === null && row.guest_name !== null,
+  isFormer: row.user_id === null && row.guest_name === null,
+});
 
 function parsePassword(value, { required }) {
   const password = String(value ?? '');
@@ -110,8 +117,7 @@ function toListItem(row, viewer, verified) {
   return {
     id: row.id,
     title: visible ? row.title : '비밀글입니다.',
-    author: row.author ?? row.guest_name,
-    isGuest: row.user_id === null,
+    ...authorOf(row),
     hasPassword: !visible && !!row.password_hash,   // 잠긴 글인데 비밀번호로 열 수 있는지
     isHidden: !!row.is_hidden,
     isPinned: !!row.is_pinned,
@@ -123,9 +129,9 @@ function toListItem(row, viewer, verified) {
 
 async function findPost(boardKey, id) {
   const [rows] = await pool.execute(
-    `SELECT p.id, p.board, p.user_id, p.guest_name, p.password_hash, p.title, p.body, p.is_hidden, p.is_pinned,
-            p.created_at, p.updated_at, u.username AS author
-       FROM posts p LEFT JOIN users u ON u.id = p.user_id
+    `SELECT p.id, p.board, p.user_id, p.guest_name, p.author_name, p.password_hash, p.title, p.body, p.is_hidden, p.is_pinned,
+            p.created_at, p.updated_at
+       FROM posts p
       WHERE p.board = ? AND p.id = ?`,
     [boardKey, Number(id)],
   );
@@ -133,7 +139,7 @@ async function findPost(boardKey, id) {
   return rows[0];
 }
 
-const LIST_COLUMNS = `p.id, p.user_id, p.guest_name, p.password_hash, p.title, p.is_hidden, p.is_pinned, p.created_at, u.username AS author,
+const LIST_COLUMNS = `p.id, p.user_id, p.guest_name, p.author_name, p.password_hash, p.title, p.is_hidden, p.is_pinned, p.created_at,
   (SELECT COUNT(*) FROM post_replies r WHERE r.post_id = p.id) AS reply_count`;
 
 // 글쓰기 가능 여부: { canWrite, guestWrite(비회원으로 쓰는지) }
@@ -161,7 +167,7 @@ router.get('/:board/posts', async (req, res) => {
     [board.key],
   );
   const [rows] = await pool.query(
-    `SELECT ${LIST_COLUMNS} FROM posts p LEFT JOIN users u ON u.id = p.user_id
+    `SELECT ${LIST_COLUMNS} FROM posts p
       WHERE p.board = ? ${pinnedFilter}
       ORDER BY p.id DESC LIMIT ? OFFSET ?`,
     [board.key, PAGE_SIZE, (page - 1) * PAGE_SIZE],
@@ -169,7 +175,7 @@ router.get('/:board/posts', async (req, res) => {
   let pinned = [];
   if (board.key === 'qna') {
     const [pinnedRows] = await pool.query(
-      `SELECT ${LIST_COLUMNS} FROM posts p LEFT JOIN users u ON u.id = p.user_id
+      `SELECT ${LIST_COLUMNS} FROM posts p
         WHERE p.board = 'qna' AND p.is_pinned = 1 ORDER BY p.id DESC`,
     );
     pinned = pinnedRows.map((r) => toListItem(r, req.viewer, verified));
@@ -203,8 +209,8 @@ router.get('/:board/posts/:id', async (req, res) => {
   let replies = [];
   if (board.key === 'qna') {
     const [rows] = await pool.execute(
-      `SELECT r.id, r.body, r.created_at, r.updated_at, u.username AS author
-         FROM post_replies r JOIN users u ON u.id = r.user_id
+      `SELECT r.id, r.body, r.created_at, r.updated_at, COALESCE(r.author_name, '알 수 없음') AS author
+         FROM post_replies r
         WHERE r.post_id = ? ORDER BY r.id`,
       [post.id],
     );
@@ -216,8 +222,7 @@ router.get('/:board/posts/:id', async (req, res) => {
       board: post.board,
       title: post.title,
       body: post.body,
-      author: post.author ?? post.guest_name,
-      isGuest: post.user_id === null,
+      ...authorOf(post),
       isHidden: !!post.is_hidden,
       isPinned: !!post.is_pinned,
       hasPassword: !!post.password_hash,
@@ -225,7 +230,7 @@ router.get('/:board/posts/:id', async (req, res) => {
       updatedAt: post.updated_at,
       canEdit: canEdit(board, post, req.viewer, verified),
       // 비회원 글: 비밀번호를 확인하면 수정·삭제 가능
-      canVerify: post.user_id === null && !canEdit(board, post, req.viewer, verified),
+      canVerify: post.user_id === null && !!post.password_hash && !canEdit(board, post, req.viewer, verified),
     },
     replies,
     canReply: board.key === 'qna' && !!req.viewer?.isAdmin,
@@ -250,8 +255,8 @@ router.post('/:board/posts', (req, res, next) => (req.viewer ? next() : guestPos
   const passwordHash = (await resolvePassword(req.body, { guest, isHidden: data.isHidden })) ?? null;
 
   const [result] = await pool.execute(
-    'INSERT INTO posts (board, user_id, guest_name, title, body, is_hidden, password_hash) VALUES (?, ?, ?, ?, ?, ?, ?)',
-    [board.key, req.viewer?.id ?? null, guestName, data.title, data.body, data.isHidden ? 1 : 0, passwordHash],
+    'INSERT INTO posts (board, user_id, guest_name, author_name, title, body, is_hidden, password_hash) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+    [board.key, req.viewer?.id ?? null, guestName, guest ? guestName : req.viewer.username, data.title, data.body, data.isHidden ? 1 : 0, passwordHash],
   );
   // 비회원 작성자는 방금 쓴 글을 바로 볼 수 있게 (이 브라우저에서)
   if (guest) markVerified(req, result.insertId);
@@ -317,8 +322,8 @@ router.post('/qna/posts/:id/replies', async (req, res) => {
   const text = parseReply(req.body);
   const replyId = await withTransaction(async (conn) => {
     const [result] = await conn.execute(
-      'INSERT INTO post_replies (post_id, user_id, body) VALUES (?, ?, ?)',
-      [post.id, req.viewer.id, text],
+      'INSERT INTO post_replies (post_id, user_id, author_name, body) VALUES (?, ?, ?, ?)',
+      [post.id, req.viewer.id, req.viewer.username, text],
     );
     // 비회원 글은 알림을 받을 계정이 없음
     if (post.user_id !== null && post.user_id !== req.viewer.id) {

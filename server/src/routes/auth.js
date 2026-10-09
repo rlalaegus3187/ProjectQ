@@ -9,8 +9,9 @@ const {
   getSetting, isSignupOpen, isSiteClosed, getClosedMessage,
 } = require('../settings');
 const {
-  parseUsername, parseNewPassword, parseContact, destroyUserSessions,
+  parseUsername, parseNewPassword, parseContact, destroyUserSessions, detachUserPosts,
 } = require('../accounts');
+const { withTransaction } = require('../characters');
 
 const router = express.Router();
 
@@ -154,7 +155,8 @@ router.put('/me/agreement', requireAuth, async (req, res) => {
 });
 
 // 계정 삭제 (되돌릴 수 없음): { password, confirm: true }
-// 함께 삭제(FK CASCADE): 캐릭터(프로필·스탯·인벤토리·아이템/소지금 기록), 알림, 내가 쓴 Q&A 글(답변 포함)
+// 함께 삭제(FK CASCADE): 캐릭터(프로필·스탯·인벤토리·아이템/소지금 기록), 알림
+// 내가 쓴 Q&A 글은 남음 (계정과 연결하지 않음 — '탈퇴한 회원'의 글로 표시)
 router.delete('/me', authLimiter, requireAuth, async (req, res) => {
   if (req.body?.confirm !== true) throw new HttpError(400, '복구할 수 없다는 안내에 동의해주세요.');
   const userId = req.session.userId;
@@ -167,7 +169,10 @@ router.delete('/me', authLimiter, requireAuth, async (req, res) => {
     const [[{ admins }]] = await pool.query("SELECT COUNT(*) AS admins FROM users WHERE role = 'admin'");
     if (Number(admins) <= 1) throw new HttpError(400, '마지막 관리자 계정은 삭제할 수 없습니다. 다른 관리자를 먼저 지정해주세요.');
   }
-  await pool.execute('DELETE FROM users WHERE id = ?', [userId]);
+  await withTransaction(async (conn) => {
+    await detachUserPosts(conn, [userId]);
+    await conn.execute('DELETE FROM users WHERE id = ?', [userId]);
+  });
   await destroyUserSessions(userId);   // 다른 기기의 로그인도 끊음
   req.session.destroy(() => {
     res.clearCookie('projectq.sid');

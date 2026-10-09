@@ -56,7 +56,7 @@ watch([boardKey, page], load, { immediate: true });
               </span>
               <span class="post-meta">
                 <span class="badge" :class="post.replyCount ? 'answered' : 'waiting'">{{ post.replyCount ? '답변완료' : '답변대기' }}</span>
-                {{ post.author }}<span v-if="post.isGuest" class="badge guest">비회원</span> · {{ formatDate(post.createdAt) }}
+                {{ post.author }}<span v-if="post.isGuest" class="badge guest">비회원</span><span v-else-if="post.isFormer" class="badge guest">탈퇴</span> · {{ formatDate(post.createdAt) }}
               </span>
             </component>
           </li>
@@ -71,14 +71,14 @@ watch([boardKey, page], load, { immediate: true });
             <span class="post-title"><span v-if="post.isHidden" class="badge lock">{{ post.hasPassword ? '비밀 🔑' : '비밀' }}</span>{{ post.title }}</span>
             <span class="post-meta">
               <span v-if="boardKey === 'qna'" class="badge" :class="post.replyCount ? 'answered' : 'waiting'">{{ post.replyCount ? '답변완료' : '답변대기' }}</span>
-              {{ post.author }}<span v-if="post.isGuest" class="badge guest">비회원</span> · {{ formatDate(post.createdAt) }}
+              {{ post.author }}<span v-if="post.isGuest" class="badge guest">비회원</span><span v-else-if="post.isFormer" class="badge guest">탈퇴</span> · {{ formatDate(post.createdAt) }}
             </span>
           </RouterLink>
           <div v-else class="post-link locked">
             <span class="post-title"><span class="badge lock">비밀</span>{{ post.title }}</span>
             <span class="post-meta">
               <span class="badge" :class="post.replyCount ? 'answered' : 'waiting'">{{ post.replyCount ? '답변완료' : '답변대기' }}</span>
-              {{ post.author }}<span v-if="post.isGuest" class="badge guest">비회원</span> · {{ formatDate(post.createdAt) }}
+              {{ post.author }}<span v-if="post.isGuest" class="badge guest">비회원</span><span v-else-if="post.isFormer" class="badge guest">탈퇴</span> · {{ formatDate(post.createdAt) }}
             </span>
           </div>
         </li>

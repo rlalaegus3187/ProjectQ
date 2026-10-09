@@ -102,7 +102,7 @@ function removeUsers(list) {
   if (!list.length) return;
   const withChar = list.filter((u) => u.character).length;
   if (!confirm(`${list.length}명을 삭제할까요?\n${namesOf(list)}\n\n`
-    + `계정과 함께 캐릭터·프로필·인벤토리·기록·Q&A 글·알림이 모두 삭제됩니다${withChar ? ` (캐릭터 ${withChar}개)` : ''}.\n되돌릴 수 없습니다.`)) return;
+    + `계정과 함께 캐릭터·프로필·인벤토리·기록·알림이 모두 삭제됩니다${withChar ? ` (캐릭터 ${withChar}개)` : ''}.\nQ&A 글은 '탈퇴한 회원'의 글로 남습니다. 되돌릴 수 없습니다.`)) return;
   return act(async () => {
     const r = await api('/admin/users/bulk-delete', { method: 'POST', body: { ids: list.map((u) => u.id) } });
     return `${r.deleted}명을 삭제했습니다.`;

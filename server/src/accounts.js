@@ -40,6 +40,15 @@ async function destroyUserSessions(userId, exceptSessionId = null, conn = pool) 
   );
 }
 
+// 계정을 지우기 전에: 그 사람이 쓴 Q&A 글·답변은 남기고 계정 연결(user_id)만 비움 (글에는 쓸 때의 이름이 저장돼 있음)
+// updated_at 은 그대로 (글이 '수정됨'으로 보이지 않게)
+async function detachUserPosts(conn, userIds) {
+  if (!userIds.length) return;
+  await conn.query('UPDATE posts SET user_id = NULL, updated_at = updated_at WHERE user_id IN (?)', [userIds]);
+  await conn.query('UPDATE post_replies SET user_id = NULL, updated_at = updated_at WHERE user_id IN (?)', [userIds]);
+}
+
 module.exports = {
+  detachUserPosts,
   USERNAME_RE, PASSWORD_MIN, parseUsername, parseNewPassword, parseContact, destroyUserSessions,
 };

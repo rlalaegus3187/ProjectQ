@@ -4,7 +4,7 @@ const pool = require('../db');
 const requireAdmin = require('../middleware/requireAdmin');
 const { HttpError } = require('../errors');
 const { hashPassword } = require('../password');
-const { parseNewPassword, destroyUserSessions } = require('../accounts');
+const { parseNewPassword, destroyUserSessions, detachUserPosts } = require('../accounts');
 const { notify, notifyUsers } = require('../notify');
 const { withTransaction } = require('../characters');
 const { parseIds } = require('../bulk');
@@ -102,11 +102,13 @@ router.patch('/users/role', async (req, res) => {
   res.json({ updated: changed.length, skipped: ids.length - changed.length });
 });
 
-// 회원 일괄 삭제: { ids } — 캐릭터·프로필·인벤토리·기록·Q&A 글·알림도 함께 삭제 (DB FK CASCADE), 로그인도 끊음
+// 회원 일괄 삭제: { ids } — 캐릭터·프로필·인벤토리·기록·알림도 함께 삭제 (DB FK CASCADE), 로그인도 끊음
+// Q&A 글·답변은 계정과 연결하지 않으므로 그대로 남음 (탈퇴한 회원의 글)
 router.post('/users/bulk-delete', async (req, res) => {
   const ids = parseIds(req.body?.ids, { label: '회원을' });
   const deleted = await withTransaction(async (conn) => {
     const rows = await checkTargets(conn, req, ids, { removesAdmin: true });
+    await detachUserPosts(conn, ids);
     await conn.query('DELETE FROM users WHERE id IN (?)', [ids]);
     return rows;
   });
