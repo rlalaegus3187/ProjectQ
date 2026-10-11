@@ -15,8 +15,8 @@ app.use(express.json({ limit: '1mb' }));   // 긴 글(콘텐츠 페이지 등) �
 // 세션은 MySQL(sessions 테이블)에 저장 → PM2 재시작/재배포해도 로그인 유지
 const sessionStore = new MySQLStore({ createDatabaseTable: false }, pool);
 
-app.use(session({
-  name: 'projectq.sid',
+const sessionMiddleware = session({
+  name: config.sessionCookie,   // 사이트마다 다르게 (server/.env SESSION_COOKIE)
   secret: config.sessionSecret,
   store: sessionStore,
   resave: false,
@@ -27,7 +27,8 @@ app.use(session({
     sameSite: 'lax',              // 다른 사이트에서의 POST 에 쿠키 미전송 (CSRF 완화)
     maxAge: 1000 * 60 * 60 * 24 * 7,
   },
-}));
+});
+app.use(sessionMiddleware);
 
 // 회원 전용 모드면 로그인 안 한 요청을 막음 (로그인·가입 등 일부 제외)
 app.use('/api', require('./middleware/sitePrivate'));
@@ -47,6 +48,8 @@ app.use('/api/item-effects', require('./routes/itemEffects').publicRouter);
 app.use('/api/admin', require('./routes/itemEffects').adminRouter);
 app.use('/api/admin', require('./routes/titles').adminRouter);
 app.use('/api', require('./routes/titles').memberRouter);
+app.use('/api', require('./routes/chat').memberRouter);
+app.use('/api/admin', require('./routes/chat').adminRouter);
 app.use('/api/inventory', require('./routes/inventory'));
 app.use('/api/members', require('./routes/members'));
 app.use('/api/shop', require('./routes/shop'));
@@ -69,11 +72,14 @@ app.use((err, req, res, next) => {
     const message = err.code === 'LIMIT_FILE_SIZE' ? '파일은 5MB 이하만 올릴 수 있습니다.' : '업로드 요청이 올바르지 않습니다.';
     return res.status(400).json({ message });
   }
-  console.error(`[${new Date().toISOString()}] ${req.method} ${req.originalUrl}`, err);   // pm2 logs projectq-api 에서 확인
+  console.error(`[${new Date().toISOString()}] ${req.method} ${req.originalUrl}`, err);   // pm2 logs <APP_NAME>-api 에서 확인
   res.status(500).json({ message: '서버 오류가 발생했습니다.' });
 });
 
 // Nginx 가 앞단에서 받으므로 외부에 직접 노출하지 않도록 로컬에만 바인딩
-app.listen(config.port, '127.0.0.1', () => {
-  console.log(`[projectq] API listening on 127.0.0.1:${config.port} (${config.env})`);
+const server = app.listen(config.port, '127.0.0.1', () => {
+  console.log(`[${config.appName}] API listening on 127.0.0.1:${config.port} (${config.env})`);
 });
+
+// 채팅 (Socket.IO) — 같은 포트·같은 로그인 세션을 씀 (주소 /api/socket.io). server/src/chat/README.md
+require('./chat').setupChat(server, sessionMiddleware);

@@ -14,6 +14,7 @@ const { HttpError } = require('../errors');
 const { parseYouTubeId } = require('../youtube');
 const { withTransaction } = require('../characters');
 const { getMenu, saveMenu, setMenuItem } = require('../menu');
+const { isChatEnabled } = require('../chat/store');
 
 const MAX_BODY = 200000;
 const SLUG_RE = /^[a-z][a-z0-9-]{1,29}$/;
@@ -52,7 +53,10 @@ publicRouter.get('/:slug', async (req, res) => {
 // 상단 메뉴: 보이게 한 항목만 [{ key, label, to, isPublic? }]
 const menuRouter = express.Router();
 menuRouter.get('/', async (req, res) => {
-  const menu = (await getMenu()).filter((m) => m.visible).map(({ key, label, to, isPublic }) => ({ key, label, to, isPublic }));
+  const chatOn = await isChatEnabled();   // 채팅을 끄면 메뉴에서도 빠짐
+  const menu = (await getMenu())
+    .filter((m) => m.visible && (m.key !== 'chat' || chatOn))
+    .map(({ key, label, to, isPublic }) => ({ key, label, to, isPublic }));
   res.json({ menu });
 });
 

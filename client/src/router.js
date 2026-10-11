@@ -59,10 +59,13 @@ const router = createRouter({
         { path: 'titles', redirect: '/admin/titles/list' },
         { path: 'titles/list', component: () => import('./pages/admin/TitleListPage.vue') },
         { path: 'titles/grant', component: () => import('./pages/admin/TitleGrantPage.vue') },
+        { path: 'chat', component: () => import('./pages/admin/ChatAdminPage.vue') },
         { path: 'settings', component: () => import('./pages/admin/SettingsPage.vue') },
         { path: 'themes', component: () => import('./pages/admin/ThemesPage.vue') },
       ],
     },
+    // 채팅 (Socket.IO) — 로그인한 멤버만, 소켓은 이 화면에 있는 동안만 연결
+    { path: '/chat', component: () => import('./pages/chat/ChatPage.vue'), meta: { requiresAuth: true, wide: true, css: 'ChatPage' } },
     { path: '/shop', component: () => import('./pages/shop/ShopPage.vue'), meta: { css: 'ShopPage' } },
     // 멤버란 (전체 캐릭터) — 로그인 없이 공개. 회원만 보게 하려면 meta: { requiresAuth: true } 추가
     { path: '/members', component: () => import('./pages/members/MemberListPage.vue'), meta: { css: 'MemberListPage' } },

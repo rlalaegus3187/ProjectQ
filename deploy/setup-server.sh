@@ -164,6 +164,9 @@ DB_USER=${DB_USER}
 DB_PASSWORD=${DB_PASSWORD}
 DB_NAME=${DB_NAME}
 SESSION_SECRET=${SESSION_SECRET}
+# 한 서버에 사이트를 여러 개 돌릴 때 사이트마다 다르게 (README '한 서버에 여러 사이트')
+# APP_NAME=projectq
+# SESSION_COOKIE=projectq.sid
 # HTTPS(certbot) 적용 후 true 로 변경하고 deploy.js 다시 실행
 COOKIE_SECURE=false
 ENV
@@ -215,6 +218,22 @@ http {
 }
 NGINX
 sudo mkdir -p /etc/nginx/projectq.d
+# 채팅(Socket.IO) 웹소켓 — deploy/setup-socketio.sh 와 같은 내용 (나중에 PORT 를 바꾸면 그 스크립트를 다시 실행)
+sudo tee /etc/nginx/projectq.d/socketio.conf >/dev/null <<'NGINX'
+location /api/socket.io/ {
+    proxy_pass http://127.0.0.1:3000;
+    proxy_http_version 1.1;
+    proxy_set_header Upgrade $http_upgrade;
+    proxy_set_header Connection "upgrade";
+    proxy_set_header Host $host;
+    proxy_set_header X-Real-IP $remote_addr;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto $scheme;
+    proxy_read_timeout 1h;
+    proxy_send_timeout 1h;
+    proxy_buffering off;
+}
+NGINX
 sudo tee /etc/nginx/conf.d/projectq.conf >/dev/null <<NGINX
 server {
     listen 80 default_server;

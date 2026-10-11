@@ -107,6 +107,7 @@ async function getSiteSettings(conn = pool) {
     profileEditOpen: await isProfileEditOpen(conn),
     statsEnabled: await isStatsEnabled(conn),
     titlesEnabled: await isTitlesEnabled(conn),
+    chatEnabled: (await getSetting('chat_enabled', conn)) !== '0',   // 채팅 사용 (관리 → 채팅 관리)
     // 지금 적용된 CSS 테마 { id, css(덮어쓸 css 주소, basic 이면 null) }
     siteTheme: await require('./themes').getActiveTheme(conn),
   };

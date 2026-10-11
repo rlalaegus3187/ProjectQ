@@ -119,3 +119,6 @@ strong.off { color: var(--color-muted); }
 .title-color-row { display: flex; align-items: center; gap: 10px; }
 .title-color-row input[type=color] { width: 48px; height: 32px; padding: 2px; }
 .bulk-bar .bulk-memo { flex: 1 1 220px; min-width: 0; padding: 6px 8px; font-size: 13px; }
+
+/* 채팅 관리 */
+.chat-command-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 4px; }

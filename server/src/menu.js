@@ -1,6 +1,6 @@
 // 상단 메뉴 구성 (관리 → 메뉴 관리) — settings.site_menu 에 JSON 으로 저장
 //   [{ key: 'page:notice', visible: true }, { key: 'members', visible: true }, ...]  (순서 = 메뉴 순서)
-//   key: page:<slug>(콘텐츠 페이지) / members(멤버) / shop(상점) / qna(Q&A)
+//   key: page:<slug>(콘텐츠 페이지) / members(멤버) / shop(상점) / qna(Q&A) / chat(채팅 — 채팅을 끄면 메뉴에서도 빠짐)
 // 저장 안 된 항목(새로 만든 페이지 등)은 끝에 붙고, visible 기본값은 true
 const pool = require('./db');
 const { getSetting, setSetting } = require('./settings');
@@ -10,6 +10,7 @@ const BUILTIN = {
   members: { label: '멤버', to: '/members' },
   shop: { label: '상점', to: '/shop' },
   qna: { label: 'Q&A', to: '/qna' },
+  chat: { label: '채팅', to: '/chat' },
 };
 
 function parseSaved(text) {

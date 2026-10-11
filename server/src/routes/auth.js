@@ -114,7 +114,7 @@ router.post('/login', authLimiter, async (req, res) => {
 router.post('/logout', (req, res, next) => {
   req.session.destroy((err) => {
     if (err) return next(err);
-    res.clearCookie('projectq.sid');
+    res.clearCookie(config.sessionCookie);
     res.status(204).end();
   });
 });
@@ -175,7 +175,7 @@ router.delete('/me', authLimiter, requireAuth, async (req, res) => {
   });
   await destroyUserSessions(userId);   // 다른 기기의 로그인도 끊음
   req.session.destroy(() => {
-    res.clearCookie('projectq.sid');
+    res.clearCookie(config.sessionCookie);
     res.status(204).end();
   });
 });

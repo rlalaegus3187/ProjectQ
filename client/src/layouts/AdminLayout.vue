@@ -47,6 +47,7 @@ const ADMIN_MENU = [
   {
     group: '사이트',
     items: [
+      { to: '/admin/chat', label: '채팅 관리' },
       { to: '/admin/settings', label: '사이트 설정' },
       { to: '/admin/themes', label: '테마' },
     ],

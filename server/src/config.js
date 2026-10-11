@@ -9,6 +9,9 @@ function required(name) {
 
 module.exports = {
   env: process.env.NODE_ENV || 'development',
+  // 한 서버에 사이트를 여러 개 돌릴 때 사이트마다 다르게: APP_NAME(PM2 이름·로그), SESSION_COOKIE(로그인 쿠키 이름), PORT
+  appName: /^[a-z0-9][a-z0-9_-]{0,39}$/.test(process.env.APP_NAME || '') ? process.env.APP_NAME : 'projectq',
+  sessionCookie: /^[A-Za-z0-9._-]{1,50}$/.test(process.env.SESSION_COOKIE || '') ? process.env.SESSION_COOKIE : 'projectq.sid',
   port: Number(process.env.PORT || 3000),
   db: {
     host: process.env.DB_HOST || '127.0.0.1',

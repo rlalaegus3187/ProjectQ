@@ -1,0 +1,91 @@
+// 채팅방 REST (메시지 주고받기는 Socket.IO — server/src/chat/)
+//   회원:   GET /api/chat/rooms                    들어갈 수 있는 방 + 채팅 사용 여부
+//   관리자: GET    /api/admin/chat                  방 전체(닫힌 방 포함, 메시지 수) + 채팅 정보(포트·주소·모듈)
+//           POST   /api/admin/chat/rooms            방 추가 { name, description, isActive, adminOnly, sortOrder }
+//           PUT    /api/admin/chat/rooms/:id        수정
+//           DELETE /api/admin/chat/rooms/:id        삭제 (메시지도 함께)
+//           DELETE /api/admin/chat/rooms/:id/messages  대화 기록 비우기
+// 채팅 켜기/끄기는 PUT /api/admin/settings { chatEnabled }
+const express = require('express');
+const pool = require('../db');
+const config = require('../config');
+const requireAuth = require('../middleware/requireAuth');
+const requireAdmin = require('../middleware/requireAdmin');
+const { HttpError } = require('../errors');
+const store = require('../chat/store');
+const { getChat, SOCKET_PATH, CHAT_ROLES } = require('../chat');
+
+const memberRouter = express.Router();
+memberRouter.get('/chat/rooms', requireAuth, async (req, res) => {
+  const [[user]] = await pool.execute('SELECT role FROM users WHERE id = ?', [req.session.userId]);
+  const isAdmin = user?.role === 'admin';
+  res.json({ enabled: await store.isChatEnabled(), canChat: CHAT_ROLES.includes(user?.role), rooms: await store.listRooms({ isAdmin }) });
+});
+
+const adminRouter = express.Router();
+adminRouter.use('/chat', requireAdmin);
+
+function parseRoom(body) {
+  const name = String(body?.name ?? '').trim();
+  if (!name || name.length > 50) throw new HttpError(400, '방 이름은 1~50자로 입력해주세요.');
+  const description = String(body?.description ?? '').trim();
+  if (description.length > 255) throw new HttpError(400, '설명은 255자 이내로 입력해주세요.');
+  const sortOrder = Number(body?.sortOrder ?? 0);
+  if (!Number.isInteger(sortOrder) || Math.abs(sortOrder) > 100000) throw new HttpError(400, '순서는 정수로 입력해주세요.');
+  return { name, description: description || null, isActive: body?.isActive !== false ? 1 : 0, adminOnly: body?.adminOnly ? 1 : 0, sortOrder };
+}
+
+async function sendAdmin(res, status = 200) {
+  const chat = getChat();
+  res.status(status).json({
+    rooms: await store.listRooms({ all: true }),
+    enabled: await store.isChatEnabled(),
+    // 화면에 보여주는 정보 (바꾸는 곳은 server/.env 와 Nginx — 채팅은 API 와 같은 포트를 같이 씀)
+    info: {
+      port: config.port,
+      socketPath: SOCKET_PATH,
+      roles: CHAT_ROLES,
+      modules: chat ? chat.commands() : [],
+      online: chat ? (await chat.nsp.fetchSockets()).length : 0,
+    },
+  });
+}
+const changed = () => getChat()?.roomsChanged();
+
+adminRouter.get('/chat', (req, res) => sendAdmin(res));
+
+adminRouter.post('/chat/rooms', async (req, res) => {
+  const d = parseRoom(req.body);
+  await pool.execute(
+    'INSERT INTO chat_rooms (name, description, is_active, admin_only, sort_order) VALUES (?, ?, ?, ?, ?)',
+    [d.name, d.description, d.isActive, d.adminOnly, d.sortOrder],
+  );
+  changed();
+  await sendAdmin(res, 201);
+});
+
+adminRouter.put('/chat/rooms/:id', async (req, res) => {
+  const d = parseRoom(req.body);
+  const [result] = await pool.execute(
+    'UPDATE chat_rooms SET name = ?, description = ?, is_active = ?, admin_only = ?, sort_order = ? WHERE id = ?',
+    [d.name, d.description, d.isActive, d.adminOnly, d.sortOrder, Number(req.params.id) || 0],
+  );
+  if (!result.affectedRows) throw new HttpError(404, '채팅방을 찾을 수 없습니다.');
+  changed();
+  await sendAdmin(res);
+});
+
+adminRouter.delete('/chat/rooms/:id', async (req, res) => {
+  const [result] = await pool.execute('DELETE FROM chat_rooms WHERE id = ?', [Number(req.params.id) || 0]);
+  if (!result.affectedRows) throw new HttpError(404, '채팅방을 찾을 수 없습니다.');
+  changed();
+  await sendAdmin(res);
+});
+
+adminRouter.delete('/chat/rooms/:id/messages', async (req, res) => {
+  const [result] = await pool.execute('DELETE FROM chat_messages WHERE room_id = ?', [Number(req.params.id) || 0]);
+  changed();
+  res.json({ deleted: result.affectedRows });
+});
+
+module.exports = { memberRouter, adminRouter };

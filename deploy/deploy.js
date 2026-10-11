@@ -18,6 +18,10 @@
 //   APP_DIR        코드 위치 (기본: /data/ProjectQ)
 //   PROJECTQ_ENV   서버 .env 원본 (기본: /data/config/projectq.env) → 매 배포 때 server/.env 로 복사
 //   WEB_ROOT       Nginx 가 서빙하는 경로 (기본: /data/www/projectq)
+//   NGINX_SNIPPET_DIR  이 사이트 Nginx 추가 설정 폴더 (기본: /etc/nginx/projectq.d) — 채팅 웹소켓 설정 확인용
+//
+// 한 서버에 사이트 여러 개: 사이트마다 APP_DIR · PROJECTQ_ENV · WEB_ROOT 를 다르게, .env 의 PORT · APP_NAME · SESSION_COOKIE · DB_NAME · UPLOAD_DIR 도 다르게
+//   (자세한 건 README.md 의 '한 서버에 여러 사이트')
 
 const { execFileSync, spawnSync } = require('child_process');
 const crypto = require('crypto');
@@ -33,7 +37,9 @@ const SERVER_DIR = path.join(ROOT, 'server');
 const CLIENT_DIR = path.join(ROOT, 'client');
 const SHARED_ENV = process.env.PROJECTQ_ENV || '/data/config/projectq.env';
 const WEB_ROOT = process.env.WEB_ROOT || '/data/www/projectq';
-const LOCK_FILE = path.join(os.tmpdir(), 'projectq-deploy.lock');
+// 사이트(설치 폴더)마다 잠금 파일 따로 → 다른 사이트 배포와 겹쳐도 됨
+const LOCK_FILE = path.join(os.tmpdir(), `projectq-deploy-${crypto.createHash('sha1').update(ROOT).digest('hex').slice(0, 8)}.lock`);
+const NGINX_SNIPPET_DIR = process.env.NGINX_SNIPPET_DIR || '/etc/nginx/projectq.d';
 
 const args = process.argv.slice(2);
 const flag = (name) => args.includes(`--${name}`);
@@ -148,15 +154,23 @@ async function restartServer() {
 
   const envText = fs.readFileSync(path.join(SERVER_DIR, '.env'), 'utf8');
   const port = envText.match(/^PORT=(\d+)/m)?.[1] || '3000';
+  const appName = envText.match(/^APP_NAME=([a-z0-9][a-z0-9_-]*)/m)?.[1] || 'projectq';
   const url = `http://127.0.0.1:${port}/api/health`;
   for (let i = 0; i < 15; i++) {
     await new Promise((r) => setTimeout(r, 1000));
     try {
       const res = await fetch(url);
-      if (res.ok) return log('5/5', `헬스체크 통과 (${url})`);
+      if (res.ok) {
+        log('5/5', `헬스체크 통과 (${url})`);
+        // 채팅 웹소켓: Nginx 설정이 없으면 롱폴링으로 동작 (채팅은 됨) → 한 번만 설정하라고 안내
+        if (fs.existsSync(path.dirname(NGINX_SNIPPET_DIR)) && !fs.existsSync(path.join(NGINX_SNIPPET_DIR, 'socketio.conf'))) {
+          log('   ', `안내: 채팅 웹소켓 Nginx 설정이 없습니다 (지금은 롱폴링으로 동작). 한 번만: bash ${path.join(__dirname, 'setup-socketio.sh')}`);
+        }
+        return;
+      }
     } catch {}
   }
-  throw new Error(`헬스체크 실패: ${url} — pm2 logs projectq-api 로 확인하세요`);
+  throw new Error(`헬스체크 실패: ${url} — pm2 logs ${appName}-api 로 확인하세요`);
 }
 
 // 단독 실행(예: /data/deploy.js): repo 가 없으면 clone 한 뒤, repo 안의 deploy.js 에 이어서 맡김
