@@ -144,6 +144,10 @@ a.button.small, .row-actions a.button { padding: 6px 10px; font-size: 13px; }
 .markdown pre { background: #f3f4f6; padding: 12px; border-radius: 6px; overflow-x: auto; }
 .markdown blockquote { margin: 0 0 .8em; padding-left: 12px; border-left: 3px solid var(--color-input-border); color: #4b5563; }
 .markdown table { border-collapse: collapse; }
+.markdown mark { background: #fff3a3; color: inherit; padding: 0 2px; border-radius: 2px; }
+.markdown small { font-size: .82em; color: var(--color-muted); }
+.markdown code { font-size: .92em; background: #f3f4f6; padding: 1px 4px; border-radius: 4px; }
+.markdown pre code { padding: 0; background: none; }
 .markdown th, .markdown td { border: 1px solid var(--color-border); padding: 4px 8px; }
 .toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; }
 .toolbar-sep { width: 1px; height: 18px; background: var(--color-border); margin: 0 4px; }
@@ -151,6 +155,8 @@ a.button.small, .row-actions a.button { padding: 6px 10px; font-size: 13px; }
 .toolbar-file { position: relative; overflow: hidden; display: inline-flex; align-items: center; }
 .toolbar-file input { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
 .toolbar-file.disabled { opacity: .6; }
+.toolbar mark { background: #fff3a3; color: inherit; padding: 0 2px; }
+.toolbar.compact button, .toolbar.compact .toolbar-file { padding: 2px 8px; font-size: 12px; min-height: 0; }
 .markdown-editor { display: flex; flex-direction: column; gap: 8px; }
 .markdown-editor textarea { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 14px; resize: vertical; }
 /* 관리자 */

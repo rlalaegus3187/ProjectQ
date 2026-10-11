@@ -3,7 +3,7 @@
 // 방은 가입해야 대화 가능, [나가기] — 마지막 사람이 나가면 방 폭파. 방장·관리자는 [삭제]
 // 기록은 최신 20개만 받고, 위로 스크롤해 맨 위에 닿으면 이전 20개씩 (room:history)
 // 표정(두상): 입력칸 옆에서 골라 보내면 그 표정 이미지가 메시지 옆에 (마이페이지 → 프로필 수정 → 채팅용 두상, 대표 프로필의 것), 내 메시지는 [수정]으로 내용·표정 고치기
-// 글자 꾸미기: 굵게·기울임·크게·작게·형광펜 … (마크다운, chat/FormatBar.vue)
+// 글 꾸미기: 사이트 공통 마크다운 툴바·문법 (markdown/MarkdownToolbar.vue — 링크·이미지 넣기 포함)
 // 소켓은 이 화면에 있는 동안만 연결 (client/src/chat/socket.js — 공간 'chat'), 메시지 종류별 화면은 client/src/chat/modules/
 import { ref, computed, watch, nextTick, onMounted, onBeforeUnmount } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
@@ -12,7 +12,7 @@ import { auth, isAdmin } from '../../auth';
 import { getChatSocket, request } from '../../chat/socket';
 import ChatMessage from '../../chat/ChatMessage.vue';
 import FacePicker from '../../chat/FacePicker.vue';
-import FormatBar from '../../chat/FormatBar.vue';
+import { MarkdownToolbar } from '../../markdown';
 import ModalDialog from '../../components/ModalDialog.vue';
 
 const route = useRoute();
@@ -379,7 +379,7 @@ onBeforeUnmount(() => {
         </div>
 
         <p class="chat-typing muted">{{ typingNames.length ? `${typingNames.join(', ')} 님이 입력 중…` : '' }}</p>
-        <FormatBar v-if="room" v-model="text" :target="input" />
+        <MarkdownToolbar v-if="room" v-model="text" :target="input" compact />
         <form class="chat-input" @submit.prevent="send">
           <FacePicker v-model="faceId" :faces="faces" />
           <textarea ref="input" v-model="text" rows="2" maxlength="1000" :disabled="!room || status !== 'online'"
@@ -434,7 +434,7 @@ onBeforeUnmount(() => {
       </div>
       <div class="field">
         <label for="chat-edit-text">내용</label>
-        <FormatBar v-model="editing.text" :target="editInput" />
+        <MarkdownToolbar v-model="editing.text" :target="editInput" compact />
         <textarea id="chat-edit-text" ref="editInput" v-model="editing.text" rows="5" maxlength="1000" />
       </div>
       <p class="muted">고친 내용은 방에 있는 모두에게 바로 바뀌어 보이고, 메시지에 '(수정됨)'이 붙습니다.</p>

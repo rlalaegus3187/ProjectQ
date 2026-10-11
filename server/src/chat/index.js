@@ -22,7 +22,7 @@
 //   message:send  { roomId, text, faceId } → { }           ('/' 로 시작하면 명령어 — 모듈이 등록, faceId: 고른 표정(두상), 없으면 기본)
 //   message:edit  { messageId, text, faceId } → { }        (내 일반 메시지 고치기 — 내용·표정)
 //   message:delete { messageId }          → { }            (내 메시지 / 관리자는 모두)
-//   본문은 마크다운(굵게·기울임·크게·작게 등) 그대로 저장 → 화면이 안전하게 바꿔서 보여줌 (client/src/markdown/render.js renderChat)
+//   본문은 마크다운 그대로 저장 → 화면이 사이트 공통 마크다운으로 안전하게 바꿔서 보여줌 (client/src/markdown/ — 글·페이지와 같은 문법)
 //   typing        { roomId }                                (입력 중 표시, 응답 없음)
 // 서버 → 클라이언트
 //   message:new { ...메시지 } · message:updated { ...메시지 } (고침) · message:deleted { id, roomId } · message:notice { text } (나에게만, 저장 안 됨)

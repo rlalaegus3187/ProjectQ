@@ -1,9 +1,9 @@
 <script setup>
 // 메시지 한 줄 — 왼쪽 두상(말할 때 고른 표정, 없으면 이름 첫 글자) + 이름·시간 + 본문
-// 본문은 채팅용 마크다운(굵게·기울임·크게·작게·형광펜 …, markdown/render.js renderChat), 종류(type)별 화면이 있으면 그걸로(messageTypes.js)
+// 본문은 사이트 공통 마크다운(글·페이지와 같은 문법·모양 — 굵게·형광펜·작게·링크·이미지 …, markdown/), 종류(type)별 화면이 있으면 그걸로(messageTypes.js)
 import { computed } from 'vue';
 import { messageComponent } from './messageTypes';
-import { renderChat } from '../markdown';
+import { MarkdownView } from '../markdown';
 
 const props = defineProps({
   message: { type: Object, required: true },
@@ -13,7 +13,6 @@ const props = defineProps({
 defineEmits(['delete', 'edit']);
 
 const custom = computed(() => (props.message.deleted ? null : messageComponent(props.message.type)));
-const html = computed(() => renderChat(props.message.body));
 const time = computed(() => new Date(props.message.createdAt).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' }));
 const fullTime = computed(() => new Date(props.message.createdAt).toLocaleString('ko-KR'));
 const editedTime = computed(() => props.message.editedAt && `${new Date(props.message.editedAt).toLocaleString('ko-KR')}에 고침`);
@@ -42,8 +41,7 @@ const initial = computed(() => (props.message.author || '?').slice(0, 1));
       </div>
       <p v-if="message.deleted" class="chat-body muted">삭제된 메시지입니다.</p>
       <component :is="custom" v-else-if="custom" :message="message" />
-      <!-- eslint-disable-next-line vue/no-v-html -- renderChat 결과(DOMPurify, 허용 태그만) -->
-      <div v-else class="chat-body chat-md" v-html="html" />
+      <MarkdownView v-else class="chat-body chat-md" :source="message.body" />
     </div>
   </li>
 </template>

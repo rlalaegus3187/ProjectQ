@@ -5,8 +5,11 @@
 //   renderMarkdown('## 제목\n**굵게**')   → '<h2>제목</h2>\n<p><strong>굵게</strong></p>' (안전한 HTML)
 //   <MarkdownEditor v-model="text" />      편집 (툴바, 이미지 넣기, 미리보기)
 //   <MarkdownView :source="text" />        표시
+//   <MarkdownToolbar v-model="text" :target="textareaEl" />   툴바만 (채팅 입력칸처럼 입력칸을 따로 둘 때)
+// 문법·툴바·표시가 사이트 전체(글·페이지·프로필·채팅)에서 같음
 //
 // 사용자가 쓴 글이 HTML 이 되므로, v-html 에는 반드시 renderMarkdown 결과(또는 MarkdownView)만 쓰세요.
-export { renderMarkdown, renderChat } from './render';
+export { renderMarkdown } from './render';
 export { default as MarkdownEditor } from './MarkdownEditor.vue';
 export { default as MarkdownView } from './MarkdownView.vue';
+export { default as MarkdownToolbar } from './MarkdownToolbar.vue';
