@@ -32,7 +32,8 @@
 어느 방이든 **가입한 사람만** 들어가 대화합니다. 방 하나 = 소켓 room `room:<번호>`.
 
 ### 표정(두상) · 글자 꾸미기 · 고치기
-- **표정**: 마이페이지 → 표정에서 캐릭터별로 여러 개 등록 (`character_faces`, 코드 `<캐릭터 id>_<번호>` 자동, `server/src/faces.js`).
+- **표정**: 마이페이지 → 프로필 [수정] → 두상 칸 아래 **채팅용 두상**에 프로필마다 여러 개 등록 (`character_faces.profile_id`, 코드 `<캐릭터 id>_<번호>` 자동, `server/src/faces.js`).
+  채팅에서는 **대표 프로필**의 두상 목록에서 고름 (대표 프로필을 바꾸면 고르는 목록도 바뀜).
   입력칸 옆 [표정]에서 고르고 보내면 메시지에 `face_id` 로 저장 → 기록을 불러올 때 그 표정 이미지를 찾아 붙임 (`message.face { id, code, name, image }`).
   표정을 지우면 그 메시지들은 두상만 기본 모양(이름 첫 글자). 고른 표정은 브라우저에 기억.
 - **글자 꾸미기** (`client/src/markdown/render.js` 의 `renderChat`, 버튼은 `client/src/chat/FormatBar.vue`):

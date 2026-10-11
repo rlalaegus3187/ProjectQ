@@ -274,3 +274,17 @@ h1 .title-badge, h2 .title-badge { margin-right: 8px; font-size: 13px; }
 .cal-more { padding: 0 6px; font-size: 11px; color: var(--color-muted); }
 .cal-dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 6px; vertical-align: middle; }
 @media (max-width: 600px) { .cal-day { min-height: 64px; } .cal-event { font-size: 10px; padding: 0 3px; } }
+
+/* 프로필 입력의 채팅용 두상 목록 (components/FaceListField.vue) */
+.face-grid { list-style: none; margin: 4px 0 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 10px; }
+.face-grid > li { display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 8px; border: 1px solid var(--color-border-light); border-radius: 10px; min-width: 0; }
+.face-grid > li.open { grid-column: 1 / -1; align-items: stretch; }
+.face-grid > li.open .face-thumb { align-self: center; }
+.face-grid input { width: 100%; text-align: center; padding: 4px 6px; }
+.face-grid code { font-size: 12px; text-align: center; }
+.face-thumb { width: 80px; height: 80px; padding: 0; border-radius: 8px; overflow: hidden; background: var(--color-bg); border: 1px dashed var(--color-border); font-size: 12px; min-height: 0; }
+.face-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.face-actions { display: flex; gap: 10px; justify-content: center; font-size: 12px; }
+.face-actions .danger-text { color: var(--color-danger); }
+.face-grid > li.face-add { justify-content: center; border-style: dashed; min-height: 120px; }
+.face-edit .thumb { max-width: 120px; max-height: 120px; }

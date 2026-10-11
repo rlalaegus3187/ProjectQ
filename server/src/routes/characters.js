@@ -109,7 +109,7 @@ router.put('/characters/me', requireAuth, async (req, res) => {
 });
 
 // ---------- 프로필 (여러 개) ----------
-// 추가: { name, music?(유튜브 링크), details }
+// 추가: { name, music?(유튜브 링크), details, faces?([{ id?, name, image }] 채팅용 두상) }
 router.post('/characters/me/profiles', requireAuth, async (req, res) => {
   await assertProfileAllowed(req, 'add');
   const profile = validateProfileInput(req.body, await getDefinitions());
@@ -117,7 +117,7 @@ router.post('/characters/me/profiles', requireAuth, async (req, res) => {
   await sendMine(req, res, 201);
 });
 
-// 수정: { name, music?, details }  (대표 프로필은 name 없이)
+// 수정: { name, music?, details, faces? }  (대표 프로필은 name 없이, faces 를 보내면 그 목록으로 맞춤)
 router.put('/characters/me/profiles/:profileId', requireAuth, async (req, res) => {
   await assertProfileAllowed(req, 'edit');
   const profile = validateProfileInput(req.body, await getDefinitions(), { requireName: false });
@@ -139,22 +139,11 @@ router.delete('/characters/me/profiles/:profileId', requireAuth, async (req, res
   await sendMine(req, res);
 });
 
-// ---------- 표정 (채팅 두상, server/src/faces.js) ----------
-//   GET 목록 / POST 추가 { name, image } / PUT /:id 수정 / DELETE /:id 삭제 — code(<캐릭터 id>_<번호>)는 자동
+// ---------- 채팅용 두상 (server/src/faces.js) ----------
+// 대표 프로필의 두상 목록 (채팅에서 고르는 목록). 등록·수정·삭제는 프로필 추가/수정의 faces 로
 const faces = require('../faces');
-const sendFaces = async (req, res, status = 200) => res.status(status).json({ faces: await faces.listFaces(req.session.userId), max: faces.MAX_FACES });
-router.get('/characters/me/faces', requireAuth, (req, res) => sendFaces(req, res));
-router.post('/characters/me/faces', requireAuth, async (req, res) => {
-  await faces.createFace(req.session.userId, req.body);
-  await sendFaces(req, res, 201);
-});
-router.put('/characters/me/faces/:faceId', requireAuth, async (req, res) => {
-  await faces.updateFace(req.session.userId, req.params.faceId, req.body);
-  await sendFaces(req, res);
-});
-router.delete('/characters/me/faces/:faceId', requireAuth, async (req, res) => {
-  await faces.deleteFace(req.session.userId, req.params.faceId);
-  await sendFaces(req, res);
+router.get('/characters/me/faces', requireAuth, async (req, res) => {
+  res.json({ faces: await faces.listFaces(req.session.userId), max: faces.MAX_FACES });
 });
 
 // ---------- 신청서 상태 (신청자만) ----------

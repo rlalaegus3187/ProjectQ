@@ -188,7 +188,7 @@ function validateProfileInput(input, defs, { defaultName = null, requireName = t
   const { details } = groupDefinitions(defs);
   // 프로필 음악: 유튜브 링크 → 영상 ID (비우면 음악 없음)
   const musicVideoId = parseYouTubeId(input?.music, '프로필 음악');
-  return { name, musicVideoId, details: validateValues(input?.details, details) };
+  return { name, musicVideoId, details: validateValues(input?.details, details), faces: require('./faces').parseFaces(input?.faces) };
 }
 
 // 값 저장: keyColumn = character_id(스탯) / profile_id(프로필)
@@ -261,6 +261,7 @@ async function createProfile(conn, characterId, profile, { isMain = false } = {}
     [characterId, profile.name, profile.musicVideoId ?? null, isMain || Number(count) === 0 ? 1 : 0, Number(maxOrder) + 1],
   );
   await saveValues(conn, 'character_details', 'profile_id', result.insertId, profile.details);
+  await require('./faces').saveFaces(conn, characterId, result.insertId, profile.faces);
   return result.insertId;
 }
 
@@ -283,6 +284,7 @@ async function updateProfile(conn, characterId, profileId, profile) {
     await conn.execute('UPDATE character_profiles SET name = ? WHERE id = ?', [profile.name, row.id]);
   }
   await saveValues(conn, 'character_details', 'profile_id', row.id, profile.details);
+  await require('./faces').saveFaces(conn, characterId, row.id, profile.faces);
 }
 
 // 대표 프로필은 삭제 불가 (다른 프로필을 대표로 지정한 뒤 삭제)
@@ -325,6 +327,7 @@ async function getCharacter({ userId, characterId }, conn = pool) {
   const [detailRows] = profileRows.length
     ? await conn.query('SELECT profile_id, definition_id, value FROM character_details WHERE profile_id IN (?)', [profileRows.map((p) => p.id)])
     : [[]];
+  const faceMap = await require('./faces').facesByProfile(profileRows.map((p) => p.id), conn);   // 채팅용 두상
 
   const statValues = new Map(statRows.map((r) => [r.definition_id, r.value]));
   const { stats, details } = groupDefinitions(defs);
@@ -349,7 +352,8 @@ async function getCharacter({ userId, characterId }, conn = pool) {
     profiles: profileRows.map((p) => {
       const values = new Map(detailRows.filter((d) => d.profile_id === p.id).map((d) => [d.definition_id, d.value]));
       return {
-        id: p.id, name: p.name, isMain: !!p.is_main, musicVideoId: p.music_video_id, details: details.map(withValue(values)), updatedAt: p.updated_at,
+        id: p.id, name: p.name, isMain: !!p.is_main, musicVideoId: p.music_video_id, details: details.map(withValue(values)),
+        faces: faceMap.get(p.id) || [], updatedAt: p.updated_at,
       };
     }),
     maxProfiles: maxProfilesFor(character.role),

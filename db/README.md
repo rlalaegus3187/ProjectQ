@@ -52,7 +52,7 @@ home_banners   메인 배너  image(올린 파일 경로 또는 http(s) 이미�
 home_events    메인 캘린더 이벤트  title, description, color(#rrggbb), start_date ~ end_date (DATE)
 chat_rooms     채팅방  space(공간 = 네임스페이스, 기본 'chat'), name, description, owner_id(방장, FK 없음), is_permanent(1 = 상시 방, 0 = 회원 방 — 비면 폭파),
                is_active(0 = 닫힘), admin_only(관리자만), sort_order
-character_faces 캐릭터 표정(채팅 두상)  character_id → characters (CASCADE), seq(캐릭터 안 번호), code('<캐릭터 id>_<seq>', 고유), name, image
+character_faces 채팅용 두상(표정)  character_id → characters (CASCADE), profile_id → character_profiles (CASCADE, 프로필마다 여러 개), seq(캐릭터 안 번호), code('<캐릭터 id>_<seq>', 고유), name, image
 chat_room_members 방 가입자  (room_id, user_id) — 방·계정 삭제 시 CASCADE, joined_at(먼저 들어온 순 = 다음 방장)
 chat_messages  채팅 메시지  room_id → chat_rooms (CASCADE), user_id(FK 없음 — 탈퇴해도 기록 남음), author_name, author_role,
                type(text / system / 모듈이 만든 종류), body(마크다운 글자 그대로), data(JSON), face_id → character_faces (표정, 지우면 NULL),

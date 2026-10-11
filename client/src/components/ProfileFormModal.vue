@@ -56,7 +56,7 @@ function close() {
     </template>
     <form id="profile-form" class="form" @submit.prevent="save">
       <p v-if="isSubmittedApplication(character)" class="applicant-note">{{ RESUBMIT_NOTICE }}</p>
-      <ProfileFields v-model:name="form.name" v-model:details="form.details" v-model:music="form.music"
+      <ProfileFields v-model:name="form.name" v-model:details="form.details" v-model:music="form.music" v-model:faces="form.faces"
         :definitions="definitions" :legend="isMain ? '대표 프로필 (캐릭터 이름으로 표시)' : '프로필'" :show-name="!isMain" />
       <p v-if="error" class="error">{{ error }}</p>
     </form>

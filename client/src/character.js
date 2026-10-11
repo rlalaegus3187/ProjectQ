@@ -48,5 +48,6 @@ export function toProfileForm(definitions, profile = null) {
     name: profile?.name ?? '',
     music: youtubeUrl(profile?.musicVideoId),   // 프로필 음악 (유튜브 링크)
     details: fill(definitions.details, valuesOf(profile?.details)),
+    faces: (profile?.faces || []).map((f) => ({ id: f.id, code: f.code, name: f.name, image: f.image })),   // 채팅용 두상
   };
 }

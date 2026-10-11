@@ -2,22 +2,26 @@
 // 프로필 입력칸 (프로필 이름 + 프로필 양식 항목) — 회원가입의 대표 프로필, 마이페이지 프로필 추가/수정에서 사용
 // 대표 프로필은 이름을 쓰지 않음 (show-name=false, 화면에는 캐릭터 이름으로 표시)
 //   <ProfileFields v-model:name="form.name" v-model:details="form.details" :definitions="defs" />
+//   v-model:faces 를 주면 '채팅용 두상' 목록을 첫 이미지 항목(두상) 바로 아래에 (없으면 맨 아래에) 표시
 import AttributeInput from './AttributeInput.vue';
+import FaceListField from './FaceListField.vue';
+import { computed } from 'vue';
+import { parseYouTubeId } from '../music';
 
-defineProps({
+const props = defineProps({
   definitions: { type: Object, required: true },
   legend: { type: String, default: '프로필' },
   namePlaceholder: { type: String, default: '예: 과거 모습, 변장' },
   nameRequired: { type: Boolean, default: true },
   showName: { type: Boolean, default: true },   // 대표 프로필은 이름 없음 (캐릭터 이름으로 표시)
 });
-import { computed } from 'vue';
-import { parseYouTubeId } from '../music';
 
 const name = defineModel('name', { type: String, default: '' });
 const music = defineModel('music', { type: String, default: '' });
 const musicInvalid = computed(() => !!music.value && !parseYouTubeId(music.value));
 const details = defineModel('details', { type: Object, required: true });
+const faces = defineModel('faces', { type: Array, default: null });
+const faceAfter = computed(() => props.definitions.details.find((d) => d.valueType === 'image')?.code ?? null);   // 두상 칸
 </script>
 
 <template>
@@ -34,6 +38,10 @@ const details = defineModel('details', { type: Object, required: true });
       <span v-if="musicInvalid" class="error">유튜브 영상 링크가 아닙니다.</span>
     </label>
     <p v-if="!definitions.details.length" class="muted">등록된 프로필 양식이 없습니다.</p>
-    <AttributeInput v-for="def in definitions.details" :key="def.code" v-model="details[def.code]" :def="def" />
+    <template v-for="def in definitions.details" :key="def.code">
+      <AttributeInput v-model="details[def.code]" :def="def" />
+      <FaceListField v-if="faces && def.code === faceAfter" v-model="faces" />
+    </template>
+    <FaceListField v-if="faces && !faceAfter" v-model="faces" />
   </fieldset>
 </template>
