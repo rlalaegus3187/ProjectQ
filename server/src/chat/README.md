@@ -40,6 +40,13 @@
   제목 · 굵게 · 기울임 · 취소선 · `==형광펜==` · `-# 작게` · 목록 · 인용 · 코드 · **링크** · **이미지 넣기(파일)** · **이미지 링크**. 채팅에서는 크기만 작게(이미지는 최대 360×280). 서버는 글자 그대로 저장.
 - **고치기**: 내 일반 메시지만 [수정] → 내용·표정 변경, 모두에게 바로 반영(`message:updated`), '(수정됨)' 표시 (`edited_at`).
 
+### 말하는 중 표시 ('a, b, c 님이 말하는 중입니다…')
+DB·접속자 조회 없이 소켓 메시지만 주고받고, 보내는 횟수를 최소로:
+- **보내는 쪽** (ChatPage.vue): 치기 시작하면 `typing` 한 번, 계속 치는 동안 **3초마다 한 번만** (키마다 안 보냄). 다 지우거나 입력칸을 떠나면 `typing:stop` 한 번 (그 전에 typing 을 보냈을 때만). **보낼 때는 아무것도 안 보냄** — 받는 쪽이 `message:new` 로 지움.
+- **서버** (index.js): 같은 방 다른 사람에게 그대로 전달만 (`socket.data` 메모리만 확인). 한 창에서 1.5초 안에 또 오면 버림. 방을 나가거나 연결이 끊기면 대신 `typing:stop`.
+- **받는 쪽**: 받은 뒤 6초 동안 표시(또 오면 연장). `typing:stop` · 그 사람 메시지 · 6초 지남 → 지움. 정리 타이머는 표시할 사람이 있을 때만, 가장 먼저 끝나는 시각에 한 번 (계속 도는 타이머 없음).
+- 25글자를 5초 동안 쳐도 `typing` 패킷은 2번.
+
 ## 공간 (roomspace)
 `server/src/chat/spaces.js` 에 한 줄 추가하면 새 네임스페이스가 생깁니다. 방(`chat_rooms.space`)·명령어·모듈이 공간마다 따로입니다.
 ```js
@@ -116,7 +123,7 @@ await getChat()?.sendSystem(1, '이벤트가 시작되었습니다!');   // 1 = 
 | `room:enter { roomId }` → `{ room, messages, hasMore, users, members, commands }` | `typing { roomId, userId, name }` |
 | `room:history { roomId, beforeId }` → `{ messages, hasMore }` | `rooms:changed` (목록 다시 불러오기) |
 | `message:send { roomId, text, faceId }` · `message:edit { messageId, text, faceId }` | `room:closed { roomId, reason }` (방이 사라짐·내가 나감) |
-| `message:delete { messageId }` · `typing { roomId }` | `message:updated { ...메시지 }` (누가 고침) |
+| `message:delete { messageId }` · `typing { roomId }` · `typing:stop { roomId }` | `message:updated { ...메시지 }` (누가 고침) · `typing:stop { roomId, userId }` |
 
 ## 누가 쓸 수 있나
 - 로그인한 **멤버·관리자** (`index.js` 의 `CHAT_ROLES` — 신청자도 쓰게 하려면 `'applicant'` 추가)
