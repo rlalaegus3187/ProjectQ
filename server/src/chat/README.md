@@ -8,7 +8,7 @@
 |---|---|
 | `server/src/chat/index.js` | 코어 — 로그인 확인, 방 만들기·가입·나가기·삭제, 입장·기록·메시지·삭제, 접속자, 입력 중 표시, 도배 방지, 모듈 불러오기 |
 | `server/src/chat/spaces.js` | **공간(roomspace) 목록** — 공간마다 네임스페이스 `/<이름>` 하나 (지금은 `chat`, 나중에 조사 전용 등) |
-| `server/src/chat/store.js` | DB 처리 (`chat_rooms`, `chat_room_members`, `chat_messages`) |
+| `server/src/chat/store.js` | DB 처리 (`chat_rooms`, `chat_messages`, 가입 = `characters.chat_room_id`) |
 | `server/src/chat/modules/*.js` | **서버 모듈** — 파일을 넣으면 자동으로 붙음 (`_` 로 시작하면 건너뜀) |
 | `server/src/routes/chat.js` | REST: 방 목록, 관리자 방 관리 |
 | `client/src/chat/socket.js` | 소켓 연결 · `request(이벤트, 값)` |
@@ -17,7 +17,7 @@
 | `client/src/pages/chat/ChatPage.vue` | 채팅 화면 `/chat` |
 | `client/src/pages/admin/ChatAdminPage.vue` | 관리 → 채팅 관리 (켜기/끄기, 방 관리, 연결 정보) |
 
-기본 기능: 방 목록(내 방 · 다른 방) · **방 만들기**(번호 자동, 만든 사람이 방장·자동 가입, 회원당 5개) · **가입 / 나가기** ·
+기본 기능: 방 목록(내 방 · 다른 방) · **방 만들기**(번호 자동, 만든 사람이 방장·자동 가입) · **가입 / 나가기** (**한 번에 한 방만** — 캐릭터의 `chat_room_id`) ·
 마지막 사람이 나가면 **방 폭파**(기록·가입 함께 삭제) · 방장이 나가면 가장 먼저 들어온 사람이 방장 · 삭제(방장·관리자) ·
 가입한 방만 입장 — **최신 20개만** 받고 위로 스크롤해 맨 위에 닿으면 이전 20개씩 · 보내기(Enter / Shift+Enter 줄바꿈) ·
 **표정(두상)** 골라 말하기 · **글자 꾸미기**(마크다운) · 내 메시지 **고치기**(내용·표정) · 내 메시지 삭제(관리자는 모두) · 가입자 목록(지금 보고 있는 사람 표시) · 입력 중 표시 · 도배 방지(5초에 5개) · `/도움말` ·
@@ -29,7 +29,8 @@
 | 상시 방 (`is_permanent=1`) | 관리 → 채팅 관리 | 남음 |
 | 회원 방 | 채팅 화면 [+ 방 만들기] | 폭파 (계정 삭제로 비어도) |
 
-어느 방이든 **가입한 사람만** 들어가 대화합니다. 방 하나 = 소켓 room `room:<번호>`.
+어느 방이든 **가입한 사람만** 들어가 대화합니다. 가입은 **한 번에 한 방**: `characters.chat_room_id`(없으면 NULL)에 저장해 중복 가입을 DB 수준에서 막고, 다른 방에 가입돼 있으면 가입·방 만들기가 409 (먼저 나가기).
+나중에 조사 공간처럼 다른 공간을 만들면 그 공간용 칸(예: `investigation_room_id`)을 따로 둡니다. 방 하나 = 소켓 room `room:<번호>`.
 
 ### 표정(두상) · 글자 꾸미기 · 고치기
 - **표정**: 마이페이지 → 프로필 [수정] → 두상 칸 아래 **채팅용 두상**에 프로필마다 여러 개 등록 (`character_faces.profile_id`, 코드 `<캐릭터 id>_<번호>` 자동, `server/src/faces.js`).

@@ -1,6 +1,6 @@
 // 채팅방 REST (메시지 주고받기는 Socket.IO — server/src/chat/)
 // 회원이 방 만들기·가입·나가기·삭제는 소켓 이벤트 (room:create / room:join / room:leave / room:delete)
-//   회원:   GET /api/chat/rooms                    채팅 공간의 방(가입 여부·인원·방장) + 채팅 사용 여부
+//   회원:   GET /api/chat/rooms                    채팅 공간의 방(가입 여부·인원·방장) + 지금 가입한 방(currentRoomId) + 채팅 사용 여부
 //   관리자: GET    /api/admin/chat                  방 전체(닫힌 방·회원 방 포함, 메시지 수) + 채팅 정보(포트·주소·모듈)
 //           POST   /api/admin/chat/rooms            방 추가 { name, description, isActive, adminOnly, isPermanent, sortOrder } (기본 상시 방)
 //           PUT    /api/admin/chat/rooms/:id        수정 (상시 방을 끄면 회원 방 — 아무도 없으면 바로 폭파)
@@ -24,6 +24,7 @@ memberRouter.get('/chat/rooms', requireAuth, async (req, res) => {
     enabled: await store.isChatEnabled(),
     canChat,
     rooms: canChat ? await store.listRooms(DEFAULT_SPACE, { user: { id: user.id, isAdmin: user.role === 'admin' } }) : [],
+    currentRoomId: canChat ? await store.currentRoomId(user.id) : null,   // 지금 가입한 방 (한 번에 한 방, 없으면 null)
   });
 });
 

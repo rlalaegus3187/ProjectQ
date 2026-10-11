@@ -1,5 +1,6 @@
 <script setup>
-// 채팅 (/chat?room=<번호>) — 왼쪽 방 목록(내 방 · 다른 방 · 방 만들기) · 가운데 대화 · 오른쪽 가입자(접속 중 표시)
+// 채팅 (/chat?room=<번호>) — 왼쪽 방 목록(가입한 방 · 다른 방 · 방 만들기) · 가운데 대화 · 오른쪽 가입자(접속 중 표시)
+// 가입은 한 번에 한 방만 (캐릭터의 chat_room_id) — 가입 중이면 다른 방 [가입]·[방 만들기]가 막히고, 먼저 [나가기]
 // 방은 가입해야 대화 가능, [나가기] — 마지막 사람이 나가면 방 폭파. 방장·관리자는 [삭제]
 // 기록은 최신 20개만 받고, 위로 스크롤해 맨 위에 닿으면 이전 20개씩 (room:history)
 // 표정(두상): 입력칸 옆에서 골라 보내면 그 표정 이미지가 메시지 옆에 (마이페이지 → 프로필 수정 → 채팅용 두상, 대표 프로필의 것), 내 메시지는 [수정]으로 내용·표정 고치기
@@ -47,6 +48,8 @@ const roomId = computed(() => (route.query.room ? Number(route.query.room) : nul
 const selected = computed(() => rooms.value.find((r) => r.id === roomId.value) || null);   // 고른 방 (가입 안 했을 수도)
 const myRooms = computed(() => rooms.value.filter((r) => r.joined));
 const otherRooms = computed(() => rooms.value.filter((r) => !r.joined));
+const joinedRoom = computed(() => myRooms.value[0] || null);   // 한 번에 한 방만
+const busyHint = computed(() => (joinedRoom.value ? `한 번에 한 방만 가입할 수 있습니다. 먼저 '${joinedRoom.value.name}' 방에서 나가주세요.` : ''));
 const onlineIds = computed(() => new Set(users.value.map((u) => u.id)));
 // 'a, b, c 님이 말하는 중입니다…' (4명부터는 'a, b, c 외 2명')
 const typingText = computed(() => {
@@ -371,15 +374,16 @@ onBeforeUnmount(() => {
 
     <div v-if="!error || rooms.length" class="chat-layout">
       <nav class="chat-rooms" aria-label="채팅방">
-        <button type="button" class="chat-new" @click="openCreate">+ 방 만들기</button>
-        <h3>내 방 <span class="muted">{{ myRooms.length }}</span></h3>
+        <button type="button" class="chat-new" :disabled="!!joinedRoom" :title="busyHint" @click="openCreate">+ 방 만들기</button>
+        <h3>가입한 방</h3>
         <p v-if="!myRooms.length" class="muted chat-rooms-empty">가입한 방이 없습니다.</p>
         <button v-for="r in myRooms" :key="r.id" type="button" class="chat-room-btn" :class="{ active: r.id === roomId }" @click="pick(r.id)">
           <span class="chat-room-name"># {{ r.name }}<span v-if="r.adminOnly"> 🔒</span></span>
           <span class="muted chat-room-count">{{ r.memberCount }}명</span>
         </button>
         <h3>다른 방 <span class="muted">{{ otherRooms.length }}</span></h3>
-        <p v-if="!otherRooms.length" class="muted chat-rooms-empty">더 가입할 방이 없습니다.</p>
+        <p v-if="joinedRoom" class="muted chat-rooms-empty">한 번에 한 방만 가입할 수 있어요.</p>
+        <p v-if="!otherRooms.length" class="muted chat-rooms-empty">다른 방이 없습니다.</p>
         <button v-for="r in otherRooms" :key="r.id" type="button" class="chat-room-btn" :class="{ active: r.id === roomId }" @click="pick(r.id)">
           <span class="chat-room-name"># {{ r.name }}<span v-if="r.adminOnly"> 🔒</span></span>
           <span class="muted chat-room-count">{{ r.memberCount }}명</span>
@@ -396,7 +400,7 @@ onBeforeUnmount(() => {
             <span v-if="selected.description" class="muted chat-room-desc">{{ selected.description }}</span>
           </div>
           <div class="chat-room-actions">
-            <button v-if="!selected.joined" type="button" :disabled="busy" @click="join(selected)">가입</button>
+            <button v-if="!selected.joined" type="button" :disabled="busy || !!joinedRoom" :title="busyHint" @click="join(selected)">가입</button>
             <button v-else type="button" class="secondary" :disabled="busy" @click="leave(selected)">나가기</button>
             <button v-if="canDeleteRoom(selected)" type="button" class="danger" :disabled="busy" @click="removeRoom(selected)">삭제</button>
           </div>
@@ -412,7 +416,7 @@ onBeforeUnmount(() => {
           </ul>
         </div>
         <div v-else class="chat-messages chat-placeholder">
-          <p v-if="selected && !selected.joined" class="muted">가입하면 이 방의 대화를 보고 참여할 수 있습니다.</p>
+          <p v-if="selected && !selected.joined" class="muted">{{ joinedRoom ? busyHint : '가입하면 이 방의 대화를 보고 참여할 수 있습니다.' }}</p>
           <p v-else-if="!selected" class="muted">왼쪽에서 방을 고르거나 새 방을 만들어보세요.</p>
         </div>
 

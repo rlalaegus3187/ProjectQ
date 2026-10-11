@@ -1,8 +1,10 @@
-// 채팅 DB 처리 (chat_rooms / chat_room_members / chat_messages) — 코어(space.js)와 모듈, REST(routes/chat.js)가 같이 씀
+// 채팅 DB 처리 (chat_rooms / chat_messages + characters.chat_room_id) — 코어(index.js)와 모듈, REST(routes/chat.js)가 같이 씀
 //
 // 방은 공간(space = Socket.IO 네임스페이스 이름, 예: 'chat')에 속함
 //   회원 방: 회원이 만들고 가입/나가기, 마지막 사람이 나가면 폭파(삭제)
 //   상시 방(is_permanent): 관리 → 채팅 관리에서 만든 방, 비어도 남음
+// 가입: 한 번에 한 방만 — 캐릭터의 chat_room_id(지금 가입한 방, 없으면 NULL)·chat_joined_at 에 저장 (칸이 하나라 중복 가입 불가)
+//   다른 방에 가입돼 있으면 먼저 나가야 가입·방 만들기 가능. 방이 지워지면 chat_room_id 는 DB 가 자동으로 NULL
 const pool = require('../db');
 const { HttpError } = require('../errors');
 const { getSetting } = require('../settings');
@@ -10,7 +12,6 @@ const { withTransaction } = require('../characters');
 
 const MAX_BODY = 1000;          // 메시지 최대 글자 수
 const HISTORY_LIMIT = 20;       // 한 번에 불러오는 기록 수 (처음 최신 20개, 위로 스크롤하면 20개씩 더)
-const MAX_OWNED_ROOMS = 5;      // 회원 한 명이 방장으로 가질 수 있는 회원 방 수 (관리자는 제한 없음)
 
 // 채팅 사용 여부 (관리 → 채팅 관리, settings.chat_enabled = '0' 이면 끔 — 관리자는 꺼져 있어도 들어갈 수 있음)
 async function isChatEnabled(conn = pool) {
@@ -19,7 +20,7 @@ async function isChatEnabled(conn = pool) {
 
 const ROOM_COLUMNS = `r.id, r.space, r.name, r.description, r.owner_id, r.is_permanent, r.is_active, r.admin_only, r.sort_order, r.created_at,
   COALESCE(oc.name, ou.username) AS owner_name,
-  (SELECT COUNT(*) FROM chat_room_members m WHERE m.room_id = r.id) AS member_count`;
+  (SELECT COUNT(*) FROM characters m WHERE m.chat_room_id = r.id) AS member_count`;
 const ROOM_FROM = `chat_rooms r
   LEFT JOIN users ou ON ou.id = r.owner_id
   LEFT JOIN characters oc ON oc.user_id = r.owner_id`;
@@ -51,7 +52,7 @@ async function listRooms(space, { user = null, all = false } = {}, conn = pool) 
   }
   const [rows] = await conn.query(
     `SELECT ${ROOM_COLUMNS}
-            ${user ? ', EXISTS (SELECT 1 FROM chat_room_members m WHERE m.room_id = r.id AND m.user_id = ?) AS joined' : ''}
+            ${user ? ', EXISTS (SELECT 1 FROM characters m WHERE m.chat_room_id = r.id AND m.user_id = ?) AS joined' : ''}
             ${all ? ', (SELECT COUNT(*) FROM chat_messages cm WHERE cm.room_id = r.id AND cm.is_deleted = 0) AS message_count' : ''}
        FROM ${ROOM_FROM}
       WHERE ${where.join(' AND ')}
@@ -64,7 +65,7 @@ async function listRooms(space, { user = null, all = false } = {}, conn = pool) 
 // 방 하나 (볼 수 있는지 확인) — 없거나 닫혔거나 관리자 전용이면 오류
 async function getRoomFor(space, user, roomId, conn = pool) {
   const [rows] = await conn.query(
-    `SELECT ${ROOM_COLUMNS}, EXISTS (SELECT 1 FROM chat_room_members m WHERE m.room_id = r.id AND m.user_id = ?) AS joined
+    `SELECT ${ROOM_COLUMNS}, EXISTS (SELECT 1 FROM characters m WHERE m.chat_room_id = r.id AND m.user_id = ?) AS joined
        FROM ${ROOM_FROM} WHERE r.id = ? AND r.space = ?`,
     [user.id, Number(roomId) || 0, space],
   );
@@ -77,12 +78,12 @@ async function getRoomFor(space, user, roomId, conn = pool) {
 // 가입자 [{ id, name, role, joinedAt }] (먼저 들어온 순)
 async function listMembers(roomId, conn = pool) {
   const [rows] = await conn.query(
-    `SELECT u.id, u.role, COALESCE(c.name, u.username) AS name, m.joined_at
-       FROM chat_room_members m JOIN users u ON u.id = m.user_id LEFT JOIN characters c ON c.user_id = u.id
-      WHERE m.room_id = ? ORDER BY m.joined_at, u.id`,
+    `SELECT u.id, u.role, c.name, c.chat_joined_at
+       FROM characters c JOIN users u ON u.id = c.user_id
+      WHERE c.chat_room_id = ? ORDER BY c.chat_joined_at, c.id`,
     [roomId],
   );
-  return rows.map((r) => ({ id: r.id, name: r.name, role: r.role, joinedAt: r.joined_at }));
+  return rows.map((r) => ({ id: r.id, name: r.name, role: r.role, joinedAt: r.chat_joined_at }));
 }
 
 function parseRoomInput(body) {
@@ -93,44 +94,65 @@ function parseRoomInput(body) {
   return { name, description: description || null };
 }
 
-// 회원이 방 만들기 → 방 번호 (만든 사람이 방장, 자동 가입)
+// 내 캐릭터의 가입 상태 (잠금) → { id, roomId, roomName } — 캐릭터가 없으면 오류 (채팅방은 캐릭터로 가입)
+async function lockMembership(conn, user) {
+  const [[c]] = await conn.execute(
+    `SELECT c.id, c.chat_room_id, r.name AS room_name
+       FROM characters c LEFT JOIN chat_rooms r ON r.id = c.chat_room_id
+      WHERE c.user_id = ? FOR UPDATE`,
+    [user.id],
+  );
+  if (!c) throw new HttpError(400, '캐릭터를 먼저 만들어주세요. (마이페이지) — 채팅방은 캐릭터로 가입합니다.');
+  return { id: c.id, roomId: c.chat_room_id, roomName: c.room_name };
+}
+const alreadyIn = (m) => new HttpError(409, `이미 '${m.roomName}' 방에 가입되어 있습니다. 한 번에 한 방만 가입할 수 있어요 — 먼저 그 방에서 나가주세요.`);
+
+// 지금 가입한 방 번호 (없으면 null)
+async function currentRoomId(userId, conn = pool) {
+  const [[c]] = await conn.execute('SELECT chat_room_id FROM characters WHERE user_id = ?', [userId]);
+  return c?.chat_room_id ?? null;
+}
+
+// 회원이 방 만들기 → 방 번호 (만든 사람이 방장, 자동 가입 — 다른 방에 가입돼 있으면 안 됨)
 async function createRoom(space, user, body) {
   const d = parseRoomInput(body);
   return withTransaction(async (conn) => {
-    if (!user.isAdmin) {
-      const [[{ owned }]] = await conn.query(
-        'SELECT COUNT(*) AS owned FROM chat_rooms WHERE space = ? AND owner_id = ? AND is_permanent = 0', [space, user.id],
-      );
-      if (Number(owned) >= MAX_OWNED_ROOMS) throw new HttpError(400, `방장인 방은 ${MAX_OWNED_ROOMS}개까지 만들 수 있습니다. 쓰지 않는 방을 지운 뒤 만들어주세요.`);
-    }
+    const m = await lockMembership(conn, user);
+    if (m.roomId) throw alreadyIn(m);
     const [r] = await conn.execute(
       'INSERT INTO chat_rooms (space, name, description, owner_id, is_permanent, sort_order) VALUES (?, ?, ?, ?, 0, 0)',
       [space, d.name, d.description, user.id],
     );
-    await conn.execute('INSERT INTO chat_room_members (room_id, user_id) VALUES (?, ?)', [r.insertId, user.id]);
+    await conn.execute('UPDATE characters SET chat_room_id = ?, chat_joined_at = NOW(3) WHERE id = ?', [r.insertId, m.id]);
     return r.insertId;
   });
 }
 
-// 가입 (이미 가입했으면 그대로) → 새로 가입했으면 true
-async function joinRoom(room, user, conn = pool) {
-  const [r] = await conn.execute('INSERT IGNORE INTO chat_room_members (room_id, user_id) VALUES (?, ?)', [room.id, user.id]);
-  return r.affectedRows > 0;
+// 가입 → 새로 가입했으면 true (이미 이 방이면 false, 다른 방에 가입돼 있으면 오류)
+async function joinRoom(room, user) {
+  return withTransaction(async (conn) => {
+    const m = await lockMembership(conn, user);
+    if (m.roomId === room.id) return false;
+    if (m.roomId) throw alreadyIn(m);
+    const [[alive]] = await conn.execute('SELECT id FROM chat_rooms WHERE id = ? FOR UPDATE', [room.id]);   // 그 사이 폭파됐는지
+    if (!alive) throw new HttpError(404, '없는 채팅방입니다. (폭파됐을 수 있음)');
+    await conn.execute('UPDATE characters SET chat_room_id = ?, chat_joined_at = NOW(3) WHERE id = ?', [room.id, m.id]);
+    return true;
+  });
 }
 
-const isMember = async (roomId, userId, conn = pool) => {
-  const [rows] = await conn.execute('SELECT 1 FROM chat_room_members WHERE room_id = ? AND user_id = ?', [roomId, userId]);
-  return !!rows[0];
-};
+const isMember = async (roomId, userId, conn = pool) => (await currentRoomId(userId, conn)) === roomId;
 
-// 나가기 → { destroyed } — 회원 방에서 마지막 사람이 나가면 방 폭파(메시지·가입 함께 삭제), 방장이 나가면 가장 먼저 들어온 사람에게
+// 나가기 → { destroyed } — 회원 방에서 마지막 사람이 나가면 방 폭파(메시지 함께 삭제), 방장이 나가면 가장 먼저 들어온 사람에게
 async function leaveRoom(room, user) {
   return withTransaction(async (conn) => {
     const [lock] = await conn.execute('SELECT id, owner_id, is_permanent FROM chat_rooms WHERE id = ? FOR UPDATE', [room.id]);
     if (!lock[0]) return { destroyed: true };
-    const [r] = await conn.execute('DELETE FROM chat_room_members WHERE room_id = ? AND user_id = ?', [room.id, user.id]);
+    const [r] = await conn.execute(
+      'UPDATE characters SET chat_room_id = NULL, chat_joined_at = NULL WHERE user_id = ? AND chat_room_id = ?', [user.id, room.id],
+    );
     if (!r.affectedRows) throw new HttpError(400, '가입한 방이 아닙니다.');
-    const [rest] = await conn.execute('SELECT user_id FROM chat_room_members WHERE room_id = ? ORDER BY joined_at, user_id LIMIT 1', [room.id]);
+    const [rest] = await conn.execute('SELECT user_id FROM characters WHERE chat_room_id = ? ORDER BY chat_joined_at, id LIMIT 1', [room.id]);
     if (!rest[0] && !lock[0].is_permanent) {
       await conn.execute('DELETE FROM chat_rooms WHERE id = ?', [room.id]);   // 폭파
       return { destroyed: true };
@@ -154,7 +176,7 @@ async function deleteRoom(room, user, conn = pool) {
 async function deleteEmptyRooms(conn = pool) {
   const [r] = await conn.query(
     `DELETE FROM chat_rooms WHERE is_permanent = 0
-       AND NOT EXISTS (SELECT 1 FROM chat_room_members m WHERE m.room_id = chat_rooms.id)`,
+       AND NOT EXISTS (SELECT 1 FROM characters c WHERE c.chat_room_id = chat_rooms.id)`,
   );
   return r.affectedRows;
 }
@@ -163,7 +185,7 @@ async function deleteEmptyRooms(conn = pool) {
 async function cleanupAfterUserDelete(conn = pool) {
   const removed = await deleteEmptyRooms(conn);
   await conn.query(
-    `UPDATE chat_rooms r SET r.owner_id = (SELECT m.user_id FROM chat_room_members m WHERE m.room_id = r.id ORDER BY m.joined_at, m.user_id LIMIT 1)
+    `UPDATE chat_rooms r SET r.owner_id = (SELECT c.user_id FROM characters c WHERE c.chat_room_id = r.id ORDER BY c.chat_joined_at, c.id LIMIT 1)
       WHERE r.owner_id IS NOT NULL AND NOT EXISTS (SELECT 1 FROM users u WHERE u.id = r.owner_id)`,
   );
   return removed;
@@ -249,7 +271,7 @@ async function deleteMessage(user, messageId, conn = pool) {
 }
 
 module.exports = {
-  MAX_BODY, HISTORY_LIMIT, MAX_OWNED_ROOMS, isChatEnabled,
-  listRooms, getRoomFor, listMembers, parseRoomInput, createRoom, joinRoom, isMember, leaveRoom, deleteRoom, deleteEmptyRooms, cleanupAfterUserDelete,
+  MAX_BODY, HISTORY_LIMIT, isChatEnabled,
+  listRooms, getRoomFor, listMembers, parseRoomInput, currentRoomId, createRoom, joinRoom, isMember, leaveRoom, deleteRoom, deleteEmptyRooms, cleanupAfterUserDelete,
   getHistory, getMessage, saveMessage, editMessage, messageRoomId, deleteMessage, toRoom,
 };
