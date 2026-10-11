@@ -218,8 +218,9 @@ onMounted(async () => {
       </template>
     </dl>
     <p class="muted">
-      바꾸려면 서버의 설정 파일(<code>/data/config/projectq.env</code>)에서 <code>PORT</code>(API) · <code>CHAT_PORT</code>(채팅, 없으면 API 와 같이)를 고친 뒤
+      바꾸려면 서버의 설정 파일(<code>/data/config/projectq.env</code>)에서 <code>PORT</code>(API) · <code>CHAT_PORT</code>(채팅)를 고친 뒤
       <code>node /data/deploy.js</code> — 프로그램(PM2)과 Nginx 연결이 함께 바뀝니다.
+      <code>CHAT_PORT</code> 줄은 처음엔 없습니다 — 없으면 채팅이 API 와 같은 포트를 같이 쓰고, 채팅을 따로 띄우고 싶을 때만 <code>CHAT_PORT=3100</code> 처럼 한 줄 추가하세요.
       서버 안에서만 쓰는 포트라 AWS 인바운드 규칙에는 추가하지 않습니다. 사이트를 여러 개 돌리면 사이트마다 다른 번호로.
     </p>
   </section>
