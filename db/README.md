@@ -69,7 +69,6 @@ settings.profile_add_open           프로필 추가 허용 ('0' = 막음, 기�
 settings.profile_edit_open          프로필 수정·삭제·대표 지정 허용 ('0' = 막음, 기본 허용)
 settings.costs                      코스트 1~5 이름·사용 JSON [{ name, enabled }] × 5 (없으면 1=HP, 2=MP 사용 / 3~5 미사용)
 settings.home_modules                메인페이지 모듈 순서·표시 JSON [{ key: 'banner'|'welcome'|'calendar'|'menu', visible }] (없으면 환영 문구·메뉴만)
-settings.home_calendar_months        메인 캘린더에 보여줄 달 JSON ['prev','current','next'] (기본 이번달·다음달)
 settings.chat_enabled               채팅 사용 ('0' = 끔 — 관리자만, 메뉴에서도 빠짐 / 기본 사용)
 settings.titles_enabled             칭호 사용 ('0' = 미사용 — 회원 화면에서 칭호 숨김, 칭호·부여 기록은 남음 / 기본 사용)
 settings.stats_enabled              캐릭터 스탯 사용 ('0' = 미사용 — 입력·표시 숨김, 저장된 값은 남음 / 기본 사용)

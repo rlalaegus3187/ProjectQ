@@ -1,5 +1,5 @@
 <script setup>
-// 관리자: 메인페이지 관리 → 캘린더 관리 — 주요 이벤트(이름 · 기간 · 설명 · 색) + 메인에 보여줄 달(오늘 기준)
+// 관리자: 메인페이지 관리 → 캘린더 관리 — 주요 이벤트(이름 · 기간 · 설명 · 색). 메인 달력은 ‹ › 로 제한 없이 넘겨 봄
 // 메인에 캘린더를 보일지는 '메인페이지 설정'
 import { ref, computed, onMounted } from 'vue';
 import { api } from '../../api';
@@ -7,18 +7,11 @@ import ModalDialog from '../../components/ModalDialog.vue';
 import CalendarMonth from '../../home/CalendarMonth.vue';
 
 const COLORS = ['#2563eb', '#dc2626', '#16a34a', '#d97706', '#7c3aed', '#db2777', '#0891b2', '#4b5563'];
-const MONTH_OPTIONS = [
-  { key: 'prev', label: '저번달' },
-  { key: 'current', label: '이번달' },
-  { key: 'next', label: '다음달' },
-];
 const pad = (n) => String(n).padStart(2, '0');
 const now = new Date();
 const today = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
 
 const events = ref([]);
-const months = ref([]);
-const savedMonths = ref('');
 const filter = ref('upcoming');   // upcoming(진행 중·다가오는) / past(지난) / all
 const error = ref('');
 const message = ref('');
@@ -32,10 +25,7 @@ function flash(text) {
 }
 function apply(res) {
   events.value = res.events;
-  months.value = [...res.months];
-  savedMonths.value = JSON.stringify(res.months);
 }
-const monthsDirty = computed(() => JSON.stringify(MONTH_OPTIONS.map((o) => o.key).filter((k) => months.value.includes(k))) !== savedMonths.value);
 
 const shown = computed(() => {
   const list = events.value;
@@ -44,16 +34,6 @@ const shown = computed(() => {
   return list;
 });
 const period = (e) => (e.endDate === e.startDate ? e.startDate : `${e.startDate} ~ ${e.endDate}`);
-
-async function saveMonths() {
-  error.value = '';
-  try {
-    apply(await api('/admin/home/calendar', { method: 'PUT', body: { months: months.value } }));
-    flash('보여줄 달을 저장했습니다.');
-  } catch (e) {
-    error.value = e.message;
-  }
-}
 
 function newEvent(date = today) {
   editing.value = { title: '', startDate: date, endDate: date, color: COLORS[0], description: '', error: '' };
@@ -98,16 +78,12 @@ onMounted(() => api('/admin/home/calendar').then(apply).catch((e) => { error.val
       <h1>캘린더 관리</h1>
       <button type="button" @click="newEvent()">새 이벤트</button>
     </div>
-    <p class="muted">메인 캘린더에 보일 주요 이벤트를 관리합니다. 메인에 캘린더를 보일지는 <RouterLink to="/admin/home/modules">메인페이지 설정</RouterLink>에서.</p>
+    <p class="muted">
+      메인 캘린더에 보일 주요 이벤트를 관리합니다. 메인 달력은 ‹ › 로 지난 달·앞으로의 달을 제한 없이 넘겨 볼 수 있고, 가운데 ■ 는 오늘이 있는 달로 돌아갑니다.
+      메인에 캘린더를 보일지는 <RouterLink to="/admin/home/modules">메인페이지 설정</RouterLink>에서.
+    </p>
     <p v-if="error" class="error">{{ error }}</p>
     <p v-if="message" class="ok">{{ message }}</p>
-
-    <div class="cal-months-setting">
-      <strong>메인 달력에서 넘겨 볼 수 있는 달</strong> <span class="muted">(오늘 기준 — 메인에서 ‹ › 로 넘김, ■ 는 이번달)</span>
-      <label v-for="o in MONTH_OPTIONS" :key="o.key" class="inline"><input v-model="months" type="checkbox" :value="o.key" /> {{ o.label }}</label>
-      <button type="button" class="small" :disabled="!monthsDirty || !months.length" @click="saveMonths">저장</button>
-      <span v-if="!months.length" class="error">하나 이상 골라주세요.</span>
-    </div>
   </section>
 
   <section class="card">

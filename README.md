@@ -18,7 +18,7 @@ Vue 3 + Node.js/Express + MySQL 로 만든 SPA 로그인 샘플입니다.
 - **알림**: 내 Q&A 질문에 답변이 달리면 상단 `알림` 에 표시. **알림 / 보관함** 탭 — 알림마다 [보관] [삭제], '모두 삭제'. 보관한 알림은 삭제되지 않음 (보관 해제 후 삭제)
 - **음악**: 프로필별 유튜브 음악, 사이트 전체 음악(관리 → 사이트 설정), 페이지별 음악(`usePageMusic`) — 오른쪽 아래 플레이어, 볼륨/정지는 계정별 저장 (`client/src/music/README.md`)
 - **소지금 / 상점**: 캐릭터 소지금(내역 기록), 관리자가 소지금 지급·회수, `상점 관리`에서 등록된 아이템을 골라 가격·재고 설정, 회원은 `상점`에서 구매
-- **메인페이지 모듈**: 관리 → **메인페이지 관리** — **메인페이지 설정**(모듈 켜기/끄기·순서: 배너 · 환영 문구 · 캘린더 · 메뉴 바로가기) / **배너 관리**(이미지 + 누르면 이동할 주소, 여러 장이면 넘겨 보기) / **캘린더 관리**(이벤트 이름·기간·설명·색, 메인 달력에서 ‹ › 로 넘겨 볼 수 있는 달: 저번달·이번달·다음달, ■ = 오늘이 있는 달). 메인은 `GET /api/home` 한 번으로 켜진 모듈과 데이터를 받음. 새 모듈은 `server/src/home.js` 의 MODULES + `client/src/home/modules.js` 에 한 줄씩
+- **메인페이지 모듈**: 관리 → **메인페이지 관리** — **메인페이지 설정**(모듈 켜기/끄기·순서: 배너 · 환영 문구 · 캘린더 · 메뉴 바로가기) / **배너 관리**(이미지 + 누르면 이동할 주소, 여러 장이면 넘겨 보기) / **캘린더 관리**(이벤트 이름·기간·설명·색 — 메인 달력은 ‹ › 로 제한 없이 넘기고 ■ 는 오늘이 있는 달). 메인은 `GET /api/home` 한 번으로 켜진 모듈과 데이터를 받음. 새 모듈은 `server/src/home.js` 의 MODULES + `client/src/home/modules.js` 에 한 줄씩
 - **채팅 (Socket.IO)**: 상단 메뉴 **채팅** (`/chat`) — 방 목록·실시간 대화·이전 기록·접속자·입력 중 표시·내 메시지 삭제, 로그인한 멤버·관리자만. 관리 → **채팅 관리**에서 켜기/끄기·방 추가/수정/닫기/관리자 전용/기록 비우기. **모듈**을 파일로 붙여 기능 추가(예시: `/주사위 2d6`) — `server/src/chat/README.md`
 - **칭호(타이틀)**: 관리 → **칭호 관리** 아래 소탭 2개 — **칭호 목록**(추가·수정·삭제, 배지 색·설명·순서) / **칭호 부여**(칭호를 고르고 캐릭터를 체크해 한 번에 부여·회수, 사유 기록, 받은 회원에게 알림). 회원은 마이페이지 **칭호** 칸에서 대표 칭호를 고름 → 멤버 목록·캐릭터 페이지에서 이름 옆에 표시. 칭호 목록 맨 위 **칭호 사용** 스위치를 끄면 회원 화면·공개 API 에서 칭호를 숨김 (만든 칭호·부여 기록은 그대로, `settings.titles_enabled`) (`components/TitleBadge.vue`, `server/src/titles.js`)
 - **아이템 / 인벤토리**: 관리자가 아이템 등록(이미지·효과·귀속·판매가능) 후 캐릭터에게 지급/회수, 회원은 `인벤토리` 에서 확인·버리기
@@ -183,10 +183,11 @@ ProjectQ/
 | GET | `/api/admin/titles/:id/holders` | (관리자) 이 칭호를 가진 캐릭터 |
 | POST | `/api/admin/titles/:id/grant` · `/revoke` | (관리자) 부여 `{ characterIds, memo }` (알림, 이미 가진 캐릭터는 건너뜀) / 회수 `{ characterIds }` (대표 칭호였으면 해제) |
 | PUT | `/api/characters/me/main-title` | 대표 칭호 `{ titleId \| null }` (가진 칭호만) — 캐릭터 응답에 `titles`, `mainTitle` 포함 |
-| GET | `/api/home` | 메인: 켜진 모듈(순서대로) `modules: [{ key }]` + 모듈 데이터 `data: { banner: { banners }, calendar: { months, today, events } }` |
+| GET | `/api/home` | 메인: 켜진 모듈(순서대로) `modules: [{ key }]` + 모듈 데이터 `data: { banner: { banners }, calendar: { today, from, to, events(저번달~다음달) } }` |
+| GET | `/api/home/events?month=YYYY-MM` | 그 달 캘린더 이벤트 (메인 달력을 더 넘길 때) |
 | GET/PUT | `/api/admin/home/modules` | (관리자) 메인페이지 설정 `[{ key, visible }]` (순서 = 화면 순서) |
 | GET/POST/PUT/DELETE | `/api/admin/home/banners[/:id]` | (관리자) 배너 `{ image, title, link('/주소' 또는 http(s)://), sortOrder }` |
-| GET/PUT | `/api/admin/home/calendar` | (관리자) 이벤트 전체 + 보여줄 달 `{ months: ['prev','current','next'] }` |
+| GET | `/api/admin/home/calendar` | (관리자) 이벤트 전체 |
 | POST/PUT/DELETE | `/api/admin/home/events[/:id]` | (관리자) 이벤트 `{ title, startDate, endDate, color(#rrggbb), description }` |
 | GET | `/api/chat/rooms` | 들어갈 수 있는 채팅방 `{ enabled, canChat, rooms }` — 메시지는 Socket.IO (`/api/socket.io`, 네임스페이스 `/chat`, 이벤트는 `server/src/chat/README.md`) |
 | GET | `/api/admin/chat` | (관리자) 방 전체(+메시지 수) + 연결 정보 `{ port, socketPath, roles, modules, online }` |

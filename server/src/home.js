@@ -12,7 +12,7 @@ const { HttpError } = require('./errors');
 const MODULES = [
   { key: 'banner', label: '배너', description: '이미지 배너 — 누르면 지정한 주소로 이동 (여러 장이면 넘겨 보기)', visible: false },
   { key: 'welcome', label: '환영 문구', description: '사이트 이름 + 로그인/회원가입 안내', visible: true },
-  { key: 'calendar', label: '캘린더', description: '주요 이벤트 달력 (이번달 · 다음달 · 저번달)', visible: false },
+  { key: 'calendar', label: '캘린더', description: '주요 이벤트 달력 (‹ › 로 달 넘기기, ■ 오늘)', visible: false },
   { key: 'menu', label: '메뉴 바로가기', description: '상단 메뉴 항목을 카드로', visible: true },
 ];
 const KNOWN = new Map(MODULES.map((m) => [m.key, m]));
@@ -80,23 +80,10 @@ function parseBanner(body) {
 }
 
 // ---------- 캘린더 ----------
-const MONTHS = ['prev', 'current', 'next'];   // 저번달 · 이번달 · 다음달 (오늘 기준)
+// 메인 달력은 ‹ › 로 제한 없이 넘김 — 처음엔 저번달~다음달 이벤트를 같이 보내고, 그 밖의 달은 GET /api/home/events?month=YYYY-MM
 const COLOR_RE = /^#[0-9a-fA-F]{6}$/;
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
-
-async function getCalendarMonths(conn = pool) {
-  try {
-    const v = JSON.parse((await getSetting('home_calendar_months', conn)) || 'null');
-    if (Array.isArray(v)) return MONTHS.filter((m) => v.includes(m));
-  } catch {}
-  return ['current', 'next'];
-}
-async function saveCalendarMonths(list, conn = pool) {
-  const months = MONTHS.filter((m) => Array.isArray(list) && list.includes(m));
-  if (!months.length) throw new HttpError(400, '보여줄 달을 하나 이상 골라주세요.');
-  await setSetting('home_calendar_months', JSON.stringify(months), conn);
-  return months;
-}
+const MONTH_RE = /^(\d{4})-(\d{2})$/;
 
 // DATE 칼럼 → 'YYYY-MM-DD' (서버 시간대와 상관없이)
 const ymd = (d) => (d instanceof Date
@@ -130,7 +117,17 @@ function parseEvent(body) {
   return { title, description: description || null, color: color.toLowerCase(), startDate, endDate };
 }
 
-// 오늘(서버 기준 한국 시간) 기준 저번달 1일 ~ 다음달 말일 — 메인 캘린더가 보는 범위
+// 'YYYY-MM' → 그 달 1일 ~ 말일
+function monthRange(value) {
+  const m = String(value ?? '').match(MONTH_RE);
+  const y = m && Number(m[1]);
+  const mo = m && Number(m[2]);
+  if (!m || y < 1900 || y > 2200 || mo < 1 || mo > 12) throw new HttpError(400, '달은 YYYY-MM 형식으로 보내주세요.');
+  const last = new Date(Date.UTC(y, mo, 0)).getUTCDate();
+  return { from: `${m[1]}-${m[2]}-01`, to: `${m[1]}-${m[2]}-${String(last).padStart(2, '0')}` };
+}
+
+// 오늘(한국 시간) 기준 저번달 1일 ~ 다음달 말일 — 메인 캘린더를 처음 열 때 같이 보내는 범위
 function calendarRange(now = new Date()) {
   const kst = new Date(now.getTime() + 9 * 3600 * 1000);
   const y = kst.getUTCFullYear();
@@ -149,7 +146,7 @@ async function homeData() {
   if (keys.has('banner')) data.banner = { banners: await listBanners() };
   if (keys.has('calendar')) {
     const range = calendarRange();
-    data.calendar = { months: await getCalendarMonths(), today: range.today, events: await listEvents(range) };
+    data.calendar = { today: range.today, from: range.from, to: range.to, events: await listEvents(range) };
   }
   return { modules, data };
 }
@@ -157,6 +154,6 @@ async function homeData() {
 module.exports = {
   MODULES, getModules, saveModules,
   listBanners, parseBanner,
-  MONTHS, getCalendarMonths, saveCalendarMonths, listEvents, parseEvent,
+  listEvents, parseEvent, monthRange,
   homeData,
 };
