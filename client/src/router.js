@@ -43,7 +43,7 @@ const router = createRouter({
       // wide: 넓은 화면 (왼쪽 메뉴), layoutCss: 관리 화면 전체에 /css/basic/admin.css
       meta: { requiresAuth: true, requiresAdmin: true, wide: true, layoutCss: 'admin' },
       children: [
-        { path: '', redirect: '/admin/applicants' },
+        { path: '', redirect: '/admin/settings' },   // 관리 첫 화면 = 커뮤니티 설정
         { path: 'applicants', component: () => import('./pages/admin/ApplicantsPage.vue') },
         { path: 'users', component: () => import('./pages/admin/UsersPage.vue') },
         // 메인페이지 관리 → 메인페이지 설정 / 배너 관리 / 캘린더 관리
@@ -97,7 +97,7 @@ const router = createRouter({
 // 라우트 가드: 로그인/관리자 필요한 페이지 보호, 로그인 상태면 로그인/가입 페이지 건너뜀
 router.beforeEach(async (to) => {
   const [user] = await Promise.all([loadUser(), loadSite()]);
-  // 회원 전용 모드(관리 → 사이트 설정): 로그인하지 않으면 로그인/회원가입 화면만
+  // 회원 전용 모드(관리 → 커뮤니티 설정): 로그인하지 않으면 로그인/회원가입 화면만
   if (site.private && !user && !to.meta.guestOnly) {
     return { path: '/login', query: to.fullPath !== '/' ? { redirect: to.fullPath } : {} };
   }

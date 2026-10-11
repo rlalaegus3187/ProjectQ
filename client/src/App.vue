@@ -15,7 +15,7 @@ const route = useRoute();
 // 라우트별 음악: router.js 에서 { path, component, meta: { music: '영상ID' } } 로 지정 가능
 usePageMusic(() => route.meta.music);
 
-// 사이트 이름·파비콘·회원 전용 여부, 사이트 전체 음악 (관리 → 사이트 설정)
+// 사이트 이름·파비콘·회원 전용 여부, 사이트 전체 음악 (관리 → 커뮤니티 설정)
 onMounted(async () => {
   await loadSite();
   setSiteMusic(site.music);
@@ -24,7 +24,7 @@ onMounted(async () => {
 // 회원 전용 모드에서 로그인 전: 상단 메뉴 없이 로그인/회원가입 화면만 (layouts 대신 App 에서 처리)
 const gate = computed(() => site.private && !auth.user);
 
-// 사이트 비공개(관리 → 사이트 설정): 관리자가 아니면 어느 주소든 안내 화면만 (layouts/ClosedLayout.vue)
+// 사이트 비공개(관리 → 커뮤니티 설정): 관리자가 아니면 어느 주소든 안내 화면만 (layouts/ClosedLayout.vue)
 const closed = computed(() => site.closed && !isAdmin());
 // 보는 도중에 비공개로 바뀌면 서버가 알려줌 (api.js)
 window.addEventListener('site-closed', (e) => {
@@ -47,7 +47,10 @@ async function onLogout() {
   <template v-else>
     <header v-if="!gate" class="nav">
       <div class="nav-left">
-        <RouterLink to="/" class="brand">{{ site.name }}</RouterLink>
+        <RouterLink to="/" class="brand" :title="site.name">
+          <img v-if="site.logo" :src="site.logo" :alt="site.logoWithName ? '' : site.name" class="brand-logo" referrerpolicy="no-referrer" />
+          <span v-if="!site.logo || site.logoWithName">{{ site.name }}</span>
+        </RouterLink>
         <nav class="board-links">
           <RouterLink v-for="m in siteMenu.items" :key="m.key" :to="m.to">{{ menuLabel(m) }}</RouterLink>
         </nav>

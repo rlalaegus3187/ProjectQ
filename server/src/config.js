@@ -13,7 +13,7 @@ module.exports = {
   appName: /^[a-z0-9][a-z0-9_-]{0,39}$/.test(process.env.APP_NAME || '') ? process.env.APP_NAME : 'projectq',
   sessionCookie: /^[A-Za-z0-9._-]{1,50}$/.test(process.env.SESSION_COOKIE || '') ? process.env.SESSION_COOKIE : 'projectq.sid',
   // API 포트 / 채팅 포트 (server/.env) — CHAT_PORT 가 없거나 PORT 와 같으면 채팅도 API 프로세스 안에서 같이 (같은 포트)
-  //   관리 → 사이트 설정 → 서버 포트에서 볼 수 있음 (바꾸는 건 .env + 배포)
+  //   관리 → 커뮤니티 설정 → 서버 포트에서 볼 수 있음 (바꾸는 건 .env + 배포)
   port: Number(process.env.PORT || 3000),
   chatPort: Number(process.env.CHAT_PORT || process.env.PORT || 3000),
   db: {

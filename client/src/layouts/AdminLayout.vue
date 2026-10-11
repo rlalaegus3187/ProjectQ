@@ -9,6 +9,12 @@ const route = useRoute();
 const isOpen = (m) => !!m.children && route.path.startsWith(m.to);
 const ADMIN_MENU = [
   {
+    group: '커뮤니티',
+    items: [
+      { to: '/admin/settings', label: '커뮤니티 설정' },
+    ],
+  },
+  {
     group: '회원',
     items: [
       { to: '/admin/applicants', label: '신청자 관리' },
@@ -56,7 +62,6 @@ const ADMIN_MENU = [
     group: '사이트',
     items: [
       { to: '/admin/chat', label: '채팅 관리' },
-      { to: '/admin/settings', label: '사이트 설정' },
       { to: '/admin/themes', label: '테마' },
     ],
   },

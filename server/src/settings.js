@@ -18,12 +18,12 @@ async function setSetting(name, value, conn = pool) {
   }
 }
 
-// ---------- 사이트 이름 / 파비콘 (관리 → 사이트 설정) ----------
+// ---------- 사이트 이름 / 파비콘 (관리 → 커뮤니티 설정) ----------
 const { HttpError } = require('./errors');
 
 const DEFAULT_SITE_NAME = 'ProjectQ';
 
-// 사이트 이름: 1~30자 (상단 로고, 브라우저 탭 제목)
+// 사이트 이름: 1~30자 (상단, 브라우저 탭 제목)
 function parseSiteName(value) {
   const name = String(value ?? '').trim();
   if (!name || name.length > 30) throw new HttpError(400, '사이트 이름은 1~30자로 입력해주세요.');
@@ -35,6 +35,13 @@ function parseFavicon(value) {
   const url = String(value ?? '').trim();
   if (!url) return null;
   return require('./images').parseImageUrl(url, { label: '파비콘', ico: true });   // 올린 파일(ico 포함) 또는 이미지 링크
+}
+
+// 로고(상단 왼쪽 사이트 이름 자리에 보이는 이미지): 올린 이미지 또는 이미지 링크. 비우면 없음(null) → 글자 이름만
+function parseLogo(value) {
+  const url = String(value ?? '').trim();
+  if (!url) return null;
+  return require('./images').parseImageUrl(url, { label: '로고' });
 }
 
 // Q&A 비회원 글쓰기 허용 여부 (settings.qna_guest_write = '1' 이면 허용, 기본은 막음)
@@ -95,6 +102,8 @@ async function getSiteSettings(conn = pool) {
   return {
     siteName: (await getSetting('site_name', conn)) || DEFAULT_SITE_NAME,
     siteFavicon: await getSetting('site_favicon', conn),
+    siteLogo: await getSetting('site_logo', conn),
+    siteLogoWithName: (await getSetting('site_logo_with_name', conn)) === '1',   // 로고 옆에 사이트 이름도 (기본: 로고만)
     siteMusic: await getSetting('site_music', conn),
     qnaGuestWrite: await isGuestWriteAllowed(conn),
     sitePrivate: await isSitePrivate(conn),
@@ -112,7 +121,7 @@ async function getSiteSettings(conn = pool) {
 }
 
 module.exports = {
-  getSetting, setSetting, parseSiteName, parseFavicon, getSiteSettings, isGuestWriteAllowed, isSitePrivate, isSiteClosed, getClosedMessage, isSignupOpen, isProfileAddOpen, isProfileEditOpen, isStatsEnabled, isTitlesEnabled,
+  getSetting, setSetting, parseSiteName, parseFavicon, parseLogo, getSiteSettings, isGuestWriteAllowed, isSitePrivate, isSiteClosed, getClosedMessage, isSignupOpen, isProfileAddOpen, isProfileEditOpen, isStatsEnabled, isTitlesEnabled,
   clearSitePrivateCache,
   DEFAULT_SITE_NAME,
 };

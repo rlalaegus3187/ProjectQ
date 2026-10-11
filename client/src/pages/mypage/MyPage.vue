@@ -140,7 +140,7 @@ onMounted(() => load().catch((e) => { error.value = e.message; loaded.value = tr
     </template>
   </section>
 
-  <!-- 신청서 제출 동의 (관리 → 사이트 설정 → 신청서 제출 동의사항) -->
+  <!-- 신청서 제출 동의 (관리 → 커뮤니티 설정 → 신청서 제출 동의사항) -->
   <ModalDialog v-if="submitting" title="신청서 제출" @close="submitting = null">
     <template #actions>
       <button type="submit" form="submit-form" :disabled="saving || !submitting.agree">{{ saving ? '제출 중…' : '제출' }}</button>

@@ -6,7 +6,7 @@ const {
   VALUE_TYPES, HttpError, getDefinitions, groupDefinitions, withTransaction, getStatPoints, setStatPoints,
 } = require('../characters');
 const {
-  getSetting, setSetting, parseSiteName, parseFavicon, getSiteSettings, clearSitePrivateCache,
+  getSetting, setSetting, parseSiteName, parseFavicon, parseLogo, getSiteSettings, clearSitePrivateCache,
 } = require('../settings');
 const { getCosts, saveCosts } = require('../costs');
 const { parseYouTubeId } = require('../youtube');
@@ -68,7 +68,7 @@ router.get('/settings', async (req, res) => {
   res.json(await currentSettings());
 });
 
-// 보낸 값만 변경: { statPoints?, siteName?, siteFavicon?(업로드한 이미지 경로, 빈 값이면 없음), siteMusic?(유튜브 링크, 빈 값이면 끔), qnaGuestWrite?(Q&A 비회원 글쓰기 허용), sitePrivate?(회원 전용 — 로그인해야 이용), signupNotice?(회원가입 안내, 마크다운), siteTheme?(테마 폴더 이름), signupOpen?(회원가입 허용), siteClosed?, siteClosedMessage?(사이트 비공개·문구), applicationNotice?(신청서 제출 동의사항), profileAddOpen?, profileEditOpen?(프로필 추가/수정 허용), statsEnabled?(캐릭터 스탯 사용), titlesEnabled?(칭호 사용), chatEnabled?(채팅 사용), costs?([{ name, enabled }] × 5 — 코스트 이름·사용) }
+// 보낸 값만 변경: { statPoints?, siteName?, siteFavicon?(업로드한 이미지 경로, 빈 값이면 없음), siteLogo?(로고 이미지, 빈 값이면 없음), siteLogoWithName?(로고 옆에 이름도), siteMusic?(유튜브 링크, 빈 값이면 끔), qnaGuestWrite?(Q&A 비회원 글쓰기 허용), sitePrivate?(회원 전용 — 로그인해야 이용), signupNotice?(회원가입 안내, 마크다운), siteTheme?(테마 폴더 이름), signupOpen?(회원가입 허용), siteClosed?, siteClosedMessage?(사이트 비공개·문구), applicationNotice?(신청서 제출 동의사항), profileAddOpen?, profileEditOpen?(프로필 추가/수정 허용), statsEnabled?(캐릭터 스탯 사용), titlesEnabled?(칭호 사용), chatEnabled?(채팅 사용), costs?([{ name, enabled }] × 5 — 코스트 이름·사용) }
 router.put('/settings', async (req, res) => {
   const body = req.body ?? {};
   // 검증을 먼저 모두 한 뒤 저장 (하나라도 틀리면 아무것도 바꾸지 않음)
@@ -81,6 +81,8 @@ router.put('/settings', async (req, res) => {
   }
   const siteName = body.siteName !== undefined ? parseSiteName(body.siteName) : undefined;
   const siteFavicon = body.siteFavicon !== undefined ? parseFavicon(body.siteFavicon) : undefined;
+  const siteLogo = body.siteLogo !== undefined ? parseLogo(body.siteLogo) : undefined;
+  const siteLogoWithName = body.siteLogoWithName !== undefined ? !!body.siteLogoWithName : undefined;
   const siteMusic = body.siteMusic !== undefined ? parseYouTubeId(body.siteMusic, '사이트 음악') : undefined;
   const qnaGuestWrite = body.qnaGuestWrite !== undefined ? !!body.qnaGuestWrite : undefined;
   const sitePrivate = body.sitePrivate !== undefined ? !!body.sitePrivate : undefined;
@@ -117,6 +119,8 @@ router.put('/settings', async (req, res) => {
   if (statPoints !== undefined) await setStatPoints(statPoints);
   if (siteName !== undefined) await setSetting('site_name', siteName);
   if (siteFavicon !== undefined) await setSetting('site_favicon', siteFavicon);
+  if (siteLogo !== undefined) await setSetting('site_logo', siteLogo);
+  if (siteLogoWithName !== undefined) await setSetting('site_logo_with_name', siteLogoWithName ? '1' : '0');
   if (siteMusic !== undefined) await setSetting('site_music', siteMusic);
   if (qnaGuestWrite !== undefined) await setSetting('qna_guest_write', qnaGuestWrite ? '1' : '0');
   if (signupNotice !== undefined) await setSetting('signup_notice', signupNotice || null);

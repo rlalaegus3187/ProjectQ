@@ -23,7 +23,7 @@ const busy = ref(false);
 const error = ref('');
 
 const profiles = computed(() => props.character.profiles);
-// 관리 → 사이트 설정의 '프로필 추가 / 수정 허용' (관리자는 항상 가능)
+// 관리 → 커뮤니티 설정의 '프로필 추가 / 수정 허용' (관리자는 항상 가능)
 const canAdd = computed(() => !props.readonly && (site.profileAddOpen || isAdmin()));
 const canEdit = computed(() => !props.readonly && (site.profileEditOpen || isAdmin()));
 const maxProfiles = computed(() => props.character.maxProfiles ?? 10);

@@ -1,5 +1,5 @@
 <script setup>
-// 로그인 — 회원 전용 모드(관리 → 사이트 설정)면 상단 메뉴 없이 이 화면만 보이는 입장 화면
+// 로그인 — 회원 전용 모드(관리 → 커뮤니티 설정)면 상단 메뉴 없이 이 화면만 보이는 입장 화면
 import { ref } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { login } from '../../auth';
@@ -32,7 +32,8 @@ async function submit() {
 <template>
   <!-- 회원 전용 모드: 사이트 이름을 크게 보여주는 입장 화면 -->
   <header v-if="site.private" class="gate-head">
-    <img v-if="site.favicon" :src="site.favicon" alt="" class="gate-icon" />
+    <img v-if="site.logo" :src="site.logo" alt="" class="gate-logo" referrerpolicy="no-referrer" />
+    <img v-else-if="site.favicon" :src="site.favicon" alt="" class="gate-icon" />
     <h1>{{ site.name }}</h1>
     <p class="muted">회원 전용 사이트입니다. 로그인해주세요.</p>
   </header>

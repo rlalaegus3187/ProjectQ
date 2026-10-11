@@ -54,8 +54,8 @@ function startSession(req, userId) {
   });
 }
 
-// 회원가입 안내(주의문구) — 관리 → 사이트 설정에서 작성 (마크다운). 회원 전용 모드에서도 로그인 없이 조회
-// open: 회원가입 허용 여부 (관리 → 사이트 설정)
+// 회원가입 안내(주의문구) — 관리 → 커뮤니티 설정에서 작성 (마크다운). 회원 전용 모드에서도 로그인 없이 조회
+// open: 회원가입 허용 여부 (관리 → 커뮤니티 설정)
 router.get('/signup-info', async (req, res) => {
   const open = await isSignupOpen();
   res.json({ open, notice: open ? (await getSetting('signup_notice')) || '' : '' });

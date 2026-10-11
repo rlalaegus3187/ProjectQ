@@ -1,5 +1,5 @@
 <script setup>
-// 글쓰기 / 수정 — Q&A 는 회원, 또는 (관리 → 사이트 설정에서 허용하면) 비회원
+// 글쓰기 / 수정 — Q&A 는 회원, 또는 (관리 → 커뮤니티 설정에서 허용하면) 비회원
 // 비회원 글 수정은 글 보기 화면에서 비밀번호를 확인한 뒤 들어옴 (권한은 서버가 판단)
 import { ref, computed, onMounted } from 'vue';
 import { useRoute, useRouter } from 'vue-router';

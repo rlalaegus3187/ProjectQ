@@ -23,7 +23,7 @@ const { notifyAdmins } = require('../notify');
 const { getEnabledCosts } = require('../costs');
 const { isProfileAddOpen, isProfileEditOpen, isStatsEnabled, getSetting } = require('../settings');
 
-// 프로필 추가/수정이 막혀 있으면(관리 → 사이트 설정) 403 — 관리자는 항상 가능
+// 프로필 추가/수정이 막혀 있으면(관리 → 커뮤니티 설정) 403 — 관리자는 항상 가능
 //   kind: 'add' (새 프로필) | 'edit' (수정·삭제·대표 지정)
 async function assertProfileAllowed(req, kind) {
   const [[user]] = await pool.execute('SELECT role FROM users WHERE id = ?', [req.session.userId]);
@@ -140,12 +140,12 @@ router.delete('/characters/me/profiles/:profileId', requireAuth, async (req, res
 });
 
 // ---------- 신청서 상태 (신청자만) ----------
-// 신청서 제출 동의사항 (관리 → 사이트 설정에서 작성, 마크다운)
+// 신청서 제출 동의사항 (관리 → 커뮤니티 설정에서 작성, 마크다운)
 router.get('/characters/me/application-notice', requireAuth, async (req, res) => {
   res.json({ notice: (await getSetting('application_notice')) || '' });
 });
 
-// 신청서 제출 (신청자, 처음 한 번): { agree: true } — 관리 → 사이트 설정의 '신청서 제출 동의사항'에 동의해야 함
+// 신청서 제출 (신청자, 처음 한 번): { agree: true } — 관리 → 커뮤니티 설정의 '신청서 제출 동의사항'에 동의해야 함
 // 제출한 뒤에 수정·취소하면 작성중으로 돌아가고, 다시 제출할 때 또 동의 (저장할 때는 동의 필요 없음)
 router.post('/characters/me/application/submit', requireAuth, async (req, res) => {
   if (req.body?.agree !== true) throw new HttpError(400, '신청서 제출 동의사항에 동의해주세요.');

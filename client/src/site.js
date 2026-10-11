@@ -1,10 +1,10 @@
-// 사이트 설정 (관리 → 사이트 설정) — 이름(상단 로고·탭 제목), 파비콘, 회원 전용·비공개 여부, CSS 테마
-//   import { site, loadSite } from './site';   site.name, site.favicon, site.private
+// 커뮤니티 설정 (관리 → 커뮤니티 설정) — 이름(상단·탭 제목), 로고(상단 왼쪽 이미지), 파비콘, 회원 전용·비공개 여부, CSS 테마
+//   import { site, loadSite } from './site';   site.name, site.logo, site.favicon, site.private
 import { reactive, watchEffect } from 'vue';
 import { api } from './api';
 
 export const site = reactive({
-  name: 'ProjectQ', favicon: null, private: false, closed: false, closedMessage: '', signupOpen: true, profileAddOpen: true, profileEditOpen: true, statsEnabled: true, titlesEnabled: true, music: null, theme: { id: 'basic', css: null }, loaded: false,
+  name: 'ProjectQ', logo: null, logoWithName: false, favicon: null, private: false, closed: false, closedMessage: '', signupOpen: true, profileAddOpen: true, profileEditOpen: true, statsEnabled: true, titlesEnabled: true, music: null, theme: { id: 'basic', css: null }, loaded: false,
 });
 
 // CSS 테마 적용: basic(/css/basic/style.css, index.html) 다음에 <link id="theme-css"> 로 테마 css 를 덮어씀
@@ -29,7 +29,7 @@ export function applyTheme(css, { remember = true } = {}) {
 
 // GET /api/settings 결과를 반영
 export function setSite({
-  siteName, siteFavicon, sitePrivate, siteClosed, siteClosedMessage, signupOpen, profileAddOpen, profileEditOpen, statsEnabled, titlesEnabled, siteMusic, siteTheme,
+  siteName, siteFavicon, siteLogo, siteLogoWithName, sitePrivate, siteClosed, siteClosedMessage, signupOpen, profileAddOpen, profileEditOpen, statsEnabled, titlesEnabled, siteMusic, siteTheme,
 }) {
   if (titlesEnabled !== undefined) site.titlesEnabled = !!titlesEnabled;
   if (statsEnabled !== undefined) site.statsEnabled = !!statsEnabled;
@@ -44,6 +44,8 @@ export function setSite({
   }
   if (siteName) site.name = siteName;
   site.favicon = siteFavicon || null;
+  if (siteLogo !== undefined) site.logo = siteLogo || null;
+  if (siteLogoWithName !== undefined) site.logoWithName = !!siteLogoWithName;
   if (sitePrivate !== undefined) site.private = !!sitePrivate;
   if (siteMusic !== undefined) site.music = siteMusic;
 }

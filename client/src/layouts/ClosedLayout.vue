@@ -1,6 +1,6 @@
 <script setup>
-// 사이트 비공개 화면 (관리 → 사이트 설정 → 사이트 공개 꺼짐) — 관리자 말고는 어느 주소로 와도 이 화면만
-//   문구는 관리자가 사이트 설정에서 정함 (마크다운). 관리자는 아래 '관리자 로그인'으로 들어옴
+// 사이트 비공개 화면 (관리 → 커뮤니티 설정 → 사이트 공개 꺼짐) — 관리자 말고는 어느 주소로 와도 이 화면만
+//   문구는 관리자가 커뮤니티 설정에서 정함 (마크다운). 관리자는 아래 '관리자 로그인'으로 들어옴
 import { ref } from 'vue';
 import { auth, login, logout } from '../auth';
 import { site } from '../site';
@@ -29,7 +29,8 @@ async function submit() {
 <template>
   <main class="container gate closed-page">
     <header class="gate-head">
-      <img v-if="site.favicon" :src="site.favicon" alt="" class="gate-icon" />
+      <img v-if="site.logo" :src="site.logo" alt="" class="gate-logo" referrerpolicy="no-referrer" />
+    <img v-else-if="site.favicon" :src="site.favicon" alt="" class="gate-icon" />
       <h1>{{ site.name }}</h1>
     </header>
     <section class="card closed-message">

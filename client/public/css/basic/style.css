@@ -39,7 +39,8 @@ body { margin: 0; font-family: var(--font); background: var(--color-bg); color: 
 a { color: var(--color-primary); text-decoration: none; }
 .nav { display: flex; justify-content: space-between; align-items: center; padding: 12px 20px; background: var(--color-surface); border-bottom: 1px solid var(--color-border); }
 .nav nav { display: flex; gap: 16px; align-items: center; }
-.brand { font-weight: 700; font-size: 18px; color: var(--color-text); white-space: nowrap; }
+.brand { display: inline-flex; align-items: center; gap: 8px; font-weight: 700; font-size: 18px; color: var(--color-text); white-space: nowrap; }
+.brand-logo { display: block; height: 32px; width: auto; max-width: 180px; object-fit: contain; }
 .container { max-width: 760px; margin: 32px auto; padding: 0 16px; }
 .container.wide { max-width: 1400px; }   /* 넓은 화면 (관리, 콘텐츠 페이지 — router.js meta.wide) */
 .card { background: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius); padding: 24px; margin-bottom: 16px; }
@@ -222,6 +223,7 @@ label.toggle, .form label.toggle { display: inline-flex; flex-direction: row; al
 .gate-head h1 { margin: 8px 0 4px; font-size: 28px; }
 .gate-head .muted { margin: 0; }
 .gate-icon { width: 48px; height: 48px; object-fit: contain; }
+.gate-logo { display: block; margin: 0 auto; max-width: 240px; max-height: 80px; object-fit: contain; }
 .container.gate:has(.signup-card) { max-width: 560px; padding-top: 32px; }   /* 회원가입은 조금 넓게 */
 .item-logs li { grid-template-columns: 56px 1fr auto; }
 

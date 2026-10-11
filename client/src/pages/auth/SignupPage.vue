@@ -1,5 +1,5 @@
 <script setup>
-// 회원가입: 아이디 / 비밀번호 / 소통 계정 + 가입 안내(관리 → 사이트 설정에서 작성) 동의
+// 회원가입: 아이디 / 비밀번호 / 소통 계정 + 가입 안내(관리 → 커뮤니티 설정에서 작성) 동의
 // 캐릭터는 가입한 뒤 마이페이지에서 작성 (가입하면 신청자)
 import { ref, computed, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
@@ -11,7 +11,7 @@ import { site } from '../../site';
 const router = useRouter();
 const form = ref({ username: '', password: '', passwordConfirm: '', contact: '', agree: false });
 const notice = ref(null);
-const open = ref(true);   // 회원가입 허용 여부 (관리 → 사이트 설정)
+const open = ref(true);   // 회원가입 허용 여부 (관리 → 커뮤니티 설정)
 const error = ref('');
 const loading = ref(false);
 
@@ -57,7 +57,7 @@ async function submit() {
     </template>
     <template v-else>
 
-    <!-- 가입 안내(주의문구): 관리 → 사이트 설정에서 작성 -->
+    <!-- 가입 안내(주의문구): 관리 → 커뮤니티 설정에서 작성 -->
     <div v-if="notice" class="signup-notice">
       <MarkdownView :source="notice" />
     </div>

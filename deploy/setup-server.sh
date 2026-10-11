@@ -219,7 +219,7 @@ http {
 }
 NGINX
 sudo mkdir -p /etc/nginx/projectq.d
-# 채팅 웹소켓·포트 연결(upstream)은 deploy.js 가 배포 때 deploy/apply-ports.sh 로 만듦 (관리 → 사이트 설정 → 서버 포트)
+# 채팅 웹소켓·포트 연결(upstream)은 deploy.js 가 배포 때 deploy/apply-ports.sh 로 만듦 (관리 → 커뮤니티 설정 → 서버 포트)
 sudo tee /etc/nginx/conf.d/projectq.conf >/dev/null <<NGINX
 server {
     listen 80 default_server;

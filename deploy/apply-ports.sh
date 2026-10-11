@@ -5,7 +5,7 @@
 #
 # 하는 일
 #   1) /etc/nginx/conf.d/<APP_NAME>-ports.conf   upstream <이름>_api (API 포트) / <이름>_chat (채팅 포트) — 포트 번호는 여기 한 곳에만
-#   2) 사이트 설정(NGINX_SITE)의 /api/ 가 숫자 대신 <이름>_api 를 가리키게 (처음 한 번만 바뀜, 원본은 .bak-날짜 로 백업)
+#   2) 커뮤니티 설정(NGINX_SITE)의 /api/ 가 숫자 대신 <이름>_api 를 가리키게 (처음 한 번만 바뀜, 원본은 .bak-날짜 로 백업)
 #   3) NGINX_SNIPPET_DIR/socketio.conf             /api/socket.io/ → <이름>_chat (웹소켓 허용)
 #   nginx -t 가 실패하면 모두 원래대로 되돌림
 #
@@ -24,7 +24,7 @@ UP="$(echo "$APP_NAME" | tr -c 'a-zA-Z0-9_\n' '_')"   # upstream 이름 (영문�
 if [[ $EUID -ne 0 ]]; then exec sudo -n env APP_NAME="$APP_NAME" API_PORT="$API_PORT" CHAT_PORT="$CHAT_PORT" \
   NGINX_SITE="$NGINX_SITE" NGINX_SNIPPET_DIR="$NGINX_SNIPPET_DIR" NGINX_UPSTREAM_FILE="$UPSTREAM_FILE" bash "$0"; fi
 for p in "$API_PORT" "$CHAT_PORT"; do [[ "$p" =~ ^[0-9]+$ ]] && (( p >= 1024 && p <= 65535 )) || { echo "잘못된 포트: $p" >&2; exit 1; }; done
-[[ -f "$NGINX_SITE" ]] || { echo "Nginx 사이트 설정이 없습니다: $NGINX_SITE (NGINX_SITE=<경로> 로 알려주세요)" >&2; exit 1; }
+[[ -f "$NGINX_SITE" ]] || { echo "Nginx 커뮤니티 설정이 없습니다: $NGINX_SITE (NGINX_SITE=<경로> 로 알려주세요)" >&2; exit 1; }
 mkdir -p "$NGINX_SNIPPET_DIR"
 
 TMP="$(mktemp -d)"; trap 'rm -rf "$TMP"' EXIT
@@ -49,7 +49,7 @@ location /api/socket.io/ {
     proxy_buffering off;
 }
 NGINX
-# 사이트 설정: proxy_pass http://127.0.0.1:<숫자>; (또는 예전 upstream 이름) → http://<이름>_api;
+# 커뮤니티 설정: proxy_pass http://127.0.0.1:<숫자>; (또는 예전 upstream 이름) → http://<이름>_api;
 sed -E "s#proxy_pass http://(127\\.0\\.0\\.1:[0-9]+|[A-Za-z0-9_]+_api);#proxy_pass http://${UP}_api;#" "$NGINX_SITE" > "$TMP/site"
 
 same() { [[ -f "$2" ]] && cmp -s "$1" "$2"; }

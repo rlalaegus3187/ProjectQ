@@ -145,7 +145,7 @@ onMounted(() => load().catch((e) => { error.value = e.message; }));
       <dd>
         채팅 <strong>{{ info.chatPort }}</strong>
         <span class="muted">{{ info.separate ? `— API(${info.port})와 따로 띄움` : '— API 와 같은 포트·같은 프로세스' }} ·
-          <RouterLink to="/admin/settings">사이트 설정 → 서버 포트</RouterLink></span>
+          <RouterLink to="/admin/settings">커뮤니티 설정 → 서버 포트</RouterLink></span>
       </dd>
       <dt>소켓 주소</dt><dd><code>{{ info.socketPath }}</code> <span class="muted">(공간 /chat — 방마다 room:번호)</span></dd>
       <dt>쓸 수 있는 권한</dt><dd>{{ roleLabel }}</dd>

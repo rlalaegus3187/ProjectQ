@@ -81,6 +81,8 @@ settings.application_notice         신청서 제출 동의사항 (마크다운,
 settings.site_private               회원 전용 모드 ('1' = 로그인해야 이용, 없거나 '0' = 공개)
 settings.qna_guest_write            Q&A 비회원 글쓰기 허용 ('1' 허용, 없거나 '0' 막음)
 settings.site_favicon               파비콘(브라우저 탭 아이콘): 업로드 이미지 경로 ico/png 등 (없으면 없음)
+settings.site_logo                  로고(상단 왼쪽 이미지): 업로드 경로 또는 http(s) 링크 (없으면 이름 글자만)
+settings.site_logo_with_name        로고 옆에 사이트 이름도 표시 ('1', 기본 로고만)
 characters.money  소지금 (캐릭터 귀속)
 content_pages  콘텐츠 페이지  slug(PK = 주소), title(메뉴 이름), body(본문, 마크다운), music_video_id, is_public(0 = 관리자만), sort_order (description 은 더 이상 안 씀)
 item_logs      아이템 습득/사용 기록  character_id, item_id, amount(+/-), quantity_after, source(admin/shop/admin_take/discard/legacy ...),

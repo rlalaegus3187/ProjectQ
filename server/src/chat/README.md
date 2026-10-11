@@ -116,7 +116,7 @@ await getChat()?.sendSystem(1, '이벤트가 시작되었습니다!');   // 1 = 
 - **포트**: `.env` 의 `CHAT_PORT` (없거나 `PORT` 와 같으면 API 와 같은 포트·같은 프로세스). 다르면 `src/chatServer.js` 가 따로 뜨고,
   API 쪽의 `getChat()` 은 내부 통로(`chat/bridge.js`, 127.0.0.1 + 비밀 토큰)로 `sendSystem` · `roomsChanged` · `stats` 를 전달합니다.
   → 모듈 API(`command`, `beforeMessage` ...)는 채팅 프로세스 안에서만 쓰는 것이라, 따로 띄워도 모듈 코드는 그대로입니다.
-- 관리 → 사이트 설정 → 서버 포트에서 지금 포트를 볼 수 있습니다 (바꾸는 건 `.env` + `node /data/deploy.js`)
+- 관리 → 커뮤니티 설정 → 서버 포트에서 지금 포트를 볼 수 있습니다 (바꾸는 건 `.env` + `node /data/deploy.js`)
 - 주소는 늘 `/api/socket.io` — 브라우저는 지금 보고 있는 사이트로만 연결하므로 다른 사이트와 섞이지 않음
 - Nginx: 배포(`deploy.js`) 때 `deploy/apply-ports.sh` 가 `/api/socket.io/` 를 채팅 포트로 연결하고 웹소켓을 허용
 - npm 패키지: 서버 `socket.io`, 화면 `socket.io-client` — `package.json` 에 들어 있어 `deploy.js` 의 `npm ci` 가 설치. 직접 설치는

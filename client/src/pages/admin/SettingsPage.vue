@@ -1,5 +1,5 @@
 <script setup>
-// 관리자: 사이트 설정 — 사이트 공개 상태(회원 전용), 사이트 이름(상단 로고, 브라우저 탭 제목), 파비콘(브라우저 탭 아이콘), Q&A 비회원 글쓰기, 사이트 전체 음악
+// 관리자: 커뮤니티 설정 (관리 메뉴 맨 위) — 사이트 이름(상단·브라우저 탭 제목)·로고(상단 왼쪽 이미지)·파비콘(브라우저 탭 아이콘), 사이트 공개 상태(회원 전용), Q&A 비회원 글쓰기, 사이트 전체 음악
 import { ref, computed, onMounted } from 'vue';
 import { api } from '../../api';
 import ToggleSwitch from '../../components/ToggleSwitch.vue';
@@ -8,7 +8,7 @@ import { setSite } from '../../site';
 import ImageField from '../../components/ImageField.vue';
 import { MarkdownEditor } from '../../markdown';
 
-const form = ref(null);   // { sitePrivate, siteName, siteFavicon, signupNotice, qnaGuestWrite, siteMusic }
+const form = ref(null);   // { siteName, siteLogo, siteLogoWithName, siteFavicon, sitePrivate, signupNotice, qnaGuestWrite, siteMusic }
 const error = ref('');
 const message = ref('');
 const saving = ref(false);
@@ -24,7 +24,7 @@ const toForm = (s) => ({
   profileAddOpen: s.profileAddOpen !== false,
   profileEditOpen: s.profileEditOpen !== false,
   signupNotice: s.signupNotice || '',
-  siteName: s.siteName, siteFavicon: s.siteFavicon || '', qnaGuestWrite: !!s.qnaGuestWrite, siteMusic: youtubeUrl(s.siteMusic),
+  siteName: s.siteName, siteLogo: s.siteLogo || '', siteLogoWithName: !!s.siteLogoWithName, siteFavicon: s.siteFavicon || '', qnaGuestWrite: !!s.qnaGuestWrite, siteMusic: youtubeUrl(s.siteMusic),
 });
 
 async function save() {
@@ -36,7 +36,7 @@ async function save() {
     if (!siteOpen && !confirm('사이트를 비공개로 바꿀까요?\n관리자 말고는 아무도 로그인하거나 볼 수 없게 됩니다.')) return;
     const s = await api('/admin/settings', { method: 'PUT', body: { ...rest, siteClosed: !siteOpen } });
     form.value = toForm(s);
-    setSite(s);                 // 상단 로고·브라우저 탭에 바로 반영
+    setSite(s);                 // 상단 이름·로고·브라우저 탭에 바로 반영
     setSiteMusic(s.siteMusic);
     message.value = '저장했습니다.';
   } catch (e) {
@@ -62,9 +62,48 @@ onMounted(async () => {
 
 <template>
   <section class="card">
-    <h1>사이트 설정</h1>
+    <h1>커뮤니티 설정</h1>
     <p v-if="!form && !error" class="muted">불러오는 중…</p>
     <form v-else-if="form" class="form" @submit.prevent="save">
+      <fieldset class="fieldset stack">
+        <legend>사이트 이름 · 로고 · 파비콘</legend>
+        <label class="field">
+          사이트 이름 <span class="muted">(상단 왼쪽, 브라우저 탭 제목, 로그인 화면)</span>
+          <input v-model="form.siteName" required maxlength="30" />
+        </label>
+
+        <div class="field">
+          <span>로고 <span class="muted">(상단 왼쪽 사이트 이름 자리에 보이는 이미지, 비우면 이름 글자만)</span></span>
+          <ImageField v-model="form.siteLogo" alt="로고" hint="png(배경 투명 권장), jpg, gif, webp · 높이 32px 로 줄여서 보임 · 5MB 이하" />
+        </div>
+        <label v-if="form.siteLogo" class="switch-row">
+          <ToggleSwitch v-model="form.siteLogoWithName" />
+          <span>로고 옆에 사이트 이름도 표시 <span class="muted">— 끄면 로고만 (로고에 이름이 들어 있을 때)</span></span>
+        </label>
+
+        <div class="field">
+          <span>파비콘 <span class="muted">(브라우저 탭에 보이는 작은 아이콘, 비우면 없음)</span></span>
+          <ImageField v-model="form.siteFavicon" alt="파비콘"
+            accept=".ico,image/x-icon,image/vnd.microsoft.icon,image/png,image/jpeg,image/gif,image/webp"
+            hint="ico, png(권장: 32×32 또는 64×64 정사각형) · 5MB 이하" />
+        </div>
+
+        <div class="site-preview" aria-label="상단 미리보기">
+          <span class="muted">상단 미리보기</span>
+          <span class="brand">
+            <img v-if="form.siteLogo" :src="form.siteLogo" alt="" class="brand-logo" referrerpolicy="no-referrer" />
+            <span v-if="!form.siteLogo || form.siteLogoWithName">{{ form.siteName || '사이트 이름' }}</span>
+          </span>
+        </div>
+        <div class="site-preview" aria-label="브라우저 탭 미리보기">
+          <span class="muted">브라우저 탭 미리보기</span>
+          <span class="tab">
+            <img v-if="form.siteFavicon" :src="form.siteFavicon" alt="" />
+            {{ form.siteName || '사이트 이름' }}
+          </span>
+        </div>
+      </fieldset>
+
       <fieldset class="fieldset stack">
         <legend>사이트 공개 · 회원가입</legend>
         <label class="switch-row">
@@ -97,28 +136,6 @@ onMounted(async () => {
         </div>
       </fieldset>
 
-      <fieldset class="fieldset stack">
-        <legend>사이트 이름 · 파비콘</legend>
-        <label class="field">
-          사이트 이름 <span class="muted">(상단 로고, 브라우저 탭 제목)</span>
-          <input v-model="form.siteName" required maxlength="30" />
-        </label>
-
-        <div class="field">
-          <span>파비콘 <span class="muted">(브라우저 탭에 보이는 작은 아이콘, 비우면 없음)</span></span>
-          <ImageField v-model="form.siteFavicon" alt="파비콘"
-            accept=".ico,image/x-icon,image/vnd.microsoft.icon,image/png,image/jpeg,image/gif,image/webp"
-            hint="ico, png(권장: 32×32 또는 64×64 정사각형) · 5MB 이하" />
-        </div>
-
-        <div class="site-preview" aria-label="미리보기">
-          <span class="muted">브라우저 탭 미리보기</span>
-          <span class="tab">
-            <img v-if="form.siteFavicon" :src="form.siteFavicon" alt="" />
-            {{ form.siteName || '사이트 이름' }}
-          </span>
-        </div>
-      </fieldset>
 
       <fieldset class="fieldset stack">
         <legend>프로필</legend>
