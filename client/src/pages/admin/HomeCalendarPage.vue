@@ -103,7 +103,7 @@ onMounted(() => api('/admin/home/calendar').then(apply).catch((e) => { error.val
     <p v-if="message" class="ok">{{ message }}</p>
 
     <div class="cal-months-setting">
-      <strong>메인에 보여줄 달</strong> <span class="muted">(오늘 기준)</span>
+      <strong>메인 달력에서 넘겨 볼 수 있는 달</strong> <span class="muted">(오늘 기준 — 메인에서 ‹ › 로 넘김, ■ 는 이번달)</span>
       <label v-for="o in MONTH_OPTIONS" :key="o.key" class="inline"><input v-model="months" type="checkbox" :value="o.key" /> {{ o.label }}</label>
       <button type="button" class="small" :disabled="!monthsDirty || !months.length" @click="saveMonths">저장</button>
       <span v-if="!months.length" class="error">하나 이상 골라주세요.</span>
