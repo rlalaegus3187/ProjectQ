@@ -18,6 +18,14 @@ const ADMIN_MENU = [
   {
     group: '콘텐츠',
     items: [
+      {
+        to: '/admin/home', label: '메인페이지 관리',
+        children: [
+          { to: '/admin/home/modules', label: '메인페이지 설정' },
+          { to: '/admin/home/banners', label: '배너 관리' },
+          { to: '/admin/home/calendar', label: '캘린더 관리' },
+        ],
+      },
       { to: '/admin/contents', label: '페이지 관리' },
       { to: '/admin/menu', label: '메뉴 관리' },
     ],

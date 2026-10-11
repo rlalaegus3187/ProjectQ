@@ -33,6 +33,8 @@ app.use('/api/admin', require('./routes/itemEffects').adminRouter);
 app.use('/api/admin', require('./routes/titles').adminRouter);
 app.use('/api', require('./routes/titles').memberRouter);
 app.use('/api', require('./routes/chat').memberRouter);
+app.use('/api/home', require('./routes/home').publicRouter);
+app.use('/api/admin', require('./routes/home').adminRouter);
 app.use('/api/admin', require('./routes/chat').adminRouter);
 app.use('/api/inventory', require('./routes/inventory'));
 app.use('/api/members', require('./routes/members'));

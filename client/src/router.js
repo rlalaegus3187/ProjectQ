@@ -46,6 +46,11 @@ const router = createRouter({
         { path: '', redirect: '/admin/applicants' },
         { path: 'applicants', component: () => import('./pages/admin/ApplicantsPage.vue') },
         { path: 'users', component: () => import('./pages/admin/UsersPage.vue') },
+        // 메인페이지 관리 → 메인페이지 설정 / 배너 관리 / 캘린더 관리
+        { path: 'home', redirect: '/admin/home/modules' },
+        { path: 'home/modules', component: () => import('./pages/admin/HomeModulesPage.vue') },
+        { path: 'home/banners', component: () => import('./pages/admin/HomeBannersPage.vue') },
+        { path: 'home/calendar', component: () => import('./pages/admin/HomeCalendarPage.vue') },
         { path: 'contents/:slug?', component: () => import('./pages/admin/ContentEditPage.vue') },
         { path: 'menu', component: () => import('./pages/admin/MenuPage.vue') },
         { path: 'attributes', component: () => import('./pages/admin/AttributesPage.vue') },

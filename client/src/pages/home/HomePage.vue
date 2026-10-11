@@ -1,20 +1,25 @@
 <script setup>
-import { auth } from '../../auth';
-import { siteMenu, menuLabel } from '../../menu';
-import { site } from '../../site';
+// 메인 (/) — 관리 → 메인페이지 관리에서 켠 모듈을 정한 순서대로 (모듈 화면은 client/src/home/)
+import { ref, onMounted } from 'vue';
+import { api } from '../../api';
+import { HOME_MODULES } from '../../home/modules';
+
+const modules = ref(null);   // [{ key }]
+const data = ref({});
+
+onMounted(async () => {
+  try {
+    const res = await api('/home');
+    modules.value = res.modules.filter((m) => HOME_MODULES[m.key]);
+    data.value = res.data;
+  } catch {
+    modules.value = [{ key: 'welcome' }, { key: 'menu' }];   // 못 불러오면 기본 화면
+  }
+});
 </script>
 
 <template>
-  <section class="card">
-    <h1>{{ site.name }}</h1>
-    <p v-if="auth.user">{{ auth.user.username }}님, 환영합니다. <RouterLink to="/mypage">내 캐릭터 보기</RouterLink></p>
-    <p v-else-if="site.signupOpen"><RouterLink to="/signup">회원가입</RouterLink>하고 캐릭터를 만들어보세요.</p>
-    <p v-else class="muted">지금은 회원가입을 받지 않습니다. <RouterLink to="/login">로그인</RouterLink></p>
-  </section>
-
-  <section class="board-cards">
-    <RouterLink v-for="m in siteMenu.items" :key="m.key" :to="m.to" class="card board-card">
-      <strong>{{ menuLabel(m) }}</strong>
-    </RouterLink>
-  </section>
+  <div v-if="modules" class="home">
+    <component :is="HOME_MODULES[m.key]" v-for="m in modules" :key="m.key" :data="data[m.key] || null" />
+  </div>
 </template>

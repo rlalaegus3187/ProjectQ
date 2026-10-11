@@ -48,6 +48,8 @@ notifications  계정별 알림  user_id, type, post_id, link(이동 주소), me
                → 추가는 server/src/notify.js 의 notify()/notifyUsers()/notifyAdmins() 사용
 items          아이템 (id, name, description(마크다운), image(이미지 하나 — 목록·인벤토리·상세 공용),
                effect → item_effects.code (FK), effect_values JSON, is_bound 귀속, is_sellable 판매가능)
+home_banners   메인 배너  image(업로드 경로), title, link(누르면 이동: '/주소' 또는 http(s)://), sort_order
+home_events    메인 캘린더 이벤트  title, description, color(#rrggbb), start_date ~ end_date (DATE)
 chat_rooms     채팅방  name, description, is_active(0 = 닫힘), admin_only(관리자만), sort_order
 chat_messages  채팅 메시지  room_id → chat_rooms (CASCADE), user_id(FK 없음 — 탈퇴해도 기록 남음), author_name, author_role,
                type(text / system / 모듈이 만든 종류), body, data(JSON), is_deleted, created_at
@@ -66,6 +68,8 @@ settings.site_theme                 CSS 테마 폴더 이름 (client/public/css/
 settings.profile_add_open           프로필 추가 허용 ('0' = 막음, 기본 허용 — 관리자는 항상 가능)
 settings.profile_edit_open          프로필 수정·삭제·대표 지정 허용 ('0' = 막음, 기본 허용)
 settings.costs                      코스트 1~5 이름·사용 JSON [{ name, enabled }] × 5 (없으면 1=HP, 2=MP 사용 / 3~5 미사용)
+settings.home_modules                메인페이지 모듈 순서·표시 JSON [{ key: 'banner'|'welcome'|'calendar'|'menu', visible }] (없으면 환영 문구·메뉴만)
+settings.home_calendar_months        메인 캘린더에 보여줄 달 JSON ['prev','current','next'] (기본 이번달·다음달)
 settings.chat_enabled               채팅 사용 ('0' = 끔 — 관리자만, 메뉴에서도 빠짐 / 기본 사용)
 settings.titles_enabled             칭호 사용 ('0' = 미사용 — 회원 화면에서 칭호 숨김, 칭호·부여 기록은 남음 / 기본 사용)
 settings.stats_enabled              캐릭터 스탯 사용 ('0' = 미사용 — 입력·표시 숨김, 저장된 값은 남음 / 기본 사용)

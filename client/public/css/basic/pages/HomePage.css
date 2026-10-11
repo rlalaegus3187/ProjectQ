@@ -2,3 +2,28 @@
 .board-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 12px; }
 .board-card { display: flex; flex-direction: column; gap: 4px; color: inherit; margin-bottom: 0; }
 .board-card:hover { border-color: #93c5fd; }
+.home { display: flex; flex-direction: column; gap: 16px; }
+.home > .card, .home > .board-cards { margin-bottom: 0; }
+
+/* 배너 (client/src/home/BannerModule.vue) */
+.home-banner { position: relative; overflow: hidden; border-radius: var(--radius); background: var(--color-surface); border: 1px solid var(--color-border); }
+.home-banner-track { display: flex; transition: transform .45s ease; }
+.home-banner-slide { flex: 0 0 100%; }
+.home-banner-slide img { display: block; width: 100%; max-height: 380px; object-fit: cover; }
+.home-banner-nav { position: absolute; top: 50%; transform: translateY(-50%); width: 36px; height: 36px; padding: 0; border-radius: 50%;
+  background: rgba(17, 24, 39, .45); color: #fff; font-size: 22px; line-height: 1; opacity: 0; transition: opacity .2s; }
+.home-banner:hover .home-banner-nav, .home-banner-nav:focus-visible { opacity: 1; }
+.home-banner-nav.prev { left: 10px; }
+.home-banner-nav.next { right: 10px; }
+.home-banner-dots { position: absolute; left: 0; right: 0; bottom: 10px; display: flex; justify-content: center; gap: 6px; }
+.home-banner-dots button { width: 8px; height: 8px; padding: 0; border-radius: 50%; background: rgba(255, 255, 255, .55); }
+.home-banner-dots button.active { background: #fff; width: 20px; border-radius: 999px; }
+
+/* 캘린더 (client/src/home/CalendarModule.vue — 달력 칸 모양은 style.css 의 .cal) */
+.home-cal-tabs { display: flex; gap: 4px; }
+.home-cal-tabs button { padding: 6px 12px; font-size: 13px; background: var(--color-primary-soft); color: var(--color-primary); }
+.home-cal-tabs button.active { background: var(--color-primary); color: var(--color-on-primary); }
+.home-cal-list { list-style: none; margin: 12px 0 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.home-cal-list button { display: flex; align-items: center; gap: 6px; font-size: 14px; color: var(--color-text); text-align: left; }
+.home-cal-empty { margin: 12px 0 0; }
+.home-cal-desc { white-space: pre-wrap; line-height: 1.6; }
