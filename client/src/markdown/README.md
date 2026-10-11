@@ -10,7 +10,7 @@ import { renderMarkdown, MarkdownEditor, MarkdownView, MarkdownToolbar } from '.
 | 이름 | 용도 |
 |---|---|
 | `<MarkdownEditor v-model="text" />` | 편집기 — 공통 툴바 + 입력칸 |
-| `<MarkdownToolbar v-model="text" :target="textarea" />` | 공통 툴바만 — 제목·굵게·기울임·취소선·형광펜·작게·목록·인용·코드·링크·**이미지 넣기**(업로드)·**이미지 링크** (채팅 입력칸은 `compact`) |
+| `<MarkdownToolbar v-model="text" :target="textarea" />` | 공통 툴바만 — **B · I · S · 크게 · 작게 · 목록 · 인용 · 이미지**(누르면 [파일 올리기] / [링크로 넣기]) (채팅 입력칸은 `compact`) |
 | `<MarkdownView :source="text" />` | 표시 |
 | `renderMarkdown(text)` | 마크다운 → 안전한 HTML 문자열 (직접 `v-html` 에 넣을 때) |
 
@@ -18,8 +18,8 @@ import { renderMarkdown, MarkdownEditor, MarkdownView, MarkdownToolbar } from '.
 
 ## 문법 (툴바 버튼과 같음)
 ```
-## 소제목
-**굵게**  *기울임*  ~~취소선~~  ==형광펜==  `코드`
+## 크게 (소제목)
+**굵게**  *기울임*  ~~취소선~~
 -# 작은 글씨
 > 인용
 - 목록

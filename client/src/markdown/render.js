@@ -16,7 +16,7 @@ DOMPurify.addHook('afterSanitizeAttributes', (node) => {
 });
 
 // 사이트 공통 문법 추가 (글·페이지·프로필·채팅 모두 같음 — 툴바는 MarkdownToolbar.vue)
-//   ==형광펜==   ·   줄 앞에 '-# ' → 작은 글씨
+//   줄 앞에 '-# ' → 작은 글씨 (크게는 '## ')
 marked.use({
   extensions: [
     {
@@ -29,17 +29,6 @@ marked.use({
         return undefined;
       },
       renderer(token) { return `<p><small>${this.parser.parseInline(token.tokens)}</small></p>\n`; },
-    },
-    {
-      name: 'highlight',
-      level: 'inline',
-      start: (src) => src.indexOf('=='),
-      tokenizer(src) {
-        const m = /^==([^=\n]+)==/.exec(src);
-        if (m) return { type: 'highlight', raw: m[0], tokens: this.lexer.inlineTokens(m[1]) };
-        return undefined;
-      },
-      renderer(token) { return `<mark>${this.parser.parseInline(token.tokens)}</mark>`; },
     },
   ],
 });

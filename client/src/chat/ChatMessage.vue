@@ -1,6 +1,6 @@
 <script setup>
 // 메시지 한 줄 — 왼쪽 두상(말할 때 고른 표정, 없으면 이름 첫 글자) + 이름·시간 + 본문
-// 본문은 사이트 공통 마크다운(글·페이지와 같은 문법·모양 — 굵게·형광펜·작게·링크·이미지 …, markdown/), 종류(type)별 화면이 있으면 그걸로(messageTypes.js)
+// 본문은 사이트 공통 마크다운(글·페이지와 같은 문법·모양 — 굵게·크게·작게·목록·인용·이미지 …, markdown/), 종류(type)별 화면이 있으면 그걸로(messageTypes.js)
 import { computed } from 'vue';
 import { messageComponent } from './messageTypes';
 import { MarkdownView } from '../markdown';
