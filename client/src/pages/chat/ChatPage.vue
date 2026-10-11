@@ -32,7 +32,7 @@ const notice = ref('');         // 방이 사라짐 등 안내
 const status = ref('connecting');   // connecting / online / offline
 const hasMore = ref(false);
 const loadingMore = ref(false);
-const typing = ref({});          // userId → { name, until }
+const typing = ref({});          // 말하는 중인 사람: userId → { name, until }
 const scroller = ref(null);
 const creating = ref(null);      // { name, description, error, saving }
 const input = ref(null);         // 입력칸 <textarea>
@@ -48,7 +48,13 @@ const selected = computed(() => rooms.value.find((r) => r.id === roomId.value) |
 const myRooms = computed(() => rooms.value.filter((r) => r.joined));
 const otherRooms = computed(() => rooms.value.filter((r) => !r.joined));
 const onlineIds = computed(() => new Set(users.value.map((u) => u.id)));
-const typingNames = computed(() => Object.values(typing.value).map((t) => t.name));
+// 'a, b, c 님이 말하는 중입니다…' (4명부터는 'a, b, c 외 2명')
+const typingText = computed(() => {
+  const names = Object.values(typing.value).map((t) => t.name);
+  if (!names.length) return '';
+  const shown = names.slice(0, 3).join(', ');
+  return `${shown}${names.length > 3 ? ` 외 ${names.length - 3}명` : ''} 님이 말하는 중입니다…`;
+});
 const canDeleteRoom = (r) => !!r && (isAdmin() || (!r.isPermanent && r.ownerId === auth.user?.id));
 const STATUS_LABEL = { connecting: '연결 중…', online: '연결됨', offline: '연결 끊김 — 다시 연결하는 중' };
 
@@ -89,7 +95,7 @@ function resetRoom() {
   users.value = [];
   members.value = [];
   hasMore.value = false;
-  typing.value = {};
+  setTyping({});
 }
 
 // 들어가기 (가입한 방만) — 최신 20개
@@ -105,7 +111,7 @@ async function enter(id) {
     users.value = data.users;
     members.value = data.members;
     commands.value = data.commands;
-    typing.value = {};
+    setTyping({});
     await toBottom();
     await fillScreen();
   } catch (e) {
@@ -184,6 +190,7 @@ const removeRoom = (r) => act(async () => {
 
 // ---------- 표정 ----------
 const FACE_KEY = () => `pq-chat-face-${auth.user?.id}`;
+// 고른 두상은 이 브라우저에 기억 → 다음에 열어도 그 두상으로 (보낸 뒤에도 바꿀 때까지 유지, 서버에는 저장 안 함)
 async function loadFaces() {
   faces.value = (await api('/characters/me/faces').catch(() => ({ faces: [] }))).faces;
   let saved = null;
@@ -220,6 +227,8 @@ async function send() {
   sendError.value = '';
   text.value = '';
   try {
+    typingSent = false;   // 보냄 = 입력 끝 (서버·받는 쪽이 알아서 지움 → stop 안 보냄)
+    lastTyping = 0;
     await request('message:send', { roomId: room.value.id, text: body, faceId: faceId.value });
   } catch (e) {
     sendError.value = e.message;
@@ -233,12 +242,45 @@ function onKey(e) {
     send();
   }
 }
+// ---------- 말하는 중 (보내는 쪽) ----------
+// 치기 시작하면 바로 한 번, 계속 치는 동안 3초마다 한 번만 'typing' (키마다 보내지 않음)
+// 다 지우거나 입력칸을 떠나면 'typing:stop' 한 번 (보냈던 경우만). 보내면 아무것도 안 보냄 (message:new 가 대신)
+const TYPING_RESEND = 3000;
 let lastTyping = 0;
+let typingSent = false;
 function onInput() {
-  if (!room.value || Date.now() - lastTyping < 2000) return;
+  if (!room.value) return;
+  if (!text.value.trim()) { stopTyping(); return; }
+  if (Date.now() - lastTyping < TYPING_RESEND) return;
   lastTyping = Date.now();
+  typingSent = true;
   socket.emit('typing', { roomId: room.value.id });
 }
+function stopTyping() {
+  if (!typingSent || !room.value) return;
+  typingSent = false;
+  lastTyping = 0;
+  socket.emit('typing:stop', { roomId: room.value.id });
+}
+
+// ---------- 말하는 중 (받는 쪽) ----------
+// 'typing' 을 받으면 6초 동안 표시 (그 사이 또 오면 연장). typing:stop · 그 사람 메시지 · 방을 나감 → 바로 지움
+// 정리 타이머는 표시할 사람이 있을 때만, 가장 먼저 끝나는 시각에 한 번 (1초마다 도는 타이머 없음)
+const TYPING_TTL = 6000;
+let sweepTimer = null;
+function setTyping(next) {
+  typing.value = next;
+  clearTimeout(sweepTimer);
+  const list = Object.values(next);
+  if (!list.length) return;
+  sweepTimer = setTimeout(() => {
+    const now = Date.now();
+    setTyping(Object.fromEntries(Object.entries(typing.value).filter(([, t]) => t.until > now)));
+  }, Math.min(...list.map((t) => t.until)) - Date.now() + 50);
+}
+const dropTyping = (userId) => {
+  if (typing.value[userId]) setTyping(Object.fromEntries(Object.entries(typing.value).filter(([id]) => Number(id) !== userId)));
+};
 
 async function remove(m) {
   if (!confirm('이 메시지를 삭제할까요?')) return;
@@ -259,7 +301,7 @@ const handlers = {
     if (m.roomId !== room.value?.id) return;
     const stick = nearBottom() || m.userId === auth.user?.id;
     messages.value.push(m);
-    delete typing.value[m.userId];
+    dropTyping(m.userId);
     if (stick) await toBottom();
   },
   'message:updated': (m) => {   // 누가 메시지·표정을 고침
@@ -287,19 +329,14 @@ const handlers = {
   },
   typing: ({ roomId: id, userId, name }) => {
     if (id !== room.value?.id) return;
-    typing.value = { ...typing.value, [userId]: { name, until: Date.now() + 4000 } };
+    setTyping({ ...typing.value, [userId]: { name, until: Date.now() + TYPING_TTL } });
   },
+  'typing:stop': ({ roomId: id, userId }) => { if (id === room.value?.id) dropTyping(userId); },
   'rooms:changed': async () => {
     await loadRooms().catch(() => {});
     if (roomId.value && !rooms.value.some((r) => r.id === roomId.value)) selectRoom(null);
   },
 };
-// 입력 중 표시는 4초 지나면 지움
-const typingTimer = setInterval(() => {
-  const now = Date.now();
-  const left = Object.fromEntries(Object.entries(typing.value).filter(([, t]) => t.until > now));
-  if (Object.keys(left).length !== Object.keys(typing.value).length) typing.value = left;
-}, 1000);
 
 watch(roomId, (id) => { if (status.value === 'online') enter(id); else resetRoom(); });
 
@@ -317,7 +354,8 @@ onMounted(async () => {
   socket.connect();
 });
 onBeforeUnmount(() => {
-  clearInterval(typingTimer);
+  clearTimeout(sweepTimer);
+  stopTyping();
   for (const [event, fn] of Object.entries(handlers)) socket.off(event, fn);
   socket.disconnect();
 });
@@ -378,13 +416,13 @@ onBeforeUnmount(() => {
           <p v-else-if="!selected" class="muted">왼쪽에서 방을 고르거나 새 방을 만들어보세요.</p>
         </div>
 
-        <p class="chat-typing muted">{{ typingNames.length ? `${typingNames.join(', ')} 님이 입력 중…` : '' }}</p>
+        <p class="chat-typing muted" aria-live="polite">{{ typingText }}</p>
         <MarkdownToolbar v-if="room" v-model="text" :target="input" compact />
         <form class="chat-input" @submit.prevent="send">
           <FacePicker v-model="faceId" :faces="faces" />
           <textarea ref="input" v-model="text" rows="2" maxlength="1000" :disabled="!room || status !== 'online'"
             :placeholder="room ? (commands.length ? '메시지 입력 (Enter 보내기, Shift+Enter 줄바꿈, /도움말 명령어)' : '메시지 입력') : '가입한 방에 들어가면 대화할 수 있습니다'"
-            aria-label="메시지" @keydown="onKey" @input="onInput" />
+            aria-label="메시지" @keydown="onKey" @input="onInput" @blur="stopTyping" />
           <button type="submit" :disabled="!room || status !== 'online' || !text.trim()">보내기</button>
         </form>
         <p v-if="sendError" class="error">{{ sendError }}</p>

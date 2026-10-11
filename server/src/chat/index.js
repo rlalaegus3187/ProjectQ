@@ -23,10 +23,11 @@
 //   message:edit  { messageId, text, faceId } → { }        (내 일반 메시지 고치기 — 내용·표정)
 //   message:delete { messageId }          → { }            (내 메시지 / 관리자는 모두)
 //   본문은 마크다운 그대로 저장 → 화면이 사이트 공통 마크다운으로 안전하게 바꿔서 보여줌 (client/src/markdown/ — 글·페이지와 같은 문법)
-//   typing        { roomId }                                (입력 중 표시, 응답 없음)
+//   typing        { roomId }                                (입력 중 — 치는 동안 3초마다, 응답 없음)
+//   typing:stop   { roomId }                                (다 지움·보냄·입력칸 떠남, 응답 없음)
 // 서버 → 클라이언트
 //   message:new { ...메시지 } · message:updated { ...메시지 } (고침) · message:deleted { id, roomId } · message:notice { text } (나에게만, 저장 안 됨)
-//   room:users { roomId, users } · room:members { roomId, members } · typing { roomId, userId, name }
+//   room:users { roomId, users } · room:members { roomId, members } · typing { roomId, userId, name } · typing:stop { roomId, userId }
 //   rooms:changed (방 목록이 바뀜 → 다시 불러오기) · room:closed { roomId, reason } (방이 사라졌거나 내가 나감 → 방에서 내보냄)
 //
 // 모듈: 공간의 modulesDir(기본 server/src/chat/modules/*.js)을 자동으로 불러옴 (이름이 _ 로 시작하면 건너뜀) — 쓰는 법은 chat/README.md
@@ -45,6 +46,7 @@ const SPACES = require('./spaces');
 const SOCKET_PATH = '/api/socket.io';
 const CHAT_ROLES = ['admin', 'member'];   // 채팅을 쓸 수 있는 권한 (신청자도 쓰게 하려면 'applicant' 추가)
 const RATE = { count: 5, perMs: 5000 };   // 5초에 5개까지
+const TYPING = { minMs: 1500 };            // 입력 중 알림은 한 사람(창)당 1.5초에 한 번만 전달 (화면은 3초마다, 받는 쪽은 6초 지나면 지움)
 const roomKey = (roomId) => `room:${roomId}`;
 
 const spaces = new Map();   // 공간 이름 → 모듈 API (setupChat 이후, getChat 으로 꺼냄)
@@ -189,6 +191,8 @@ function setupSpace(io, space) {
       if (!roomId) return;
       socket.leave(roomKey(roomId));
       socket.data.roomId = null;
+      if (socket.data.typedAt) socket.to(roomKey(roomId)).emit('typing:stop', { roomId, userId: socket.data.user.id });   // 치다가 나감
+      socket.data.typedAt = 0;
       await broadcastUsers(roomId);
       for (const fn of hooks.leave) await fn({ user: socket.data.user, roomId, socket });
     }
@@ -283,6 +287,7 @@ function setupSpace(io, space) {
       const room = await memberRoom(user, roomId);
       if (socket.data.roomId !== room.id) throw new HttpError(400, '먼저 채팅방에 들어가주세요.');
       const body = parseBody(text);
+      socket.data.typedAt = 0;   // 보냄 = 입력 끝 (받는 쪽은 message:new 를 받으면 그 사람 '말하는 중'을 지움 → stop 따로 안 보냄)
       const face = await faces.ownFaceId(user.id, faceId);
       const ctx = { user, room, socket, faceId: face, reply: (t) => api.notice(socket, t) };
 
@@ -322,9 +327,20 @@ function setupSpace(io, space) {
       nsp.to(roomKey(removed.roomId)).emit('message:deleted', removed);
     }));
 
+    // 입력 중 표시 — DB·접속자 조회 없이 같은 방 다른 사람에게 그대로 전달만 (메모리의 socket.data 만 봄)
+    //   typing      화면이 입력을 시작하면, 계속 치는 동안 TYPING.resendMs 마다 한 번 (서버도 TYPING.minMs 안에 또 오면 버림)
+    //   typing:stop 다 지웠을 때·보냈을 때·입력칸을 떠날 때 — 받는 쪽은 바로 지움 (안 와도 받는 쪽이 TYPING.ttlMs 뒤 스스로 지움)
     socket.on('typing', ({ roomId } = {}) => {
-      if (socket.data.roomId && socket.data.roomId === Number(roomId)) {
+      const now = Date.now();
+      if (socket.data.roomId && socket.data.roomId === Number(roomId) && now - (socket.data.typedAt || 0) >= TYPING.minMs) {
+        socket.data.typedAt = now;
         socket.to(roomKey(roomId)).emit('typing', { roomId: Number(roomId), userId: socket.data.user.id, name: socket.data.user.name });
+      }
+    });
+    socket.on('typing:stop', ({ roomId } = {}) => {
+      if (socket.data.roomId && socket.data.roomId === Number(roomId) && socket.data.typedAt) {
+        socket.data.typedAt = 0;
+        socket.to(roomKey(roomId)).emit('typing:stop', { roomId: Number(roomId), userId: socket.data.user.id });
       }
     });
 
