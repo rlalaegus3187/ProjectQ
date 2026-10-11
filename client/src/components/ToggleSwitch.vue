@@ -11,8 +11,10 @@ const on = defineModel({ type: Boolean, default: false });
 const emit = defineEmits(['change']);
 
 function toggle() {
-  on.value = !on.value;
-  emit('change', on.value);
+  // v-model 로 연결되면 on.value 는 부모가 다시 그릴 때 바뀌므로, 새 값을 따로 계산해서 넘김
+  const next = !on.value;
+  on.value = next;
+  emit('change', next);
 }
 </script>
 

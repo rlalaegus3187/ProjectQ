@@ -87,6 +87,11 @@ async function isStatsEnabled(conn = pool) {
   return (await getSetting('stats_enabled', conn)) !== '0';
 }
 
+// 칭호 사용 (settings.titles_enabled = '0' 이면 미사용 — 회원 화면에서 칭호를 숨김, 관리 화면·저장된 칭호는 그대로)
+async function isTitlesEnabled(conn = pool) {
+  return (await getSetting('titles_enabled', conn)) !== '0';
+}
+
 // 공개 설정 (로그인 없이 GET /api/settings, 관리자 설정 화면)
 async function getSiteSettings(conn = pool) {
   return {
@@ -101,13 +106,14 @@ async function getSiteSettings(conn = pool) {
     profileAddOpen: await isProfileAddOpen(conn),
     profileEditOpen: await isProfileEditOpen(conn),
     statsEnabled: await isStatsEnabled(conn),
+    titlesEnabled: await isTitlesEnabled(conn),
     // 지금 적용된 CSS 테마 { id, css(덮어쓸 css 주소, basic 이면 null) }
     siteTheme: await require('./themes').getActiveTheme(conn),
   };
 }
 
 module.exports = {
-  getSetting, setSetting, parseSiteName, parseFavicon, getSiteSettings, isGuestWriteAllowed, isSitePrivate, isSiteClosed, getClosedMessage, isSignupOpen, isProfileAddOpen, isProfileEditOpen, isStatsEnabled,
+  getSetting, setSetting, parseSiteName, parseFavicon, getSiteSettings, isGuestWriteAllowed, isSitePrivate, isSiteClosed, getClosedMessage, isSignupOpen, isProfileAddOpen, isProfileEditOpen, isStatsEnabled, isTitlesEnabled,
   clearSitePrivateCache,
   DEFAULT_SITE_NAME,
 };

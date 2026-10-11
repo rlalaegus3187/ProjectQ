@@ -18,7 +18,7 @@ Vue 3 + Node.js/Express + MySQL 로 만든 SPA 로그인 샘플입니다.
 - **알림**: 내 Q&A 질문에 답변이 달리면 상단 `알림` 에 표시. **알림 / 보관함** 탭 — 알림마다 [보관] [삭제], '모두 삭제'. 보관한 알림은 삭제되지 않음 (보관 해제 후 삭제)
 - **음악**: 프로필별 유튜브 음악, 사이트 전체 음악(관리 → 사이트 설정), 페이지별 음악(`usePageMusic`) — 오른쪽 아래 플레이어, 볼륨/정지는 계정별 저장 (`client/src/music/README.md`)
 - **소지금 / 상점**: 캐릭터 소지금(내역 기록), 관리자가 소지금 지급·회수, `상점 관리`에서 등록된 아이템을 골라 가격·재고 설정, 회원은 `상점`에서 구매
-- **칭호(타이틀)**: 관리 → **칭호 관리** 아래 소탭 2개 — **칭호 목록**(추가·수정·삭제, 배지 색·설명·순서) / **칭호 부여**(칭호를 고르고 캐릭터를 체크해 한 번에 부여·회수, 사유 기록, 받은 회원에게 알림). 회원은 마이페이지 **칭호** 칸에서 대표 칭호를 고름 → 멤버 목록·캐릭터 페이지에서 이름 옆에 표시 (`components/TitleBadge.vue`, `server/src/titles.js`)
+- **칭호(타이틀)**: 관리 → **칭호 관리** 아래 소탭 2개 — **칭호 목록**(추가·수정·삭제, 배지 색·설명·순서) / **칭호 부여**(칭호를 고르고 캐릭터를 체크해 한 번에 부여·회수, 사유 기록, 받은 회원에게 알림). 회원은 마이페이지 **칭호** 칸에서 대표 칭호를 고름 → 멤버 목록·캐릭터 페이지에서 이름 옆에 표시. 칭호 목록 맨 위 **칭호 사용** 스위치를 끄면 회원 화면·공개 API 에서 칭호를 숨김 (만든 칭호·부여 기록은 그대로, `settings.titles_enabled`) (`components/TitleBadge.vue`, `server/src/titles.js`)
 - **아이템 / 인벤토리**: 관리자가 아이템 등록(이미지·효과·귀속·판매가능) 후 캐릭터에게 지급/회수, 회원은 `인벤토리` 에서 확인·버리기
   - 관리 → **아이템 관리** 아래 소탭 3개: **아이템 목록**(검색 · 정렬: 최근·먼저 만든 순·가나다 · 효과별 보기, 이미지는 하나), **캐릭터 아이템 관리**(캐릭터별 보유 종류·개수·소지금, '이 아이템을 가진 캐릭터만', 지급·회수), **아이템 효과**(효과 종류 추가·수정·삭제 — DB `item_effects`)
   - **습득 기록**: 모든 습득·사용이 `item_logs` 에 언제·어디서(관리자 지급/상점 구매/버림 ...)·메모·처리한 사람과 함께 남음. 관리자 지급 때 획득처(예: 이벤트 보상) 입력
@@ -152,7 +152,7 @@ ProjectQ/
 | PATCH | `/api/admin/items/bulk` | (관리자) `{ ids, isBound?, isSellable? }` |
 | PUT/PATCH | `/api/admin/shop/bulk` | (관리자) 일괄 저장 `{ items: [{ id, price, stock, isActive, sortOrder }] }` / 판매 켜기·끄기 `{ ids, isActive }` |
 | GET | `/api/admin/themes` | (관리자) CSS 테마 목록 `{ themes: [{ id, name, description, author, css, preview }], active }` — 적용은 settings 의 `siteTheme` |
-| GET/PUT | `/api/admin/settings` | (관리자) `{ statPoints, siteName, siteFavicon(업로드한 이미지 경로 — ico/png 등, 빈 값=없음), qnaGuestWrite(Q&A 비회원 글쓰기), sitePrivate(회원 전용), signupOpen(회원가입 허용), siteClosed(사이트 비공개), siteClosedMessage(비공개 문구), applicationNotice(신청서 제출 동의사항), profileAddOpen, profileEditOpen(프로필 추가/수정 허용), statsEnabled(캐릭터 스탯 사용), costs([{ name, enabled }] × 5 — 코스트), siteMusic(유튜브 링크, 빈 값=끔) }` 조회/변경 (보낸 값만) |
+| GET/PUT | `/api/admin/settings` | (관리자) `{ statPoints, siteName, siteFavicon(업로드한 이미지 경로 — ico/png 등, 빈 값=없음), qnaGuestWrite(Q&A 비회원 글쓰기), sitePrivate(회원 전용), signupOpen(회원가입 허용), siteClosed(사이트 비공개), siteClosedMessage(비공개 문구), applicationNotice(신청서 제출 동의사항), profileAddOpen, profileEditOpen(프로필 추가/수정 허용), statsEnabled(캐릭터 스탯 사용), titlesEnabled(칭호 사용), costs([{ name, enabled }] × 5 — 코스트), siteMusic(유튜브 링크, 빈 값=끔) }` 조회/변경 (보낸 값만) |
 | GET | `/api/admin/attributes` | (관리자) 전체 항목, 비활성 포함 |
 | POST | `/api/admin/attributes` | (관리자) `{ category: stat/detail, code, label, valueType, options, isRequired, sortOrder }` 항목 추가 |
 | PATCH | `/api/admin/attributes/:id` | (관리자) `{ label, valueType, options, isRequired, sortOrder, isActive }` 수정 |

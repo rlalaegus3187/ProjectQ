@@ -6,6 +6,7 @@ const express = require('express');
 const pool = require('../db');
 const { HttpError, getCharacter, MEMBER_ROLES } = require('../characters');
 const loadViewer = require('../middleware/loadViewer');
+const { isTitlesEnabled } = require('../settings');
 
 const router = express.Router();
 const PAGE_SIZE = 24;
@@ -40,12 +41,13 @@ router.get('/', async (req, res) => {
     [...params, PAGE_SIZE, (page - 1) * PAGE_SIZE],
   );
 
+  const titlesOn = await isTitlesEnabled();
   res.json({
     members: rows.map((r) => ({
       id: r.id,
       name: r.name,
       thumbnail: r.thumbnail,
-      mainTitle: r.main_title_name ? { name: r.main_title_name, color: r.main_title_color } : null,   // 대표 칭호
+      mainTitle: titlesOn && r.main_title_name ? { name: r.main_title_name, color: r.main_title_color } : null,   // 대표 칭호
       profileCount: Number(r.profile_count),
       createdAt: r.created_at,
     })),
@@ -66,7 +68,8 @@ router.get('/:id', loadViewer, async (req, res) => {
     // 관리자가 보는 신청서: 신청 상태까지 보여줌
     return res.json({ character, applicant: true });
   }
-  // 소지금·신청 정보는 공개하지 않음
+  // 소지금·신청 정보는 공개하지 않음. 칭호 미사용이면 칭호도
+  if (!(await isTitlesEnabled())) Object.assign(character, { titles: [], mainTitle: null });
   for (const key of ['money', 'applicationStatus', 'submittedAt', 'locked']) delete character[key];
   res.json({ character, applicant: false });
 });

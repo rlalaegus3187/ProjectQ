@@ -184,8 +184,8 @@ onMounted(() => load().catch((e) => { error.value = e.message; loaded.value = tr
     <p v-if="error && !form" class="error">{{ error }}</p>
   </section>
 
-  <!-- 칭호: 운영진이 부여, 하나를 대표로 고르면 멤버 목록·캐릭터 페이지에서 이름 옆에 보임 -->
-  <section v-if="character" class="card">
+  <!-- 칭호 (관리 → 칭호 목록에서 '칭호 사용'을 끄면 숨김): 운영진이 부여, 하나를 대표로 고르면 멤버 목록·캐릭터 페이지에서 이름 옆에 보임 -->
+  <section v-if="character && site.titlesEnabled" class="card">
     <h2>칭호 <span class="muted">{{ character.titles.length }}개</span></h2>
     <p v-if="!character.titles.length" class="muted">아직 받은 칭호가 없습니다. 칭호는 운영진이 부여합니다.</p>
     <template v-else>

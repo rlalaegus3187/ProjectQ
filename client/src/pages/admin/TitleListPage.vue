@@ -1,8 +1,11 @@
 <script setup>
 // 관리자: 칭호 관리 → 칭호 목록 — 칭호 추가 / 수정 / 삭제 (색·설명·순서)
 // 캐릭터에게 주는 건 '칭호 부여' 소탭
+// 맨 위 '칭호 사용' 스위치: 끄면 회원 화면(마이페이지·멤버 목록·캐릭터 페이지)에서 칭호가 숨겨짐 (만든 칭호·부여 기록은 그대로)
 import { ref, computed, onMounted } from 'vue';
 import { api } from '../../api';
+import { site, setSite } from '../../site';
+import ToggleSwitch from '../../components/ToggleSwitch.vue';
 import ModalDialog from '../../components/ModalDialog.vue';
 import BulkBar from '../../components/BulkBar.vue';
 import TitleBadge from '../../components/TitleBadge.vue';
@@ -29,6 +32,19 @@ const sel = useSelection(() => shown.value);
 
 async function load() {
   titles.value = (await api('/admin/titles')).titles;
+}
+
+// 칭호 사용 / 미사용 — 누르면 바로 저장
+const titlesEnabled = ref(site.titlesEnabled);
+async function toggleTitles(on) {
+  error.value = '';
+  try {
+    setSite(await api('/admin/settings', { method: 'PUT', body: { titlesEnabled: on } }));
+    flash(on ? '칭호를 사용합니다.' : '칭호를 사용하지 않습니다. 회원 화면에서 칭호가 숨겨집니다. (만든 칭호·부여 기록은 그대로)');
+  } catch (e) {
+    titlesEnabled.value = !on;
+    error.value = e.message;
+  }
 }
 
 function newTitle() {
@@ -102,6 +118,16 @@ onMounted(() => load().catch((e) => { error.value = e.message; }));
       캐릭터에게 줄 칭호를 만듭니다. 캐릭터에게 주는 건 <RouterLink to="/admin/titles/grant">칭호 부여</RouterLink>에서 합니다.
       받은 캐릭터는 마이페이지에서 하나를 <strong>대표 칭호</strong>로 골라 이름 옆에 표시할 수 있습니다.
     </p>
+    <div class="form">
+      <label class="switch-row">
+        <ToggleSwitch v-model="titlesEnabled" @change="toggleTitles" />
+        <span>
+          칭호 <strong :class="titlesEnabled ? 'on' : 'off'">{{ titlesEnabled ? '사용' : '미사용' }}</strong>
+          <span class="muted">— 미사용이면 마이페이지 칭호 칸, 멤버 목록·캐릭터 페이지의 칭호 배지가 모두 숨겨집니다.
+            여기서 만든 칭호와 부여 기록은 그대로 남아서, 다시 켜면 그대로 보입니다.</span>
+        </span>
+      </label>
+    </div>
     <p v-if="error" class="error">{{ error }}</p>
     <p v-if="message" class="ok">{{ message }}</p>
 

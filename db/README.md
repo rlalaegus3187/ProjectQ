@@ -63,6 +63,7 @@ settings.site_theme                 CSS 테마 폴더 이름 (client/public/css/
 settings.profile_add_open           프로필 추가 허용 ('0' = 막음, 기본 허용 — 관리자는 항상 가능)
 settings.profile_edit_open          프로필 수정·삭제·대표 지정 허용 ('0' = 막음, 기본 허용)
 settings.costs                      코스트 1~5 이름·사용 JSON [{ name, enabled }] × 5 (없으면 1=HP, 2=MP 사용 / 3~5 미사용)
+settings.titles_enabled             칭호 사용 ('0' = 미사용 — 회원 화면에서 칭호 숨김, 칭호·부여 기록은 남음 / 기본 사용)
 settings.stats_enabled              캐릭터 스탯 사용 ('0' = 미사용 — 입력·표시 숨김, 저장된 값은 남음 / 기본 사용)
 settings.signup_open                회원가입 허용 ('0' = 막음, 없거나 '1' = 허용)
 settings.site_closed                사이트 비공개 ('1' = 관리자만 로그인·이용, 없거나 '0' = 공개)

@@ -15,6 +15,7 @@ const { withTransaction, getCharacterByUserId } = require('../characters');
 const { parseIds } = require('../bulk');
 const { notifyUsers } = require('../notify');
 const { listTitles, findTitle, parseTitleInput, grantTitles, revokeTitles } = require('../titles');
+const { isTitlesEnabled } = require('../settings');
 
 const adminRouter = express.Router();
 adminRouter.use('/titles', requireAdmin);
@@ -105,6 +106,7 @@ adminRouter.post('/titles/:id/revoke', async (req, res) => {
 // ---------- 회원: 대표 칭호 ----------
 const memberRouter = express.Router();
 memberRouter.put('/characters/me/main-title', requireAuth, async (req, res) => {
+  if (!(await isTitlesEnabled())) throw new HttpError(403, '지금은 칭호를 사용하지 않습니다.');
   const [[me]] = await pool.execute('SELECT id FROM characters WHERE user_id = ?', [req.session.userId]);
   if (!me) throw new HttpError(404, '캐릭터가 없습니다.');
   const raw = req.body?.titleId;
