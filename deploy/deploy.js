@@ -169,13 +169,40 @@ function portInUse(port) {
   });
 }
 
-// 지금 PM2 로 떠 있는 이 사이트 앱들의 포트
+// 프로세스(pid)들이 실제로 열고 있는(LISTEN) TCP 포트 — /proc 에서 읽음 (리눅스, 같은 사용자의 프로세스)
+//   pid 가 가진 소켓(inode) ↔ /proc/net/tcp(6) 의 LISTEN 줄을 맞춰 봄
+function listeningPortsOf(pids) {
+  const inodes = new Set();
+  for (const pid of pids) {
+    let fds = [];
+    try { fds = fs.readdirSync(`/proc/${pid}/fd`); } catch { continue; }
+    for (const fd of fds) {
+      try {
+        const m = fs.readlinkSync(`/proc/${pid}/fd/${fd}`).match(/^socket:\[(\d+)\]$/);
+        if (m) inodes.add(m[1]);
+      } catch {}
+    }
+  }
+  const ports = new Set();
+  for (const file of ['/proc/net/tcp', '/proc/net/tcp6']) {
+    let lines = [];
+    try { lines = fs.readFileSync(file, 'utf8').trim().split('\n').slice(1); } catch { continue; }
+    for (const line of lines) {
+      const cols = line.trim().split(/\s+/);   // local_address(ip:port 16진수) · st(0A = LISTEN) · ... · inode(9번째)
+      if (cols[3] === '0A' && inodes.has(cols[9])) ports.add(parseInt(cols[1].split(':')[1], 16));
+    }
+  }
+  return ports;
+}
+
+// 지금 PM2 로 떠 있는 이 사이트 앱들(<APP_NAME>-api / -chat)이 쓰는 포트
+//   예전 설정으로 띄운 앱은 PM2 에 PORT 값이 없으므로(.env 에서 직접 읽음) 프로세스가 실제로 연 포트로 확인
 function runningPorts(appName) {
   try {
-    const list = JSON.parse(capture('pm2', ['jlist']));
-    return new Set(list.filter((a) => a.name.startsWith(`${appName}-`) && a.pm2_env?.status === 'online')
-      .flatMap((a) => [a.pm2_env.env?.PORT, a.pm2_env.env?.CHAT_PORT, a.pm2_env.PORT, a.pm2_env.CHAT_PORT])
-      .filter(Boolean).map(Number));
+    const apps = JSON.parse(capture('pm2', ['jlist']))
+      .filter((a) => [`${appName}-api`, `${appName}-chat`].includes(a.name) && a.pm2_env?.status === 'online');
+    const fromEnv = apps.flatMap((a) => [a.pm2_env.env?.PORT, a.pm2_env.env?.CHAT_PORT]).filter(Boolean).map(Number);
+    return new Set([...fromEnv, ...listeningPortsOf(apps.map((a) => a.pid).filter(Boolean))]);
   } catch {
     return new Set();
   }
