@@ -1,26 +1,33 @@
-// 채팅 (Socket.IO) 코어 — 방 입장 · 기록 · 메시지 · 삭제 · 접속자 · 입력 중 표시 + 모듈 붙이기
+// 채팅 (Socket.IO) 코어 — 방 만들기·가입·나가기·삭제 · 입장 · 기록 · 메시지 · 접속자 · 입력 중 표시 + 모듈 붙이기
 //
 //   server/src/index.js:  const { setupChat } = require('./chat');  setupChat(httpServer, sessionMiddleware);
 //   다른 서버 코드에서:     const { getChat } = require('./chat');  await getChat()?.sendSystem(roomId, '공지입니다');
 //   (채팅을 다른 포트로 따로 띄웠으면 API 쪽 getChat() 은 내부 통로로 전달 — chat/bridge.js)
 //
-// 주소: Socket.IO path '/api/socket.io', 네임스페이스 '/chat'
+// 주소: Socket.IO path '/api/socket.io', 공간(roomspace)마다 네임스페이스 '/<공간>' — 목록은 chat/spaces.js (지금은 '/chat')
+//   방 하나 = 소켓 room 'room:<방 번호>' (방 번호는 DB 가 자동으로 매김)
 // 포트: API 와 같은 포트(같은 프로세스) 또는 따로 (src/chatServer.js) — server/.env 의 CHAT_PORT
 //
 // 로그인 세션(쿠키)을 그대로 씀 — 로그인한 회원만, CHAT_ROLES 권한만 (기본: 멤버·관리자)
 // 채팅을 끄면(관리 → 채팅 관리) 관리자만, 사이트 비공개 모드면 관리자만
 //
 // 소켓 이벤트 (클라이언트 → 서버, 마지막 인자 ack 로 { ok, ... } 또는 { error } 응답)
-//   room:join     { roomId }              → { room, messages, users, commands }   (다른 방에 있었으면 나옴)
-//   room:history  { roomId, beforeId }    → { messages }   (이전 기록 더 보기)
+//   rooms:list    { }                     → { rooms }      (이 공간의 방 + 가입 여부·인원·방장)
+//   room:create   { name, description }   → { room }       (만든 사람이 방장, 자동 가입)
+//   room:join     { roomId }              → { room }       (가입)
+//   room:leave    { roomId }              → { destroyed }  (나가기 — 마지막 사람이 나가면 방 폭파)
+//   room:delete   { roomId }              → { }            (방장·관리자, 상시 방은 관리자만)
+//   room:enter    { roomId }              → { room, messages, hasMore, users, members, commands }   (가입한 방만, 최신 20개)
+//   room:history  { roomId, beforeId }    → { messages, hasMore }   (위로 스크롤하면 이전 20개)
 //   message:send  { roomId, text }        → { }            ('/' 로 시작하면 명령어 — 모듈이 등록)
 //   message:delete { messageId }          → { }            (내 메시지 / 관리자는 모두)
 //   typing        { roomId }                                (입력 중 표시, 응답 없음)
 // 서버 → 클라이언트
 //   message:new { ...메시지 } · message:deleted { id, roomId } · message:notice { text } (나에게만, 저장 안 됨)
-//   room:users { roomId, users } · typing { roomId, userId, name } · rooms:changed (방 목록이 바뀜)
+//   room:users { roomId, users } · room:members { roomId, members } · typing { roomId, userId, name }
+//   rooms:changed (방 목록이 바뀜 → 다시 불러오기) · room:closed { roomId, reason } (방이 사라졌거나 내가 나감 → 방에서 내보냄)
 //
-// 모듈: server/src/chat/modules/*.js 를 자동으로 불러옴 (이름이 _ 로 시작하면 건너뜀) — 쓰는 법은 chat/README.md
+// 모듈: 공간의 modulesDir(기본 server/src/chat/modules/*.js)을 자동으로 불러옴 (이름이 _ 로 시작하면 건너뜀) — 쓰는 법은 chat/README.md
 const fs = require('fs');
 const path = require('path');
 const { Server } = require('socket.io');
@@ -30,13 +37,15 @@ const { isSiteClosed } = require('../settings');
 const config = require('../config');
 const store = require('./store');
 const { remoteChat } = require('./bridge');
+const SPACES = require('./spaces');
 
 const SOCKET_PATH = '/api/socket.io';
 const CHAT_ROLES = ['admin', 'member'];   // 채팅을 쓸 수 있는 권한 (신청자도 쓰게 하려면 'applicant' 추가)
 const RATE = { count: 5, perMs: 5000 };   // 5초에 5개까지
 const roomKey = (roomId) => `room:${roomId}`;
 
-let chat = null;   // setupChat 이후의 모듈 API (getChat 으로 꺼냄)
+const spaces = new Map();   // 공간 이름 → 모듈 API (setupChat 이후, getChat 으로 꺼냄)
+const DEFAULT_SPACE = 'chat';
 
 // 세션의 회원 → 채팅 사용자 { id, username, name(캐릭터 이름, 없으면 아이디), role, isAdmin }
 async function loadUser(userId) {
@@ -72,8 +81,8 @@ function handler(fn) {
   };
 }
 
-function loadModules(api) {
-  const dir = path.join(__dirname, 'modules');
+function loadModules(api, dir) {
+  if (!fs.existsSync(dir)) return [];
   const disabled = new Set(String(process.env.CHAT_MODULES_DISABLED || '').split(',').map((s) => s.trim()).filter(Boolean));
   const loaded = [];
   for (const file of fs.readdirSync(dir).filter((f) => f.endsWith('.js') && !f.startsWith('_')).sort()) {
@@ -86,10 +95,9 @@ function loadModules(api) {
   return loaded;
 }
 
-function setupChat(httpServer, sessionMiddleware) {
-  const io = new Server(httpServer, { path: SOCKET_PATH, serveClient: false });
-  io.engine.use(sessionMiddleware);   // express-session 쿠키 → socket.request.session
-  const nsp = io.of('/chat');
+// 공간 하나 (네임스페이스 /<name>) — 모듈 API 를 돌려줌
+function setupSpace(io, space) {
+  const nsp = io.of(`/${space.name}`);
 
   // ---------- 모듈 API ----------
   const hooks = { before: [], after: [], join: [], leave: [], connection: [] };
@@ -104,6 +112,20 @@ function setupChat(httpServer, sessionMiddleware) {
   async function broadcastUsers(roomId) {
     nsp.to(roomKey(roomId)).emit('room:users', { roomId, users: await usersIn(roomId) });
   }
+  async function broadcastMembers(roomId) {
+    nsp.to(roomKey(roomId)).emit('room:members', { roomId, members: await store.listMembers(roomId) });
+  }
+  // 방에서 소켓 내보내기 (userId 를 주면 그 사람만) — 화면에는 room:closed
+  async function closeRoom(roomId, reason, userId = null) {
+    const sockets = await nsp.in(roomKey(roomId)).fetchSockets();
+    for (const s of sockets) {
+      if (userId && s.data.user?.id !== userId) continue;
+      s.emit('room:closed', { roomId, reason });
+      s.leave(roomKey(roomId));
+      if (s.data.roomId === roomId) s.data.roomId = null;
+    }
+    if (userId) await broadcastUsers(roomId);
+  }
   // 저장 + 방에 보내기
   async function post(roomId, message) {
     const saved = await store.saveMessage({ roomId, ...message });
@@ -111,7 +133,8 @@ function setupChat(httpServer, sessionMiddleware) {
     return saved;
   }
 
-  chat = {
+  const api = {
+    space: space.name, label: space.label,
     io, nsp, store, pool, HttpError,
     // 명령어 등록: chat.command('주사위', { aliases: ['dice'], usage: '/주사위 2d6', description }, async (ctx) => ...)
     //   ctx = { args, argText, user, room, socket, reply(text) }
@@ -122,24 +145,26 @@ function setupChat(httpServer, sessionMiddleware) {
     },
     beforeMessage(fn) { hooks.before.push(fn); },     // (msg, ctx) → msg(바꿔도 됨) | null(조용히 취소) — 막으려면 throw new HttpError(400, '이유')
     afterMessage(fn) { hooks.after.push(fn); },       // (savedMsg, ctx) — 저장·전송된 뒤
-    onJoin(fn) { hooks.join.push(fn); },              // ({ user, room, socket })
-    onLeave(fn) { hooks.leave.push(fn); },            // ({ user, roomId, socket })
+    onJoin(fn) { hooks.join.push(fn); },              // ({ user, room, socket }) — 방에 들어올 때(입장)
+    onLeave(fn) { hooks.leave.push(fn); },            // ({ user, roomId, socket }) — 방에서 나갈 때(퇴장)
     onConnection(fn) { hooks.connection.push(fn); },  // (socket, user) — socket.on('내모듈:이벤트', ...) 추가할 때
     post,
     sendSystem: (roomId, text, data = null) => post(roomId, { type: 'system', body: text, data }),
     notice: (socket, text) => socket.emit('message:notice', { text }),   // 한 사람에게만, 저장 안 됨
     usersIn,
     roomsChanged: () => nsp.emit('rooms:changed'),
-  stats: async () => ({ online: (await nsp.fetchSockets()).length, commands: chat.commands() }),
+    // 방이 지워짐 (관리 화면 삭제 등) → 들어와 있던 사람 내보내고 목록 새로고침
+    roomDeleted: async (roomId, reason = '방이 삭제되었습니다.') => { await closeRoom(Number(roomId), reason); nsp.emit('rooms:changed'); },
+    stats: async () => ({ online: (await nsp.fetchSockets()).length, commands: api.commands() }),
     commands: () => [...new Set(commands.values())].map(({ name, usage, description }) => ({ name, usage, description })),
   };
 
   // 기본 명령어: /도움말
-  chat.command('도움말', { aliases: ['help'], usage: '/도움말', description: '쓸 수 있는 명령어 목록' }, ({ reply }) => {
-    reply(chat.commands().map((c) => `${c.usage} — ${c.description}`).join('\n'));
+  api.command('도움말', { aliases: ['help'], usage: '/도움말', description: '쓸 수 있는 명령어 목록' }, ({ reply }) => {
+    reply(api.commands().map((c) => `${c.usage} — ${c.description}`).join('\n'));
   });
-  const modules = loadModules(chat);
-  console.log(`[chat] 모듈 ${modules.length ? modules.join(', ') : '없음'}`);
+  const modules = loadModules(api, space.modulesDir);
+  console.log(`[chat] /${space.name} 모듈 ${modules.length ? modules.join(', ') : '없음'}`);
 
   // ---------- 접속 ----------
   nsp.use(async (socket, next) => {
@@ -172,10 +197,56 @@ function setupChat(httpServer, sessionMiddleware) {
       socket.data.user = user;
       return user;
     }
+    const roomFor = (user, roomId) => store.getRoomFor(space.name, user, roomId);
+    async function memberRoom(user, roomId) {
+      const room = await roomFor(user, roomId);
+      if (!room.joined) throw new HttpError(403, '가입한 방에서만 대화할 수 있습니다. 먼저 [가입]해주세요.');
+      return room;
+    }
+
+    socket.on('rooms:list', handler(async () => ({ rooms: await store.listRooms(space.name, { user: await freshUser() }) })));
+
+    socket.on('room:create', handler(async (body) => {
+      const user = await freshUser();
+      const id = await store.createRoom(space.name, user, body);
+      api.roomsChanged();
+      return { room: await roomFor(user, id) };
+    }));
 
     socket.on('room:join', handler(async ({ roomId }) => {
       const user = await freshUser();
-      const room = await store.getRoomFor(user, roomId);
+      const room = await roomFor(user, roomId);
+      if (await store.joinRoom(room, user)) {
+        await broadcastMembers(room.id);
+        api.roomsChanged();
+      }
+      return { room: { ...room, joined: true } };
+    }));
+
+    socket.on('room:leave', handler(async ({ roomId }) => {
+      const user = await freshUser();
+      const room = await roomFor(user, roomId);
+      const { destroyed } = await store.leaveRoom(room, user);
+      if (destroyed) {
+        await closeRoom(room.id, `'${room.name}' 방은 모두 나가서 사라졌습니다.`);
+      } else {
+        await closeRoom(room.id, `'${room.name}' 방에서 나왔습니다.`, user.id);   // 내 다른 창도
+        await broadcastMembers(room.id);
+      }
+      api.roomsChanged();
+      return { destroyed };
+    }));
+
+    socket.on('room:delete', handler(async ({ roomId }) => {
+      const user = await freshUser();
+      const room = await roomFor(user, roomId);
+      await store.deleteRoom(room, user);
+      await api.roomDeleted(room.id, `'${room.name}' 방이 삭제되었습니다.`);
+    }));
+
+    socket.on('room:enter', handler(async ({ roomId }) => {
+      const user = await freshUser();
+      const room = await memberRoom(user, roomId);
       if (socket.data.roomId !== room.id) {
         await leaveCurrent();
         socket.join(roomKey(room.id));
@@ -183,12 +254,13 @@ function setupChat(httpServer, sessionMiddleware) {
         await broadcastUsers(room.id);
         for (const fn of hooks.join) await fn({ user, room, socket });
       }
-      return { room, messages: await store.getHistory(room.id), users: await usersIn(room.id), commands: chat.commands() };
+      const { messages, hasMore } = await store.getHistory(room.id);
+      return { room, messages, hasMore, users: await usersIn(room.id), members: await store.listMembers(room.id), commands: api.commands() };
     }));
 
     socket.on('room:history', handler(async ({ roomId, beforeId }) => {
-      const room = await store.getRoomFor(await freshUser(), roomId);
-      return { messages: await store.getHistory(room.id, { beforeId: Number(beforeId) || null }) };
+      const room = await memberRoom(await freshUser(), roomId);
+      return store.getHistory(room.id, { beforeId: Number(beforeId) || null });
     }));
 
     socket.on('message:send', handler(async ({ roomId, text }) => {
@@ -198,12 +270,12 @@ function setupChat(httpServer, sessionMiddleware) {
       sent.push(now);
 
       const user = await freshUser();
-      const room = await store.getRoomFor(user, roomId);
+      const room = await memberRoom(user, roomId);
       if (socket.data.roomId !== room.id) throw new HttpError(400, '먼저 채팅방에 들어가주세요.');
       const body = String(text ?? '').trim();
       if (!body) throw new HttpError(400, '내용을 입력해주세요.');
       if (body.length > store.MAX_BODY) throw new HttpError(400, `메시지는 ${store.MAX_BODY}자 이내로 보내주세요.`);
-      const ctx = { user, room, socket, reply: (t) => chat.notice(socket, t) };
+      const ctx = { user, room, socket, reply: (t) => api.notice(socket, t) };
 
       // 명령어
       let msg = { type: 'text', body, data: null };
@@ -243,11 +315,24 @@ function setupChat(httpServer, sessionMiddleware) {
     for (const fn of hooks.connection) fn(socket, socket.data.user);
   });
 
-  return chat;
+  return api;
+}
+
+function setupChat(httpServer, sessionMiddleware) {
+  const io = new Server(httpServer, { path: SOCKET_PATH, serveClient: false });
+  io.engine.use(sessionMiddleware);   // express-session 쿠키 → socket.request.session
+  for (const space of SPACES) spaces.set(space.name, setupSpace(io, space));
+  return spaces.get(DEFAULT_SPACE);
 }
 
 // 이 프로세스의 채팅 — 없고(API 서버) 채팅을 따로 띄웠으면 내부 통로로 전달하는 원격 채팅
-let remote = null;
-const getChat = () => chat || (config.chatSeparate ? (remote ||= remoteChat(config.chatPort)) : null);
+//   getChat()          기본 공간('chat') · getChat('investigation') 다른 공간
+const remotes = new Map();
+function getChat(space = DEFAULT_SPACE) {
+  if (spaces.size) return spaces.get(space) || null;
+  if (!config.chatSeparate || !SPACES.some((s) => s.name === space)) return null;
+  if (!remotes.has(space)) remotes.set(space, remoteChat(config.chatPort, space));
+  return remotes.get(space);
+}
 
-module.exports = { setupChat, getChat, SOCKET_PATH, CHAT_ROLES };
+module.exports = { setupChat, getChat, SOCKET_PATH, CHAT_ROLES, SPACES, DEFAULT_SPACE };

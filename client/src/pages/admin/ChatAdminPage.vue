@@ -1,5 +1,6 @@
 <script setup>
 // 관리자: 채팅 관리 — 채팅 켜기/끄기, 채팅방 추가·수정·삭제·기록 비우기, 연결 정보(포트·주소·모듈 — 읽기 전용)
+// 상시 방: 여기서 만든 방(비어도 남음) / 회원 방: 회원이 채팅 화면에서 만든 방(모두 나가면 폭파)
 import { ref, computed, onMounted } from 'vue';
 import { api } from '../../api';
 import { setSite } from '../../site';
@@ -40,17 +41,17 @@ async function toggleChat(on) {
 
 function newRoom() {
   const maxOrder = Math.max(0, ...rooms.value.map((r) => r.sortOrder));
-  editing.value = { name: '', description: '', isActive: true, adminOnly: false, sortOrder: maxOrder + 10, error: '' };
+  editing.value = { name: '', description: '', isActive: true, adminOnly: false, isPermanent: true, sortOrder: maxOrder + 10, error: '' };
 }
 function editRoom(r) {
   editing.value = { ...r, error: '' };
 }
 async function save() {
-  const { id, name, description, isActive, adminOnly, sortOrder } = editing.value;
+  const { id, name, description, isActive, adminOnly, isPermanent, sortOrder } = editing.value;
   editing.value.error = '';
   saving.value = true;
   try {
-    const body = { name, description, isActive, adminOnly, sortOrder };
+    const body = { name, description, isActive, adminOnly, isPermanent, sortOrder };
     apply(id ? await api(`/admin/chat/rooms/${id}`, { method: 'PUT', body }) : await api('/admin/chat/rooms', { method: 'POST', body }));
     flash(`'${name}' 방을 ${id ? '수정' : '추가'}했습니다.`);
     editing.value = null;
@@ -110,15 +111,18 @@ onMounted(() => load().catch((e) => { error.value = e.message; }));
       <h2>채팅방</h2>
       <button type="button" @click="newRoom">새 채팅방</button>
     </div>
+    <p class="muted">상시 방은 비어도 남고 순서대로 위에 보입니다. 회원 방은 회원이 채팅 화면에서 만든 방으로, 모두 나가면 사라집니다. 어느 방이든 [가입]한 사람만 대화합니다.</p>
     <p v-if="!rooms.length" class="muted">채팅방이 없습니다.</p>
     <div v-else class="table-wrap">
       <table class="table">
-        <thead><tr><th>순서</th><th>이름</th><th>설명</th><th>사용</th><th>입장</th><th>메시지</th><th></th></tr></thead>
+        <thead><tr><th>번호</th><th>순서</th><th>이름</th><th>종류</th><th>가입</th><th>사용</th><th>입장</th><th>메시지</th><th></th></tr></thead>
         <tbody>
           <tr v-for="r in rooms" :key="r.id" :class="{ inactive: !r.isActive }">
-            <td>{{ r.sortOrder }}</td>
-            <td class="title-cell"><strong># {{ r.name }}</strong></td>
-            <td class="title-cell muted">{{ r.description }}</td>
+            <td class="muted">{{ r.id }}</td>
+            <td>{{ r.isPermanent ? r.sortOrder : '-' }}</td>
+            <td class="title-cell"><strong># {{ r.name }}</strong><br v-if="r.description" /><span class="muted">{{ r.description }}</span></td>
+            <td>{{ r.isPermanent ? '상시 방' : `회원 방 · 방장 ${r.ownerName || '-'}` }}</td>
+            <td>{{ r.memberCount }}명</td>
             <td>{{ r.isActive ? '사용' : '닫힘' }}</td>
             <td>{{ r.adminOnly ? '관리자만' : '모두' }}</td>
             <td>{{ r.messageCount }}개</td>
@@ -143,7 +147,7 @@ onMounted(() => load().catch((e) => { error.value = e.message; }));
         <span class="muted">{{ info.separate ? `— API(${info.port})와 따로 띄움` : '— API 와 같은 포트·같은 프로세스' }} ·
           <RouterLink to="/admin/settings">사이트 설정 → 서버 포트</RouterLink></span>
       </dd>
-      <dt>소켓 주소</dt><dd><code>{{ info.socketPath }}</code> <span class="muted">(네임스페이스 /chat)</span></dd>
+      <dt>소켓 주소</dt><dd><code>{{ info.socketPath }}</code> <span class="muted">(공간 /chat — 방마다 room:번호)</span></dd>
       <dt>쓸 수 있는 권한</dt><dd>{{ roleLabel }}</dd>
       <dt>지금 접속</dt>
       <dd>
@@ -177,6 +181,7 @@ onMounted(() => load().catch((e) => { error.value = e.message; }));
         </div>
         <label class="toggle"><ToggleSwitch v-model="editing.isActive" /> 사용 <span class="muted">(끄면 목록에서 숨김, 기록은 남음)</span></label>
         <label class="toggle"><ToggleSwitch v-model="editing.adminOnly" /> 관리자만 입장</label>
+        <label class="toggle"><ToggleSwitch v-model="editing.isPermanent" /> 상시 방 <span class="muted">(끄면 회원 방 — 모두 나가면 폭파, 지금 아무도 없으면 바로 사라짐)</span></label>
         <div class="field">
           <label for="room-order">순서 <span class="muted">(작을수록 위)</span></label>
           <input id="room-order" v-model.number="editing.sortOrder" class="narrow" type="number" step="1" />

@@ -12,6 +12,7 @@ const {
   parseUsername, parseNewPassword, parseContact, destroyUserSessions, detachUserPosts,
 } = require('../accounts');
 const { withTransaction } = require('../characters');
+const { chatCleanup } = require('../chat/cleanup');
 
 const router = express.Router();
 
@@ -174,6 +175,7 @@ router.delete('/me', authLimiter, requireAuth, async (req, res) => {
     await conn.execute('DELETE FROM users WHERE id = ?', [userId]);
   });
   await destroyUserSessions(userId);   // 다른 기기의 로그인도 끊음
+  await chatCleanup();
   req.session.destroy(() => {
     res.clearCookie(config.sessionCookie);
     res.status(204).end();

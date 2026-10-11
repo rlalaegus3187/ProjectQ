@@ -50,7 +50,9 @@ items          아이템 (id, name, description(마크다운), image(이미지 �
                effect → item_effects.code (FK), effect_values JSON, is_bound 귀속, is_sellable 판매가능)
 home_banners   메인 배너  image(올린 파일 경로 또는 http(s) 이미지 링크), title, link(누르면 이동: '/주소' 또는 http(s)://), sort_order
 home_events    메인 캘린더 이벤트  title, description, color(#rrggbb), start_date ~ end_date (DATE)
-chat_rooms     채팅방  name, description, is_active(0 = 닫힘), admin_only(관리자만), sort_order
+chat_rooms     채팅방  space(공간 = 네임스페이스, 기본 'chat'), name, description, owner_id(방장, FK 없음), is_permanent(1 = 상시 방, 0 = 회원 방 — 비면 폭파),
+               is_active(0 = 닫힘), admin_only(관리자만), sort_order
+chat_room_members 방 가입자  (room_id, user_id) — 방·계정 삭제 시 CASCADE, joined_at(먼저 들어온 순 = 다음 방장)
 chat_messages  채팅 메시지  room_id → chat_rooms (CASCADE), user_id(FK 없음 — 탈퇴해도 기록 남음), author_name, author_role,
                type(text / system / 모듈이 만든 종류), body, data(JSON), is_deleted, created_at
 titles         칭호  name(UNIQUE), description, color(#rrggbb, 없으면 기본색), sort_order

@@ -7,6 +7,7 @@ const { hashPassword } = require('../password');
 const { parseNewPassword, destroyUserSessions, detachUserPosts } = require('../accounts');
 const { notify, notifyUsers } = require('../notify');
 const { withTransaction } = require('../characters');
+const { chatCleanup } = require('../chat/cleanup');
 const { parseIds } = require('../bulk');
 const ROLE_LABELS = { admin: '관리자', member: '멤버', applicant: '신청자' };
 
@@ -113,6 +114,7 @@ router.post('/users/bulk-delete', async (req, res) => {
     return rows;
   });
   for (const r of deleted) await destroyUserSessions(r.id);
+  await chatCleanup();
   res.json({ deleted: deleted.length, usernames: deleted.map((r) => r.username) });
 });
 

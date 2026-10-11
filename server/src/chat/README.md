@@ -6,8 +6,9 @@
 ## 들어 있는 것
 | 위치 | 하는 일 |
 |---|---|
-| `server/src/chat/index.js` | 코어 — 로그인 확인, 방 입장·기록·메시지·삭제, 접속자, 입력 중 표시, 도배 방지, 모듈 불러오기 |
-| `server/src/chat/store.js` | DB 처리 (`chat_rooms`, `chat_messages`) |
+| `server/src/chat/index.js` | 코어 — 로그인 확인, 방 만들기·가입·나가기·삭제, 입장·기록·메시지·삭제, 접속자, 입력 중 표시, 도배 방지, 모듈 불러오기 |
+| `server/src/chat/spaces.js` | **공간(roomspace) 목록** — 공간마다 네임스페이스 `/<이름>` 하나 (지금은 `chat`, 나중에 조사 전용 등) |
+| `server/src/chat/store.js` | DB 처리 (`chat_rooms`, `chat_room_members`, `chat_messages`) |
 | `server/src/chat/modules/*.js` | **서버 모듈** — 파일을 넣으면 자동으로 붙음 (`_` 로 시작하면 건너뜀) |
 | `server/src/routes/chat.js` | REST: 방 목록, 관리자 방 관리 |
 | `client/src/chat/socket.js` | 소켓 연결 · `request(이벤트, 값)` |
@@ -16,8 +17,27 @@
 | `client/src/pages/chat/ChatPage.vue` | 채팅 화면 `/chat` |
 | `client/src/pages/admin/ChatAdminPage.vue` | 관리 → 채팅 관리 (켜기/끄기, 방 관리, 연결 정보) |
 
-기본 기능: 방 목록 · 최근 50개 기록(+ 이전 대화 더 보기) · 보내기(Enter / Shift+Enter 줄바꿈) · 내 메시지 삭제(관리자는 모두) ·
-접속자 목록 · 입력 중 표시 · 도배 방지(5초에 5개) · `/도움말` · 관리자: 방 추가/수정/닫기/관리자 전용/기록 비우기, 채팅 끄기
+기본 기능: 방 목록(내 방 · 다른 방) · **방 만들기**(번호 자동, 만든 사람이 방장·자동 가입, 회원당 5개) · **가입 / 나가기** ·
+마지막 사람이 나가면 **방 폭파**(기록·가입 함께 삭제) · 방장이 나가면 가장 먼저 들어온 사람이 방장 · 삭제(방장·관리자) ·
+가입한 방만 입장 — **최신 20개만** 받고 위로 스크롤해 맨 위에 닿으면 이전 20개씩 · 보내기(Enter / Shift+Enter 줄바꿈) ·
+내 메시지 삭제(관리자는 모두) · 가입자 목록(지금 보고 있는 사람 표시) · 입력 중 표시 · 도배 방지(5초에 5개) · `/도움말` ·
+관리자: 상시 방 추가/수정/닫기/관리자 전용/기록 비우기, 회원 방 삭제, 채팅 끄기
+
+### 방 종류
+| 종류 | 만드는 곳 | 비면 |
+|---|---|---|
+| 상시 방 (`is_permanent=1`) | 관리 → 채팅 관리 | 남음 |
+| 회원 방 | 채팅 화면 [+ 방 만들기] | 폭파 (계정 삭제로 비어도) |
+
+어느 방이든 **가입한 사람만** 들어가 대화합니다. 방 하나 = 소켓 room `room:<번호>`.
+
+## 공간 (roomspace)
+`server/src/chat/spaces.js` 에 한 줄 추가하면 새 네임스페이스가 생깁니다. 방(`chat_rooms.space`)·명령어·모듈이 공간마다 따로입니다.
+```js
+{ name: 'investigation', label: '조사', modulesDir: path.join(__dirname, 'investigation') },
+```
+- 화면: `getChatSocket('investigation')` · `request('room:enter', { roomId }, 'investigation')`
+- 서버: `getChat('investigation')?.sendSystem(roomId, '...')`
 
 ## 새 모듈 만들기
 ### 1) 서버 모듈 — `server/src/chat/modules/<이름>.js`
@@ -58,13 +78,14 @@ export default { name: 'attendance', messageTypes: { attendance: AttendanceMessa
 | `chat.command(이름, { aliases, usage, description }, fn)` | `/이름 ...` 명령어. `fn(ctx)` 가 `{ type, body, data }` 를 돌려주면 방에 올라감, 안 돌려주면 아무것도 안 올라감 |
 | `chat.beforeMessage(fn)` | 보내기 전: `fn(msg, ctx)` → 바꾼 `msg` / `null`(조용히 취소) / `throw new chat.HttpError(400, '이유')`(보낸 사람에게 오류) |
 | `chat.afterMessage(fn)` | 저장·전송된 뒤: `fn(saved, ctx)` — 다른 기능 연동(포인트 지급, 기록 등). 여기서 난 오류는 로그만 남고 채팅은 계속 |
-| `chat.onJoin(fn)` · `chat.onLeave(fn)` | 방에 들어올 때 `{ user, room, socket }` / 나갈 때 `{ user, roomId, socket }` |
+| `chat.onJoin(fn)` · `chat.onLeave(fn)` | 방 화면에 들어올 때 `{ user, room, socket }` / 나갈 때 `{ user, roomId, socket }` (가입·탈퇴가 아니라 입장·퇴장) |
 | `chat.onConnection(fn)` | 접속할 때 `(socket, user)` — 모듈 전용 소켓 이벤트 추가: `socket.on('모듈이름:이벤트', (payload, ack) => ...)` |
 | `chat.post(roomId, { user, type, body, data })` | 메시지 저장 + 방에 보내기 (`user` 없으면 이름 없는 메시지) |
 | `chat.sendSystem(roomId, text)` | 시스템 메시지 (가운데 회색 글자) |
 | `chat.notice(socket, text)` | 한 사람에게만 보이는 안내 (저장 안 됨) |
 | `chat.usersIn(roomId)` | 그 방 접속자 `[{ id, name, role }]` |
-| `chat.store` · `chat.pool` · `chat.nsp` · `chat.io` | DB 함수 · DB 커넥션 풀 · Socket.IO 네임스페이스(`/chat`) · 서버 |
+| `chat.roomsChanged()` · `chat.roomDeleted(roomId, 이유)` | 방 목록 새로고침 / 방이 지워짐 → 들어와 있던 사람 내보냄 |
+| `chat.space` · `chat.store` · `chat.pool` · `chat.nsp` · `chat.io` | 공간 이름 · DB 함수 · DB 커넥션 풀 · Socket.IO 네임스페이스(`/chat`) · 서버 |
 
 `ctx = { user: { id, username, name(캐릭터 이름 없으면 아이디), role, isAdmin }, room, socket, reply(text), args, argText }`
 
@@ -77,11 +98,14 @@ await getChat()?.sendSystem(1, '이벤트가 시작되었습니다!');   // 1 = 
 ## 소켓 이벤트 (화면 ↔ 서버)
 | 보내기 (화면 → 서버, ack 로 `{ ok, ... }` / `{ error }`) | 받기 (서버 → 화면) |
 |---|---|
-| `room:join { roomId }` → `{ room, messages, users, commands }` | `message:new` 새 메시지 |
-| `room:history { roomId, beforeId }` → `{ messages }` | `message:deleted { id, roomId }` |
-| `message:send { roomId, text }` | `message:notice { text }` (나에게만) |
-| `message:delete { messageId }` | `room:users { roomId, users }` · `typing { roomId, userId, name }` |
-| `typing { roomId }` (응답 없음) | `rooms:changed` (관리자가 방을 바꿈 → 목록 다시 불러오기) |
+| `rooms:list` → `{ rooms }` | `message:new` 새 메시지 |
+| `room:create { name, description }` → `{ room }` | `message:deleted { id, roomId }` |
+| `room:join { roomId }` → `{ room }` (가입) | `message:notice { text }` (나에게만) |
+| `room:leave { roomId }` → `{ destroyed }` | `room:users { roomId, users }` (보고 있는 사람) |
+| `room:delete { roomId }` | `room:members { roomId, members }` (가입자) |
+| `room:enter { roomId }` → `{ room, messages, hasMore, users, members, commands }` | `typing { roomId, userId, name }` |
+| `room:history { roomId, beforeId }` → `{ messages, hasMore }` | `rooms:changed` (목록 다시 불러오기) |
+| `message:send { roomId, text }` · `message:delete { messageId }` · `typing { roomId }` | `room:closed { roomId, reason }` (방이 사라짐·내가 나감) |
 
 ## 누가 쓸 수 있나
 - 로그인한 **멤버·관리자** (`index.js` 의 `CHAT_ROLES` — 신청자도 쓰게 하려면 `'applicant'` 추가)
