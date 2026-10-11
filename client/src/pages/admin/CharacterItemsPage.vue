@@ -192,7 +192,7 @@ onMounted(async () => {
     <p v-if="!inventory.length" class="muted">아이템이 없습니다.</p>
     <ul v-else class="post-list">
       <li v-for="entry in inventory" :key="entry.item.id" class="inv-row">
-        <img v-if="entry.item.image" :src="entry.item.image" :alt="entry.item.name" class="item-icon" />
+        <img referrerpolicy="no-referrer" v-if="entry.item.image" :src="entry.item.image" :alt="entry.item.name" class="item-icon" />
         <span class="post-title">{{ entry.item.name }} <span class="muted">x {{ entry.quantity }}</span>
           <span class="muted inv-acquired">최근 습득 {{ new Date(entry.lastAcquiredAt).toLocaleString('ko-KR') }} · {{ itemSourceLabel(entry.lastSource) }}<template v-if="entry.lastMemo"> ({{ entry.lastMemo }})</template></span>
         </span>

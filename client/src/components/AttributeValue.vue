@@ -10,7 +10,7 @@ const isSafeLink = (url) => /^https?:\/\//i.test(url);
 
 <template>
   <span v-if="attr.value === null || attr.value === ''" class="muted">-</span>
-  <img v-else-if="attr.valueType === 'image'" :src="attr.value" :alt="attr.label" class="thumb" />
+  <img referrerpolicy="no-referrer" v-else-if="attr.valueType === 'image'" :src="attr.value" :alt="attr.label" class="thumb" />
   <a v-else-if="attr.valueType === 'link' && isSafeLink(attr.value)" :href="attr.value" target="_blank" rel="noopener noreferrer">{{ attr.value }}</a>
   <MarkdownView v-else-if="attr.valueType === 'long_text'" :source="attr.value" />
   <span v-else>{{ attr.value }}</span>

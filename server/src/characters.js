@@ -8,6 +8,7 @@ const VALUE_TYPES = ['number', 'text', 'long_text', 'link', 'image', 'select'];
 const MAX_LENGTH = { text: 500, long_text: 10000, link: 2000 };
 // 이미지 값은 이 서버에 업로드한 파일 경로만 허용 (routes/uploads.js)
 const UPLOAD_URL_RE = /^\/api\/uploads\/[a-f0-9]{32}\.(png|jpg|gif|webp)$/;
+const { isUploaded, isImageLink } = require('./images');
 
 const { HttpError } = require('./errors');
 const { parseYouTubeId } = require('./youtube');
@@ -118,8 +119,8 @@ function validateValue(def, text) {
       if (!['http:', 'https:'].includes(url.protocol)) fail('http:// 또는 https:// 링크만 입력할 수 있습니다.');
       return text;
     }
-    case 'image':
-      if (!UPLOAD_URL_RE.test(text)) fail('이미지를 다시 업로드해주세요.');
+    case 'image':   // 올린 파일 또는 http(s) 이미지 링크 (images.js)
+      if (!isUploaded(text) && !isImageLink(text)) fail('이미지를 다시 올리거나 http(s):// 이미지 링크를 넣어주세요.');
       return text;
     case 'select':
       if (!(def.options || []).includes(text)) fail('목록에 있는 값을 선택해주세요.');

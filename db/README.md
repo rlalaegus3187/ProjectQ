@@ -46,9 +46,9 @@ posts          게시글  board: qna(Q&A) — 화면에서 쓰는 게시판은 Q
 post_replies   Q&A 답변 (관리자)  post_id FK → posts.id (글 삭제 시 함께 삭제), user_id(FK 없음, 계정 삭제 시 NULL), author_name
 notifications  계정별 알림  user_id, type, post_id, link(이동 주소), message, is_read, is_archived(보관함 — 삭제 안 됨), archived_at
                → 추가는 server/src/notify.js 의 notify()/notifyUsers()/notifyAdmins() 사용
-items          아이템 (id, name, description(마크다운), image(이미지 하나 — 목록·인벤토리·상세 공용),
+items          아이템 (id, name, description(마크다운), image(이미지 하나 — 목록·인벤토리·상세 공용, 올린 파일 경로 또는 http(s) 이미지 링크, 1000자),
                effect → item_effects.code (FK), effect_values JSON, is_bound 귀속, is_sellable 판매가능)
-home_banners   메인 배너  image(업로드 경로), title, link(누르면 이동: '/주소' 또는 http(s)://), sort_order
+home_banners   메인 배너  image(올린 파일 경로 또는 http(s) 이미지 링크), title, link(누르면 이동: '/주소' 또는 http(s)://), sort_order
 home_events    메인 캘린더 이벤트  title, description, color(#rrggbb), start_date ~ end_date (DATE)
 chat_rooms     채팅방  name, description, is_active(0 = 닫힘), admin_only(관리자만), sort_order
 chat_messages  채팅 메시지  room_id → chat_rooms (CASCADE), user_id(FK 없음 — 탈퇴해도 기록 남음), author_name, author_role,

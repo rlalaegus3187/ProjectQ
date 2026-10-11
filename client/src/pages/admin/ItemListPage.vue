@@ -191,7 +191,7 @@ onMounted(() => Promise.all([loadItems(), loadItemEffects({ force: true })]).cat
         <tbody>
           <tr v-for="item in shown" :key="item.id" :class="{ checked: sel.has(item.id) }">
             <td class="check"><input type="checkbox" :aria-label="`${item.name} 선택`" :checked="sel.has(item.id)" @change="sel.toggle(item.id)" /></td>
-            <td><img v-if="item.image" :src="item.image" :alt="item.name" class="item-icon" /></td>
+            <td><img referrerpolicy="no-referrer" v-if="item.image" :src="item.image" :alt="item.name" class="item-icon" /></td>
             <td class="title-cell">{{ item.name }}</td>
             <td class="title-cell">{{ effectLabel(item.effect) }} <span class="muted">{{ formatEffectValues(item.effectValues) }}</span></td>
             <td>{{ item.isBound ? '귀속' : '-' }}</td>

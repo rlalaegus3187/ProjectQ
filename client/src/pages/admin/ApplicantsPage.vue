@@ -170,7 +170,7 @@ onMounted(load);
           <tr v-for="a in applicants" :key="a.id" :class="{ checked: selected.has(a.id) }">
             <td class="check"><input type="checkbox" :checked="selected.has(a.id)" :aria-label="`${a.name} 선택`" @change="toggle(a.id)" /></td>
             <td>
-              <img v-if="a.thumbnail" :src="a.thumbnail" alt="" class="applicant-thumb" loading="lazy" />
+              <img referrerpolicy="no-referrer" v-if="a.thumbnail" :src="a.thumbnail" alt="" class="applicant-thumb" loading="lazy" />
               <span v-else class="applicant-thumb" />
             </td>
             <td><button type="button" class="link-button" @click="view(a)">{{ a.name }}</button></td>

@@ -22,7 +22,6 @@ async function setSetting(name, value, conn = pool) {
 const { HttpError } = require('./errors');
 
 const DEFAULT_SITE_NAME = 'ProjectQ';
-const FAVICON_URL_RE = /^\/api\/uploads\/[a-f0-9]{32}\.(ico|png|jpg|gif|webp)$/;
 
 // 사이트 이름: 1~30자 (상단 로고, 브라우저 탭 제목)
 function parseSiteName(value) {
@@ -35,8 +34,7 @@ function parseSiteName(value) {
 function parseFavicon(value) {
   const url = String(value ?? '').trim();
   if (!url) return null;
-  if (!FAVICON_URL_RE.test(url)) throw new HttpError(400, '파비콘 이미지를 다시 업로드해주세요.');
-  return url;
+  return require('./images').parseImageUrl(url, { label: '파비콘', ico: true });   // 올린 파일(ico 포함) 또는 이미지 링크
 }
 
 // Q&A 비회원 글쓰기 허용 여부 (settings.qna_guest_write = '1' 이면 허용, 기본은 막음)

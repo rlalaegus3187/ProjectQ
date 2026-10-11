@@ -1,5 +1,5 @@
 <script setup>
-// 마크다운 편집기: 툴바(제목·굵게·기울임·취소선·목록·인용·링크·이미지 넣기) + 입력칸
+// 마크다운 편집기: 툴바(제목·굵게·기울임·취소선·목록·인용·링크·이미지 넣기·이미지 링크) + 입력칸
 //   <MarkdownEditor v-model="text" :rows="10" :maxlength="10000" id="bio" />
 import { ref, nextTick } from 'vue';
 import { uploadImage } from '../upload';
@@ -30,6 +30,17 @@ async function insert(before, after = '', placeholder = '', { atEnd = false } = 
   if (!el) return;
   el.focus();
   el.setSelectionRange(start + before.length, start + before.length + selected.length);
+}
+
+// 이미지 링크로 넣기 — http(s):// 주소만
+async function onImageLink() {
+  uploadError.value = '';
+  const url = (window.prompt('이미지 주소(https://...)를 붙여 넣으세요') || '').trim();
+  if (!url) return;
+  let ok = false;
+  try { ok = /^https?:$/.test(new URL(url).protocol) && !/[\s()]/.test(url); } catch { ok = false; }
+  if (!ok) { uploadError.value = 'http:// 또는 https:// 로 시작하는 이미지 주소를 넣어주세요. (공백·괄호 없이)'; return; }
+  await insert(`\n![이미지](${url})\n`, '', '', { atEnd: true });
 }
 
 async function onImage(event) {
@@ -64,6 +75,7 @@ async function onImage(event) {
         {{ uploading ? '업로드 중…' : '이미지 넣기' }}
         <input type="file" accept="image/png,image/jpeg,image/gif,image/webp" :disabled="uploading" @change="onImage" />
       </label>
+      <button type="button" title="이미지 주소(링크)로 넣기" @click="onImageLink">이미지 링크</button>
     </div>
 
     <textarea :id="props.id" ref="textarea" v-model="text" :rows="props.rows"

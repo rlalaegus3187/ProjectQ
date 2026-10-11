@@ -8,6 +8,11 @@ DOMPurify.addHook('afterSanitizeAttributes', (node) => {
     node.setAttribute('target', '_blank');
     node.setAttribute('rel', 'noopener noreferrer');
   }
+  // 바깥 이미지 링크: 이 사이트 주소를 알리지 않음 (다른 사이트 그림 사용을 막는 곳에서도 보이도록), 화면에 가까워지면 불러옴
+  if (node.tagName === 'IMG') {
+    node.setAttribute('referrerpolicy', 'no-referrer');
+    node.setAttribute('loading', 'lazy');
+  }
 });
 
 export function renderMarkdown(source) {

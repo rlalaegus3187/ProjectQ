@@ -126,7 +126,7 @@ onMounted(() => load().catch((e) => { error.value = e.message; }));
         <tbody>
           <tr v-for="l in listings" :key="l.id" :class="{ inactive: !drafts[l.id]?.isActive, dirty: drafts[l.id] && isDirty(l), checked: sel.has(l.id) }">
             <td class="check"><input type="checkbox" :aria-label="`${l.item.name} 선택`" :checked="sel.has(l.id)" @change="sel.toggle(l.id)" /></td>
-            <td><img v-if="l.item.image" :src="l.item.image" :alt="l.item.name" class="item-icon" /></td>
+            <td><img referrerpolicy="no-referrer" v-if="l.item.image" :src="l.item.image" :alt="l.item.name" class="item-icon" /></td>
             <td class="title-cell">{{ l.item.name }}</td>
             <td><input v-model.number="drafts[l.id].price" class="money-input" type="number" min="0" step="1" :title="formatMoney(drafts[l.id].price)" /></td>
             <td><input v-model="drafts[l.id].stock" class="narrow" type="number" min="0" step="1" placeholder="무제한" /></td>

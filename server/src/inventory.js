@@ -18,7 +18,8 @@
 //   // 트랜잭션 안에서는 마지막 인자로 커넥션 → 함께 커밋/롤백
 //   await withTransaction(async (conn) => { await takeItem({...}, conn); await giveItem({...}, conn); });
 const pool = require('./db');
-const { HttpError, UPLOAD_URL_RE } = require('./characters');
+const { HttpError } = require('./characters');
+const { parseImageUrl } = require('./images');
 const { notify } = require('./notify');
 
 const MAX_QUANTITY = 99999;
@@ -82,12 +83,8 @@ function validateItemInput(body) {
   const description = String(body?.description ?? '').trim();
   if (description.length > 10000) throw new HttpError(400, '설명은 10,000자 이내로 입력해주세요.');
 
-  const image = (value, label) => {
-    const v = String(value ?? '').trim();
-    if (!v) return null;
-    if (!UPLOAD_URL_RE.test(v)) throw new HttpError(400, `${label}를 다시 업로드해주세요.`);
-    return v;
-  };
+  // 올린 파일 또는 http(s) 이미지 링크
+  const image = (value, label) => parseImageUrl(value, { label });
 
   // 효과 종류는 item_effects 테이블 (있는지는 저장할 때 assertEffect 로 확인)
   const effect = String(body?.effect ?? 'none');

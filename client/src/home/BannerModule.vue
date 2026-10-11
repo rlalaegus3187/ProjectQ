@@ -22,9 +22,9 @@ onBeforeUnmount(() => clearInterval(timer));
   <section v-if="banners.length" class="home-banner" aria-label="배너" @mouseenter="paused = true" @mouseleave="paused = false">
     <div class="home-banner-track" :style="{ transform: `translateX(-${index * 100}%)` }">
       <div v-for="b in banners" :key="b.id" class="home-banner-slide">
-        <RouterLink v-if="b.link && isInternal(b.link)" :to="b.link"><img :src="b.image" :alt="b.title || '배너'" /></RouterLink>
-        <a v-else-if="b.link" :href="b.link" target="_blank" rel="noopener noreferrer"><img :src="b.image" :alt="b.title || '배너'" /></a>
-        <img v-else :src="b.image" :alt="b.title || '배너'" />
+        <RouterLink v-if="b.link && isInternal(b.link)" :to="b.link"><img referrerpolicy="no-referrer" :src="b.image" :alt="b.title || '배너'" /></RouterLink>
+        <a v-else-if="b.link" :href="b.link" target="_blank" rel="noopener noreferrer"><img referrerpolicy="no-referrer" :src="b.image" :alt="b.title || '배너'" /></a>
+        <img referrerpolicy="no-referrer" v-else :src="b.image" :alt="b.title || '배너'" />
       </div>
     </div>
     <template v-if="banners.length > 1">

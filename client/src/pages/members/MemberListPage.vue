@@ -54,7 +54,7 @@ watch(() => route.fullPath, load, { immediate: true });
         <li v-for="m in data.members" :key="m.id">
           <RouterLink :to="`/members/${m.id}`" class="member-card">
             <span class="member-thumb">
-              <img v-if="m.thumbnail" :src="m.thumbnail" :alt="m.name" loading="lazy" />
+              <img referrerpolicy="no-referrer" v-if="m.thumbnail" :src="m.thumbnail" :alt="m.name" loading="lazy" />
               <span v-else class="member-initial">{{ m.name.slice(0, 1) }}</span>
             </span>
             <TitleBadge v-if="site.titlesEnabled && m.mainTitle" :title="m.mainTitle" />

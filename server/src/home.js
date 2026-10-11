@@ -48,7 +48,7 @@ async function saveModules(list, conn = pool) {
 }
 
 // ---------- 배너 ----------
-const UPLOAD_URL_RE = /^\/api\/uploads\/[a-f0-9]{32}\.(png|jpg|gif|webp)$/;
+const { parseImageUrl } = require('./images');
 const toBanner = (r) => ({ id: r.id, image: r.image, title: r.title || '', link: r.link || '', sortOrder: r.sort_order });
 
 async function listBanners(conn = pool) {
@@ -70,8 +70,7 @@ function parseLink(value) {
 }
 
 function parseBanner(body) {
-  const image = String(body?.image ?? '').trim();
-  if (!UPLOAD_URL_RE.test(image)) throw new HttpError(400, '배너 이미지를 올려주세요.');
+  const image = parseImageUrl(body?.image, { label: '배너 이미지', required: true });   // 올린 파일 또는 이미지 링크
   const title = String(body?.title ?? '').trim();
   if (title.length > 100) throw new HttpError(400, '제목은 100자 이내로 입력해주세요.');
   const sortOrder = Number(body?.sortOrder ?? 0);

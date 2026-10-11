@@ -70,7 +70,7 @@ onMounted(() => api('/admin/home/banners').then((r) => { banners.value = r.banne
         <tbody>
           <tr v-for="b in banners" :key="b.id">
             <td>{{ b.sortOrder }}</td>
-            <td><img :src="b.image" :alt="b.title || '배너'" class="banner-thumb" /></td>
+            <td><img referrerpolicy="no-referrer" :src="b.image" :alt="b.title || '배너'" class="banner-thumb" /></td>
             <td class="title-cell">{{ b.title }}</td>
             <td class="title-cell"><a v-if="b.link" :href="b.link" target="_blank" rel="noopener">{{ b.link }}</a><span v-else class="muted">(이동 없음)</span></td>
             <td class="row-actions">
