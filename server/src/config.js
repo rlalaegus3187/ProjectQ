@@ -12,7 +12,10 @@ module.exports = {
   // 한 서버에 사이트를 여러 개 돌릴 때 사이트마다 다르게: APP_NAME(PM2 이름·로그), SESSION_COOKIE(로그인 쿠키 이름), PORT
   appName: /^[a-z0-9][a-z0-9_-]{0,39}$/.test(process.env.APP_NAME || '') ? process.env.APP_NAME : 'projectq',
   sessionCookie: /^[A-Za-z0-9._-]{1,50}$/.test(process.env.SESSION_COOKIE || '') ? process.env.SESSION_COOKIE : 'projectq.sid',
+  // API 포트 / 채팅 포트 (server/.env) — CHAT_PORT 가 없거나 PORT 와 같으면 채팅도 API 프로세스 안에서 같이 (같은 포트)
+  //   관리 → 사이트 설정 → 서버 포트에서 볼 수 있음 (바꾸는 건 .env + 배포)
   port: Number(process.env.PORT || 3000),
+  chatPort: Number(process.env.CHAT_PORT || process.env.PORT || 3000),
   db: {
     host: process.env.DB_HOST || '127.0.0.1',
     port: Number(process.env.DB_PORT || 3306),
@@ -30,3 +33,5 @@ module.exports = {
   uploadDir: process.env.UPLOAD_DIR
     || (process.env.NODE_ENV === 'production' ? '/data/uploads' : path.join(__dirname, '..', 'uploads')),
 };
+// 채팅을 따로 띄우는지 (포트가 다르면 별도 프로세스 — src/chatServer.js)
+module.exports.chatSeparate = module.exports.chatPort !== module.exports.port;

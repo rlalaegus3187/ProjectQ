@@ -253,4 +253,9 @@ router.delete('/attributes/:id', async (req, res) => {
   res.json({ deletedValues });
 });
 
+// 서버 포트 (API / 채팅) — 보기 전용. 바꾸는 곳은 server/.env 의 PORT / CHAT_PORT + 배포 (src/ports.js)
+router.get('/ports', (req, res) => {
+  res.json(require('../ports').portStatus());
+});
+
 module.exports = router;

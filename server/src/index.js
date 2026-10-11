@@ -1,9 +1,8 @@
 const express = require('express');
-const session = require('express-session');
 const helmet = require('helmet');
-const MySQLStore = require('express-mysql-session')(session);
 const config = require('./config');
 const pool = require('./db');
+const { sessionMiddleware } = require('./session');
 
 const app = express();
 
@@ -12,22 +11,7 @@ app.set('trust proxy', 1);
 app.use(helmet());
 app.use(express.json({ limit: '1mb' }));   // 긴 글(콘텐츠 페이지 등) 저장용
 
-// 세션은 MySQL(sessions 테이블)에 저장 → PM2 재시작/재배포해도 로그인 유지
-const sessionStore = new MySQLStore({ createDatabaseTable: false }, pool);
-
-const sessionMiddleware = session({
-  name: config.sessionCookie,   // 사이트마다 다르게 (server/.env SESSION_COOKIE)
-  secret: config.sessionSecret,
-  store: sessionStore,
-  resave: false,
-  saveUninitialized: false,
-  cookie: {
-    httpOnly: true,               // JS 에서 접근 불가 (XSS 로 탈취 방지)
-    secure: config.cookieSecure,  // HTTPS 에서만 전송
-    sameSite: 'lax',              // 다른 사이트에서의 POST 에 쿠키 미전송 (CSRF 완화)
-    maxAge: 1000 * 60 * 60 * 24 * 7,
-  },
-});
+// 로그인 세션 (채팅 서버와 같이 씀 — src/session.js)
 app.use(sessionMiddleware);
 
 // 회원 전용 모드면 로그인 안 한 요청을 막음 (로그인·가입 등 일부 제외)
@@ -81,5 +65,10 @@ const server = app.listen(config.port, '127.0.0.1', () => {
   console.log(`[${config.appName}] API listening on 127.0.0.1:${config.port} (${config.env})`);
 });
 
-// 채팅 (Socket.IO) — 같은 포트·같은 로그인 세션을 씀 (주소 /api/socket.io). server/src/chat/README.md
-require('./chat').setupChat(server, sessionMiddleware);
+// 채팅 (Socket.IO, 주소 /api/socket.io) — server/src/chat/README.md
+//   채팅 포트(.env CHAT_PORT)가 API 포트와 같으면 여기서 같이, 다르면 src/chatServer.js 가 따로 띄움
+if (config.chatSeparate) {
+  console.log(`[${config.appName}] chat → 별도 프로세스 127.0.0.1:${config.chatPort}`);
+} else {
+  require('./chat').setupChat(server, sessionMiddleware);
+}

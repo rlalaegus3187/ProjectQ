@@ -18,12 +18,16 @@
 //   APP_DIR        코드 위치 (기본: /data/ProjectQ)
 //   PROJECTQ_ENV   서버 .env 원본 (기본: /data/config/projectq.env) → 매 배포 때 server/.env 로 복사
 //   WEB_ROOT       Nginx 가 서빙하는 경로 (기본: /data/www/projectq)
-//   NGINX_SNIPPET_DIR  이 사이트 Nginx 추가 설정 폴더 (기본: /etc/nginx/projectq.d) — 채팅 웹소켓 설정 확인용
+//   NGINX_SITE         이 사이트 Nginx 설정 파일 (기본: /etc/nginx/conf.d/projectq.conf) — 포트 연결을 맞춤 (apply-ports.sh)
+//   NGINX_SNIPPET_DIR  이 사이트 Nginx 추가 설정 폴더 (기본: /etc/nginx/projectq.d) — 채팅 웹소켓 설정이 들어감
+//
+// 포트: server/.env 의 PORT(API) · CHAT_PORT(채팅, 없으면 API 와 같이) — 배포 때 PM2 와 Nginx 에 함께 적용
 //
 // 한 서버에 사이트 여러 개: 사이트마다 APP_DIR · PROJECTQ_ENV · WEB_ROOT 를 다르게, .env 의 PORT · APP_NAME · SESSION_COOKIE · DB_NAME · UPLOAD_DIR 도 다르게
 //   (자세한 건 README.md 의 '한 서버에 여러 사이트')
 
 const { execFileSync, spawnSync } = require('child_process');
+const net = require('net');
 const crypto = require('crypto');
 const fs = require('fs');
 const os = require('os');
@@ -40,6 +44,7 @@ const WEB_ROOT = process.env.WEB_ROOT || '/data/www/projectq';
 // 사이트(설치 폴더)마다 잠금 파일 따로 → 다른 사이트 배포와 겹쳐도 됨
 const LOCK_FILE = path.join(os.tmpdir(), `projectq-deploy-${crypto.createHash('sha1').update(ROOT).digest('hex').slice(0, 8)}.lock`);
 const NGINX_SNIPPET_DIR = process.env.NGINX_SNIPPET_DIR || '/etc/nginx/projectq.d';
+const NGINX_SITE = process.env.NGINX_SITE || '/etc/nginx/conf.d/projectq.conf';
 
 const args = process.argv.slice(2);
 const flag = (name) => args.includes(`--${name}`);
@@ -146,31 +151,84 @@ function buildClient() {
   log('4/5', `${WEB_ROOT} 교체 완료`);
 }
 
-// 5. API 재시작 + 헬스체크
-async function restartServer() {
-  log('5/5', 'API 재시작 (PM2)');
-  run('pm2', ['startOrReload', path.join(__dirname, 'ecosystem.config.cjs'), '--update-env']);
-  run('pm2', ['save']);
+// 포트를 고칠 설정 파일 (운영: PROJECTQ_ENV 원본 — 배포 때 server/.env 로 복사됨)
+const envSource = () => (fs.existsSync(SHARED_ENV) ? SHARED_ENV : path.join(SERVER_DIR, '.env'));
 
-  const envText = fs.readFileSync(path.join(SERVER_DIR, '.env'), 'utf8');
-  const port = envText.match(/^PORT=(\d+)/m)?.[1] || '3000';
-  const appName = envText.match(/^APP_NAME=([a-z0-9][a-z0-9_-]*)/m)?.[1] || 'projectq';
-  const url = `http://127.0.0.1:${port}/api/health`;
+// 이 사이트의 포트 { apiPort, chatPort, separate } — server/.env 의 PORT / CHAT_PORT
+function sitePorts() {
+  return JSON.parse(capture('node', ['scripts/ports.js'], SERVER_DIR).split('\n').pop());
+}
+
+// 127.0.0.1:port 에서 누가 듣고 있는지
+function portInUse(port) {
+  return new Promise((resolve) => {
+    const sock = net.connect({ port, host: '127.0.0.1' });
+    sock.once('connect', () => { sock.destroy(); resolve(true); });
+    sock.once('error', () => resolve(false));
+    sock.setTimeout(1000, () => { sock.destroy(); resolve(false); });
+  });
+}
+
+// 지금 PM2 로 떠 있는 이 사이트 앱들의 포트
+function runningPorts(appName) {
+  try {
+    const list = JSON.parse(capture('pm2', ['jlist']));
+    return new Set(list.filter((a) => a.name.startsWith(`${appName}-`) && a.pm2_env?.status === 'online')
+      .flatMap((a) => [a.pm2_env.env?.PORT, a.pm2_env.env?.CHAT_PORT, a.pm2_env.PORT, a.pm2_env.CHAT_PORT])
+      .filter(Boolean).map(Number));
+  } catch {
+    return new Set();
+  }
+}
+
+async function waitFor(url, okStatus = (s) => s >= 200 && s < 300) {
   for (let i = 0; i < 15; i++) {
     await new Promise((r) => setTimeout(r, 1000));
     try {
-      const res = await fetch(url);
-      if (res.ok) {
-        log('5/5', `헬스체크 통과 (${url})`);
-        // 채팅 웹소켓: Nginx 설정이 없으면 롱폴링으로 동작 (채팅은 됨) → 한 번만 설정하라고 안내
-        if (fs.existsSync(path.dirname(NGINX_SNIPPET_DIR)) && !fs.existsSync(path.join(NGINX_SNIPPET_DIR, 'socketio.conf'))) {
-          log('   ', `안내: 채팅 웹소켓 Nginx 설정이 없습니다 (지금은 롱폴링으로 동작). 한 번만: bash ${path.join(__dirname, 'setup-socketio.sh')}`);
-        }
-        return;
-      }
+      if (okStatus((await fetch(url)).status)) return true;
     } catch {}
   }
-  throw new Error(`헬스체크 실패: ${url} — pm2 logs ${appName}-api 로 확인하세요`);
+  return false;
+}
+
+// 5. API(+채팅) 재시작 + 헬스체크 + Nginx 포트 연결
+async function restartServer() {
+  const envText = fs.readFileSync(path.join(SERVER_DIR, '.env'), 'utf8');
+  const appName = envText.match(/^APP_NAME=([a-z0-9][a-z0-9_-]*)/m)?.[1] || 'projectq';
+  const ports = sitePorts();
+  log('5/5', `API 포트 ${ports.apiPort}, 채팅 ${ports.separate ? `포트 ${ports.chatPort} (따로)` : '같은 포트'}`);
+
+  // 새 포트를 다른 프로그램(다른 사이트)이 쓰고 있으면 멈춤 — 띄웠다가 실패하는 것보다 미리 알려줌
+  const mine = runningPorts(appName);
+  for (const port of new Set([ports.apiPort, ports.chatPort])) {
+    if (!mine.has(port) && await portInUse(port)) {
+      throw new Error(`${port}번 포트를 이미 다른 프로그램(또는 다른 사이트)이 쓰고 있습니다. ${envSource()} 의 PORT / CHAT_PORT 를 다른 번호로 바꿔주세요.`);
+    }
+  }
+  const portsChanged = ![ports.apiPort, ports.chatPort].every((p) => mine.has(p));
+
+  log('5/5', 'API 재시작 (PM2)');
+  run('pm2', ['startOrReload', path.join(__dirname, 'ecosystem.config.cjs'), '--update-env']);
+  if (!ports.separate) spawnSync('pm2', ['delete', `${appName}-chat`], { stdio: 'ignore' });   // 예전에 따로 띄웠던 채팅 정리
+  run('pm2', ['save']);
+
+  const apiUrl = `http://127.0.0.1:${ports.apiPort}/api/health`;
+  if (!(await waitFor(apiUrl))) throw new Error(`헬스체크 실패: ${apiUrl} — pm2 logs ${appName}-api 로 확인하세요`);
+  log('5/5', `헬스체크 통과 (${apiUrl})`);
+  if (ports.separate) {
+    const chatUrl = `http://127.0.0.1:${ports.chatPort}/api/socket.io/?EIO=4&transport=polling`;
+    if (!(await waitFor(chatUrl))) throw new Error(`채팅 서버 응답 없음: ${chatUrl} — pm2 logs ${appName}-chat 로 확인하세요`);
+    log('5/5', `채팅 서버 확인 (${chatUrl})`);
+  }
+
+  // Nginx 가 이 포트들로 연결하게 (바뀐 게 없으면 아무것도 안 함). 관리자 권한(sudo)이 필요
+  const apply = spawnSync('sudo', ['-n', 'env', `APP_NAME=${appName}`, `API_PORT=${ports.apiPort}`, `CHAT_PORT=${ports.chatPort}`,
+    `NGINX_SITE=${NGINX_SITE}`, `NGINX_SNIPPET_DIR=${NGINX_SNIPPET_DIR}`, 'bash', path.join(__dirname, 'apply-ports.sh')], { stdio: 'inherit' });
+  if (apply.status !== 0) {
+    const cmd = `sudo env APP_NAME=${appName} API_PORT=${ports.apiPort} CHAT_PORT=${ports.chatPort} NGINX_SITE=${NGINX_SITE} NGINX_SNIPPET_DIR=${NGINX_SNIPPET_DIR} bash ${path.join(__dirname, 'apply-ports.sh')}`;
+    if (portsChanged) throw new Error(`포트가 바뀌었는데 Nginx 연결을 맞추지 못했습니다. 직접 실행하세요:\n  ${cmd}`);
+    log('   ', `안내: Nginx 포트 연결을 확인하지 못했습니다 (포트는 그대로라 사이트는 동작). 필요하면: ${cmd}`);
+  }
 }
 
 // 단독 실행(예: /data/deploy.js): repo 가 없으면 clone 한 뒤, repo 안의 deploy.js 에 이어서 맡김

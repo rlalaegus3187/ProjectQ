@@ -89,10 +89,12 @@ await getChat()?.sendSystem(1, '이벤트가 시작되었습니다!');   // 1 = 
 - 메시지마다 권한을 다시 확인 → 권한 변경·탈퇴·채팅 끄기가 바로 반영
 
 ## 배포 · 포트
-- **포트를 따로 쓰지 않습니다.** API 서버와 같은 포트(`server/.env` 의 `PORT`)·같은 로그인 세션을 쓰고, 주소는 `/api/socket.io` 입니다.
-  → 사이트마다 `PORT` 만 다르면 채팅도 자동으로 나뉩니다. 소켓은 항상 지금 보고 있는 사이트 주소로 연결되므로 다른 사이트와 섞이지 않습니다.
-- Nginx: 기존 `/api/` 프록시만으로도 동작(롱폴링). **웹소켓**까지 쓰려면 사이트마다 한 번 `bash deploy/setup-socketio.sh`
-  (새 서버는 `setup-server.sh` 가 처음부터 넣어 둠, `deploy.js` 가 빠져 있으면 알려줌)
+- **포트**: `.env` 의 `CHAT_PORT` (없거나 `PORT` 와 같으면 API 와 같은 포트·같은 프로세스). 다르면 `src/chatServer.js` 가 따로 뜨고,
+  API 쪽의 `getChat()` 은 내부 통로(`chat/bridge.js`, 127.0.0.1 + 비밀 토큰)로 `sendSystem` · `roomsChanged` · `stats` 를 전달합니다.
+  → 모듈 API(`command`, `beforeMessage` ...)는 채팅 프로세스 안에서만 쓰는 것이라, 따로 띄워도 모듈 코드는 그대로입니다.
+- 관리 → 사이트 설정 → 서버 포트에서 지금 포트를 볼 수 있습니다 (바꾸는 건 `.env` + `node /data/deploy.js`)
+- 주소는 늘 `/api/socket.io` — 브라우저는 지금 보고 있는 사이트로만 연결하므로 다른 사이트와 섞이지 않음
+- Nginx: 배포(`deploy.js`) 때 `deploy/apply-ports.sh` 가 `/api/socket.io/` 를 채팅 포트로 연결하고 웹소켓을 허용
 - npm 패키지: 서버 `socket.io`, 화면 `socket.io-client` — `package.json` 에 들어 있어 `deploy.js` 의 `npm ci` 가 설치. 직접 설치는
   `npm --prefix server install socket.io` · `npm --prefix client install socket.io-client`
-- PM2 는 1개 프로세스(`instances: 1`)로 — 접속자·방 정보가 프로세스 메모리에 있음. 여러 개로 늘리려면 `@socket.io/redis-adapter` 필요
+- 채팅 프로세스는 1개(`instances: 1`)로 — 접속자·방 정보가 프로세스 메모리에 있음. 여러 개로 늘리려면 `@socket.io/redis-adapter` 필요

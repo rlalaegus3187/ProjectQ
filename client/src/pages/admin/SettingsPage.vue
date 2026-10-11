@@ -46,12 +46,17 @@ async function save() {
   }
 }
 
+// 서버 포트 (보기 전용) — 바꾸는 곳은 서버의 server/.env (PORT / CHAT_PORT) + 배포
+const ports = ref(null);
+const portLine = (p) => (p.separate ? `API ${p.apiPort} · 채팅 ${p.chatPort} (따로)` : `API · 채팅 ${p.apiPort} (같은 포트)`);
+
 onMounted(async () => {
   try {
     form.value = toForm(await api('/admin/settings'));
   } catch (e) {
     error.value = e.message;
   }
+  ports.value = await api('/admin/ports').catch(() => null);
 });
 </script>
 
@@ -178,5 +183,27 @@ onMounted(async () => {
       </div>
     </form>
     <p v-else class="error">{{ error }}</p>
+  </section>
+
+  <!-- 서버 포트: 보기만 (바꾸면 서버 연결이 끊길 수 있어서 화면에서는 못 바꿈) -->
+  <section v-if="ports" class="card">
+    <h2>서버 포트 <span class="muted">(보기 전용)</span></h2>
+    <dl class="kv">
+      <dt>API 포트</dt><dd><strong>{{ ports.running.apiPort }}</strong></dd>
+      <dt>채팅 포트</dt>
+      <dd>
+        <strong>{{ ports.running.chatPort }}</strong>
+        <span class="muted">{{ ports.running.separate ? '— API 와 따로 (별도 프로세스)' : '— API 와 같은 포트 (같은 프로세스)' }}</span>
+      </dd>
+      <template v-if="ports.pending">
+        <dt>다음 배포 때</dt>
+        <dd><span class="notice-closed">{{ portLine(ports.file) }} — 설정 파일이 바뀌었습니다. 서버에서 배포하면 적용됩니다.</span></dd>
+      </template>
+    </dl>
+    <p class="muted">
+      바꾸려면 서버의 설정 파일(<code>/data/config/projectq.env</code>)에서 <code>PORT</code>(API) · <code>CHAT_PORT</code>(채팅, 없으면 API 와 같이)를 고친 뒤
+      <code>node /data/deploy.js</code> — 프로그램(PM2)과 Nginx 연결이 함께 바뀝니다.
+      서버 안에서만 쓰는 포트라 AWS 인바운드 규칙에는 추가하지 않습니다. 사이트를 여러 개 돌리면 사이트마다 다른 번호로.
+    </p>
   </section>
 </template>

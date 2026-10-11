@@ -1,10 +1,11 @@
 // 채팅 (Socket.IO) 코어 — 방 입장 · 기록 · 메시지 · 삭제 · 접속자 · 입력 중 표시 + 모듈 붙이기
 //
 //   server/src/index.js:  const { setupChat } = require('./chat');  setupChat(httpServer, sessionMiddleware);
-//   다른 서버 코드에서:     const { getChat } = require('./chat');  getChat()?.sendSystem(roomId, '공지입니다');
+//   다른 서버 코드에서:     const { getChat } = require('./chat');  await getChat()?.sendSystem(roomId, '공지입니다');
+//   (채팅을 다른 포트로 따로 띄웠으면 API 쪽 getChat() 은 내부 통로로 전달 — chat/bridge.js)
 //
 // 주소: Socket.IO path '/api/socket.io', 네임스페이스 '/chat'
-//   → Nginx 의 /api/ 프록시로 바로 동작 (롱폴링). 웹소켓까지 쓰려면 deploy/setup-socketio.sh 한 번 실행
+// 포트: API 와 같은 포트(같은 프로세스) 또는 따로 (src/chatServer.js) — server/.env 의 CHAT_PORT
 //
 // 로그인 세션(쿠키)을 그대로 씀 — 로그인한 회원만, CHAT_ROLES 권한만 (기본: 멤버·관리자)
 // 채팅을 끄면(관리 → 채팅 관리) 관리자만, 사이트 비공개 모드면 관리자만
@@ -26,7 +27,9 @@ const { Server } = require('socket.io');
 const pool = require('../db');
 const { HttpError } = require('../errors');
 const { isSiteClosed } = require('../settings');
+const config = require('../config');
 const store = require('./store');
+const { remoteChat } = require('./bridge');
 
 const SOCKET_PATH = '/api/socket.io';
 const CHAT_ROLES = ['admin', 'member'];   // 채팅을 쓸 수 있는 권한 (신청자도 쓰게 하려면 'applicant' 추가)
@@ -127,6 +130,7 @@ function setupChat(httpServer, sessionMiddleware) {
     notice: (socket, text) => socket.emit('message:notice', { text }),   // 한 사람에게만, 저장 안 됨
     usersIn,
     roomsChanged: () => nsp.emit('rooms:changed'),
+  stats: async () => ({ online: (await nsp.fetchSockets()).length, commands: chat.commands() }),
     commands: () => [...new Set(commands.values())].map(({ name, usage, description }) => ({ name, usage, description })),
   };
 
@@ -242,6 +246,8 @@ function setupChat(httpServer, sessionMiddleware) {
   return chat;
 }
 
-const getChat = () => chat;
+// 이 프로세스의 채팅 — 없고(API 서버) 채팅을 따로 띄웠으면 내부 통로로 전달하는 원격 채팅
+let remote = null;
+const getChat = () => chat || (config.chatSeparate ? (remote ||= remoteChat(config.chatPort)) : null);
 
 module.exports = { setupChat, getChat, SOCKET_PATH, CHAT_ROLES };

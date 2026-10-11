@@ -106,7 +106,8 @@ ProjectQ/
 │  ├─ setup-server.sh      ② EC2 기본 세팅 (Node, MySQL 데이터·임시파일·로그→/data, Nginx, PM2)
 │  ├─ deploy.js            ③ git clone/pull → 설치 → 마이그레이션 → 빌드 → 재시작
 │  ├─ setup-phpmyadmin.sh  (선택) phpMyAdmin → /phpmyadmin
-│  ├─ setup-socketio.sh    (사이트마다 한 번) 채팅 웹소켓을 Nginx 에서 통과 — 안 해도 채팅은 동작(롱폴링)
+│  ├─ apply-ports.sh       .env 의 PORT(API)·CHAT_PORT(채팅)로 Nginx 연결 맞춤 + 채팅 웹소켓 — deploy.js 가 자동 실행
+│  ├─ setup-socketio.sh    배포 없이 지금 바로 위 작업만 할 때
 │  └─ ecosystem.config.cjs PM2 설정
 └─ docs/EC2_SETUP.md       배포 가이드
 ```
@@ -275,15 +276,23 @@ npm --prefix client install socket.io-client
 node /data/deploy.js
 ```
 
-### 채팅 웹소켓 (사이트마다 한 번)
+### 서버 포트 (API / 채팅)
 
-채팅은 기존 Nginx `/api/` 설정만으로도 동작합니다(롱폴링). 웹소켓으로 더 가볍게 쓰려면 서버에서 한 번:
+포트는 서버 설정 파일에서 정하고, 관리 화면(**관리 → 사이트 설정 → 서버 포트**)에서는 **보기만** 합니다.
 
 ```bash
-bash /data/ProjectQ/deploy/setup-socketio.sh     # /etc/nginx/projectq.d/socketio.conf 생성 → nginx reload
+# /data/config/projectq.env  (배포 때 server/.env 로 복사되는 원본)
+PORT=3000         # API 포트
+CHAT_PORT=3100    # 채팅 포트 — 없거나 PORT 와 같으면 API 와 같은 포트·같은 프로세스
 ```
 
-`deploy.js` 가 설정이 없으면 끝에 알려줍니다. (새 서버는 `setup-server.sh` 가 처음부터 넣어 둠)
+고친 뒤 `node /data/deploy.js` 를 실행하면:
+- PM2 가 API(`<APP_NAME>-api`)를 띄우고, 채팅 포트가 다르면 채팅(`<APP_NAME>-chat`, `src/chatServer.js`)을 따로 띄움 (같아지면 따로 띄운 채팅은 정리)
+- 새 포트를 다른 프로그램(다른 사이트, MySQL 등)이 쓰고 있거나 숫자가 잘못됐으면 **아무것도 바꾸기 전에 멈추고** 이유를 보여줌
+- Nginx 연결도 같은 번호로 맞춤 (`deploy/apply-ports.sh` — `/etc/nginx/conf.d/<APP_NAME>-ports.conf` 의 upstream 두 개, 채팅 웹소켓 설정 포함, 바뀐 게 없으면 그대로)
+
+두 포트 모두 서버 안(127.0.0.1)에서만 쓰므로 **AWS 인바운드 규칙에는 추가하지 않습니다** (바깥은 80/443 → Nginx).
+따로 띄운 채팅과 API 는 서버 안의 내부 통로(127.0.0.1 + 비밀 토큰)로 방 변경·접속자 수·시스템 메시지를 주고받습니다 (`server/src/chat/bridge.js`).
 
 ### 한 서버에 여러 사이트
 
@@ -291,21 +300,21 @@ bash /data/ProjectQ/deploy/setup-socketio.sh     # /etc/nginx/projectq.d/socketi
 
 | 어디 | 값 | 예 (사이트 2) |
 |---|---|---|
-| `.env` | `PORT` — API **와 채팅이 같이 쓰는** 포트 | `3001` |
+| `.env` | `PORT` — API 포트, `CHAT_PORT` — 채팅 포트 (없으면 API 와 같이) | `3010`, `3110` |
 | `.env` | `DB_NAME` (+ 계정) — 데이터베이스 | `site2` |
 | `.env` | `APP_NAME` — PM2 이름 `<APP_NAME>-api`, 로그 파일 | `site2` |
 | `.env` | `SESSION_COOKIE` — 로그인 쿠키 이름 | `site2.sid` |
 | `.env` | `UPLOAD_DIR` — 업로드 이미지 폴더 | `/data/uploads-site2` |
 | 배포 환경변수 | `APP_DIR` · `PROJECTQ_ENV` · `WEB_ROOT` — 코드 · .env 원본 · 웹 파일 위치 | `/data/Site2` · `/data/config/site2.env` · `/data/www/site2` |
-| Nginx | 사이트마다 `server { server_name 도메인; root WEB_ROOT; location /api/ { proxy_pass http://127.0.0.1:PORT; } include 추가설정폴더/*.conf; }` | `site2.example.com`, `/etc/nginx/site2.d` |
+| Nginx | 사이트마다 `server { server_name 도메인; root WEB_ROOT; location /api/ { proxy_pass http://127.0.0.1:PORT; } include 추가설정폴더/*.conf; }` 파일 하나 — 포트 연결은 배포가 자동으로 맞춤 | `/etc/nginx/conf.d/site2.conf`, `/etc/nginx/site2.d` |
+| 배포 환경변수 | `NGINX_SITE` · `NGINX_SNIPPET_DIR` — 위 Nginx 파일·폴더 | |
 
 ```bash
-# 사이트 2 배포 (처음: --branch, 이후엔 같은 명령으로 업데이트)
-APP_DIR=/data/Site2 PROJECTQ_ENV=/data/config/site2.env WEB_ROOT=/data/www/site2 node /data/deploy.js
-# 사이트 2 채팅 웹소켓
-PROJECTQ_ENV=/data/config/site2.env NGINX_SNIPPET_DIR=/etc/nginx/site2.d bash /data/Site2/deploy/setup-socketio.sh
+# 사이트 2 배포 (처음: --branch, 이후엔 같은 명령으로 업데이트) — PM2·Nginx 포트 연결까지
+APP_DIR=/data/Site2 PROJECTQ_ENV=/data/config/site2.env WEB_ROOT=/data/www/site2 \
+  NGINX_SITE=/etc/nginx/conf.d/site2.conf NGINX_SNIPPET_DIR=/etc/nginx/site2.d node /data/deploy.js
 ```
 
 - 포트는 관리 화면이 아니라 `.env` 에서 정합니다 — 서버가 켜지기 전에 정해져야 하고, Nginx 설정과 같이 바뀌어야 하기 때문입니다.
-  (관리 → 채팅 관리의 '연결 정보'에서 지금 포트를 확인할 수 있음)
+  (관리 → 사이트 설정 → 서버 포트에서 지금 포트와, .env 를 고쳤지만 아직 배포 전인 값을 볼 수 있음)
 - 채팅 소켓은 늘 **지금 보고 있는 사이트 주소**로 연결되고 로그인 쿠키·DB 도 사이트별이라, 포트·쿠키 이름만 다르면 다른 사이트와 섞이지 않습니다.

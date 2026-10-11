@@ -138,10 +138,18 @@ onMounted(() => load().catch((e) => { error.value = e.message; }));
     <h2>연결 정보</h2>
     <dl class="kv">
       <dt>포트</dt>
-      <dd>{{ info.port }} <span class="muted">— API 와 같은 포트를 같이 씀. 바꾸려면 서버의 server/.env 의 PORT (사이트마다 다르게)</span></dd>
+      <dd>
+        채팅 <strong>{{ info.chatPort }}</strong>
+        <span class="muted">{{ info.separate ? `— API(${info.port})와 따로 띄움` : '— API 와 같은 포트·같은 프로세스' }} ·
+          <RouterLink to="/admin/settings">사이트 설정 → 서버 포트</RouterLink></span>
+      </dd>
       <dt>소켓 주소</dt><dd><code>{{ info.socketPath }}</code> <span class="muted">(네임스페이스 /chat)</span></dd>
       <dt>쓸 수 있는 권한</dt><dd>{{ roleLabel }}</dd>
-      <dt>지금 접속</dt><dd>{{ info.online }}개 연결</dd>
+      <dt>지금 접속</dt>
+      <dd>
+        <template v-if="info.chatOffline"><span class="error">채팅 서버에 연결할 수 없습니다 (pm2 logs 로 확인)</span></template>
+        <template v-else>{{ info.online }}개 연결</template>
+      </dd>
       <dt>명령어</dt>
       <dd>
         <ul class="chat-command-list">

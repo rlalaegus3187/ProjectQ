@@ -158,6 +158,7 @@ SQL
   (umask 077 && cat > "$ENV_FILE" <<ENV
 NODE_ENV=production
 PORT=3000
+# CHAT_PORT=3100   # 채팅을 다른 포트로 따로 띄우려면 (없으면 API 와 같은 포트)
 DB_HOST=127.0.0.1
 DB_PORT=3306
 DB_USER=${DB_USER}
@@ -218,22 +219,7 @@ http {
 }
 NGINX
 sudo mkdir -p /etc/nginx/projectq.d
-# 채팅(Socket.IO) 웹소켓 — deploy/setup-socketio.sh 와 같은 내용 (나중에 PORT 를 바꾸면 그 스크립트를 다시 실행)
-sudo tee /etc/nginx/projectq.d/socketio.conf >/dev/null <<'NGINX'
-location /api/socket.io/ {
-    proxy_pass http://127.0.0.1:3000;
-    proxy_http_version 1.1;
-    proxy_set_header Upgrade $http_upgrade;
-    proxy_set_header Connection "upgrade";
-    proxy_set_header Host $host;
-    proxy_set_header X-Real-IP $remote_addr;
-    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-    proxy_set_header X-Forwarded-Proto $scheme;
-    proxy_read_timeout 1h;
-    proxy_send_timeout 1h;
-    proxy_buffering off;
-}
-NGINX
+# 채팅 웹소켓·포트 연결(upstream)은 deploy.js 가 배포 때 deploy/apply-ports.sh 로 만듦 (관리 → 사이트 설정 → 서버 포트)
 sudo tee /etc/nginx/conf.d/projectq.conf >/dev/null <<NGINX
 server {
     listen 80 default_server;

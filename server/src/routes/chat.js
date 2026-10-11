@@ -36,7 +36,7 @@ function parseRoom(body) {
 }
 
 async function sendAdmin(res, status = 200) {
-  const chat = getChat();
+  const stats = (await getChat()?.stats()) || { online: null, commands: [] };
   res.status(status).json({
     rooms: await store.listRooms({ all: true }),
     enabled: await store.isChatEnabled(),
@@ -45,8 +45,11 @@ async function sendAdmin(res, status = 200) {
       port: config.port,
       socketPath: SOCKET_PATH,
       roles: CHAT_ROLES,
-      modules: chat ? chat.commands() : [],
-      online: chat ? (await chat.nsp.fetchSockets()).length : 0,
+      chatPort: config.chatPort,
+      separate: config.chatSeparate,   // 채팅을 따로 띄웠는지 (포트가 다름)
+      modules: stats.commands,
+      online: stats.online,            // null 이면 채팅 서버에 연결 못 함
+      chatOffline: !!stats.offline,
     },
   });
 }
