@@ -2,6 +2,8 @@
 // 채팅 (/chat?room=<번호>) — 왼쪽 방 목록(내 방 · 다른 방 · 방 만들기) · 가운데 대화 · 오른쪽 가입자(접속 중 표시)
 // 방은 가입해야 대화 가능, [나가기] — 마지막 사람이 나가면 방 폭파. 방장·관리자는 [삭제]
 // 기록은 최신 20개만 받고, 위로 스크롤해 맨 위에 닿으면 이전 20개씩 (room:history)
+// 표정(두상): 입력칸 옆에서 골라 보내면 그 표정 이미지가 메시지 옆에 (마이페이지 → 표정에서 등록), 내 메시지는 [수정]으로 내용·표정 고치기
+// 글자 꾸미기: 굵게·기울임·크게·작게·형광펜 … (마크다운, chat/FormatBar.vue)
 // 소켓은 이 화면에 있는 동안만 연결 (client/src/chat/socket.js — 공간 'chat'), 메시지 종류별 화면은 client/src/chat/modules/
 import { ref, computed, watch, nextTick, onMounted, onBeforeUnmount } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
@@ -9,6 +11,8 @@ import { api } from '../../api';
 import { auth, isAdmin } from '../../auth';
 import { getChatSocket, request } from '../../chat/socket';
 import ChatMessage from '../../chat/ChatMessage.vue';
+import FacePicker from '../../chat/FacePicker.vue';
+import FormatBar from '../../chat/FormatBar.vue';
 import ModalDialog from '../../components/ModalDialog.vue';
 
 const route = useRoute();
@@ -31,6 +35,11 @@ const loadingMore = ref(false);
 const typing = ref({});          // userId → { name, until }
 const scroller = ref(null);
 const creating = ref(null);      // { name, description, error, saving }
+const input = ref(null);         // 입력칸 <textarea>
+const faces = ref([]);           // 내 표정 목록
+const faceId = ref(null);        // 지금 고른 표정 (브라우저에 기억)
+const editing = ref(null);       // 메시지 고치기 { message, text, faceId, error, saving }
+const editInput = ref(null);
 const busy = ref(false);
 let localId = 0;
 
@@ -173,6 +182,37 @@ const removeRoom = (r) => act(async () => {
   selectRoom(null);
 });
 
+// ---------- 표정 ----------
+const FACE_KEY = () => `pq-chat-face-${auth.user?.id}`;
+async function loadFaces() {
+  faces.value = (await api('/characters/me/faces').catch(() => ({ faces: [] }))).faces;
+  let saved = null;
+  try { saved = Number(localStorage.getItem(FACE_KEY())) || null; } catch { /* 기억 못 해도 동작 */ }
+  faceId.value = faces.value.some((f) => f.id === saved) ? saved : null;
+}
+watch(faceId, (id) => {
+  try { localStorage.setItem(FACE_KEY(), id ? String(id) : ''); } catch { /* 기억 못 해도 동작 */ }
+});
+
+// ---------- 메시지 고치기 ----------
+const canEdit = (m) => m.type === 'text' && !!m.userId && m.userId === auth.user?.id;
+function startEdit(m) {
+  editing.value = { message: m, text: m.body || '', faceId: m.face && faces.value.some((f) => f.id === m.face.id) ? m.face.id : null, error: '', saving: false };
+}
+async function saveEdit() {
+  const e = editing.value;
+  e.error = '';
+  e.saving = true;
+  try {
+    await request('message:edit', { messageId: e.message.id, text: e.text, faceId: e.faceId });
+    editing.value = null;
+  } catch (err) {
+    e.error = err.message;
+  } finally {
+    e.saving = false;
+  }
+}
+
 // ---------- 보내기 ----------
 async function send() {
   const body = text.value.trim();
@@ -180,7 +220,7 @@ async function send() {
   sendError.value = '';
   text.value = '';
   try {
-    await request('message:send', { roomId: room.value.id, text: body });
+    await request('message:send', { roomId: room.value.id, text: body, faceId: faceId.value });
   } catch (e) {
     sendError.value = e.message;
     if (!text.value) text.value = body;   // 실패하면 입력 내용 되돌림
@@ -221,6 +261,10 @@ const handlers = {
     messages.value.push(m);
     delete typing.value[m.userId];
     if (stick) await toBottom();
+  },
+  'message:updated': (m) => {   // 누가 메시지·표정을 고침
+    const i = messages.value.findIndex((x) => x.id === m.id);
+    if (i >= 0) messages.value.splice(i, 1, m);
   },
   'message:deleted': ({ id }) => {
     const m = messages.value.find((x) => x.id === id);
@@ -267,6 +311,7 @@ onMounted(async () => {
     status.value = 'offline';
     return;
   }
+  await loadFaces();
   if (!roomId.value && myRooms.value[0]) router.replace({ query: { room: myRooms.value[0].id } });
   for (const [event, fn] of Object.entries(handlers)) socket.on(event, fn);
   socket.connect();
@@ -325,7 +370,7 @@ onBeforeUnmount(() => {
           <p v-else-if="!hasMore && messages.length" class="muted chat-more">— 대화의 처음입니다 —</p>
           <p v-if="!messages.length" class="muted chat-empty">아직 대화가 없습니다. 첫 메시지를 보내보세요.</p>
           <ul class="chat-list">
-            <ChatMessage v-for="m in messages" :key="m.id" :message="m" :can-delete="canDelete(m)" @delete="remove" />
+            <ChatMessage v-for="m in messages" :key="m.id" :message="m" :can-delete="canDelete(m)" :can-edit="canEdit(m)" @delete="remove" @edit="startEdit" />
           </ul>
         </div>
         <div v-else class="chat-messages chat-placeholder">
@@ -334,8 +379,10 @@ onBeforeUnmount(() => {
         </div>
 
         <p class="chat-typing muted">{{ typingNames.length ? `${typingNames.join(', ')} 님이 입력 중…` : '' }}</p>
+        <FormatBar v-if="room" v-model="text" :target="input" />
         <form class="chat-input" @submit.prevent="send">
-          <textarea v-model="text" rows="2" maxlength="1000" :disabled="!room || status !== 'online'"
+          <FacePicker v-model="faceId" :faces="faces" />
+          <textarea ref="input" v-model="text" rows="2" maxlength="1000" :disabled="!room || status !== 'online'"
             :placeholder="room ? (commands.length ? '메시지 입력 (Enter 보내기, Shift+Enter 줄바꿈, /도움말 명령어)' : '메시지 입력') : '가입한 방에 들어가면 대화할 수 있습니다'"
             aria-label="메시지" @keydown="onKey" @input="onInput" />
           <button type="submit" :disabled="!room || status !== 'online' || !text.trim()">보내기</button>
@@ -372,6 +419,26 @@ onBeforeUnmount(() => {
       </div>
       <p class="muted">만든 사람이 방장이 되고 바로 가입됩니다. 모두 나가면 방은 사라집니다(대화 기록도 함께).</p>
       <p v-if="creating.error" class="error">{{ creating.error }}</p>
+    </form>
+  </ModalDialog>
+
+  <ModalDialog v-if="editing" title="메시지 고치기" @close="editing = null">
+    <template #actions>
+      <button type="submit" form="chat-edit-form" :disabled="editing.saving || !editing.text.trim()">{{ editing.saving ? '저장 중…' : '저장' }}</button>
+      <button type="button" class="secondary" @click="editing = null">취소</button>
+    </template>
+    <form id="chat-edit-form" class="form" @submit.prevent="saveEdit">
+      <div class="field">
+        <span>표정</span>
+        <FacePicker v-model="editing.faceId" :faces="faces" inline />
+      </div>
+      <div class="field">
+        <label for="chat-edit-text">내용</label>
+        <FormatBar v-model="editing.text" :target="editInput" />
+        <textarea id="chat-edit-text" ref="editInput" v-model="editing.text" rows="5" maxlength="1000" />
+      </div>
+      <p class="muted">고친 내용은 방에 있는 모두에게 바로 바뀌어 보이고, 메시지에 '(수정됨)'이 붙습니다.</p>
+      <p v-if="editing.error" class="error">{{ editing.error }}</p>
     </form>
   </ModalDialog>
 </template>

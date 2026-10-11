@@ -9,6 +9,7 @@ import TitleBadge from '../../components/TitleBadge.vue';
 import CharacterForm from '../../components/CharacterForm.vue';
 import { MarkdownView } from '../../markdown';
 import ProfileList from '../../components/ProfileList.vue';
+import FaceList from '../../components/FaceList.vue';
 import ModalDialog from '../../components/ModalDialog.vue';
 import AccountSection from '../../components/AccountSection.vue';
 import { formatMoney } from '../../items';
@@ -218,6 +219,8 @@ onMounted(() => load().catch((e) => { error.value = e.message; loaded.value = tr
       <p v-if="error" class="error">{{ error }}</p>
     </form>
   </ModalDialog>
+
+  <FaceList v-if="character" />
 
   <ProfileList v-if="character && definitions" :character="character" :definitions="definitions"
     :public-page="auth.user.role !== 'applicant'" @updated="(c) => { character = c; }" />

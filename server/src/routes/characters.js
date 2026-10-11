@@ -139,6 +139,24 @@ router.delete('/characters/me/profiles/:profileId', requireAuth, async (req, res
   await sendMine(req, res);
 });
 
+// ---------- 표정 (채팅 두상, server/src/faces.js) ----------
+//   GET 목록 / POST 추가 { name, image } / PUT /:id 수정 / DELETE /:id 삭제 — code(<캐릭터 id>_<번호>)는 자동
+const faces = require('../faces');
+const sendFaces = async (req, res, status = 200) => res.status(status).json({ faces: await faces.listFaces(req.session.userId), max: faces.MAX_FACES });
+router.get('/characters/me/faces', requireAuth, (req, res) => sendFaces(req, res));
+router.post('/characters/me/faces', requireAuth, async (req, res) => {
+  await faces.createFace(req.session.userId, req.body);
+  await sendFaces(req, res, 201);
+});
+router.put('/characters/me/faces/:faceId', requireAuth, async (req, res) => {
+  await faces.updateFace(req.session.userId, req.params.faceId, req.body);
+  await sendFaces(req, res);
+});
+router.delete('/characters/me/faces/:faceId', requireAuth, async (req, res) => {
+  await faces.deleteFace(req.session.userId, req.params.faceId);
+  await sendFaces(req, res);
+});
+
 // ---------- 신청서 상태 (신청자만) ----------
 // 신청서 제출 동의사항 (관리 → 커뮤니티 설정에서 작성, 마크다운)
 router.get('/characters/me/application-notice', requireAuth, async (req, res) => {

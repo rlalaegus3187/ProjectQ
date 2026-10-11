@@ -20,7 +20,7 @@
 기본 기능: 방 목록(내 방 · 다른 방) · **방 만들기**(번호 자동, 만든 사람이 방장·자동 가입, 회원당 5개) · **가입 / 나가기** ·
 마지막 사람이 나가면 **방 폭파**(기록·가입 함께 삭제) · 방장이 나가면 가장 먼저 들어온 사람이 방장 · 삭제(방장·관리자) ·
 가입한 방만 입장 — **최신 20개만** 받고 위로 스크롤해 맨 위에 닿으면 이전 20개씩 · 보내기(Enter / Shift+Enter 줄바꿈) ·
-내 메시지 삭제(관리자는 모두) · 가입자 목록(지금 보고 있는 사람 표시) · 입력 중 표시 · 도배 방지(5초에 5개) · `/도움말` ·
+**표정(두상)** 골라 말하기 · **글자 꾸미기**(마크다운) · 내 메시지 **고치기**(내용·표정) · 내 메시지 삭제(관리자는 모두) · 가입자 목록(지금 보고 있는 사람 표시) · 입력 중 표시 · 도배 방지(5초에 5개) · `/도움말` ·
 관리자: 상시 방 추가/수정/닫기/관리자 전용/기록 비우기, 회원 방 삭제, 채팅 끄기
 
 ### 방 종류
@@ -30,6 +30,15 @@
 | 회원 방 | 채팅 화면 [+ 방 만들기] | 폭파 (계정 삭제로 비어도) |
 
 어느 방이든 **가입한 사람만** 들어가 대화합니다. 방 하나 = 소켓 room `room:<번호>`.
+
+### 표정(두상) · 글자 꾸미기 · 고치기
+- **표정**: 마이페이지 → 표정에서 캐릭터별로 여러 개 등록 (`character_faces`, 코드 `<캐릭터 id>_<번호>` 자동, `server/src/faces.js`).
+  입력칸 옆 [표정]에서 고르고 보내면 메시지에 `face_id` 로 저장 → 기록을 불러올 때 그 표정 이미지를 찾아 붙임 (`message.face { id, code, name, image }`).
+  표정을 지우면 그 메시지들은 두상만 기본 모양(이름 첫 글자). 고른 표정은 브라우저에 기억.
+- **글자 꾸미기** (`client/src/markdown/render.js` 의 `renderChat`, 버튼은 `client/src/chat/FormatBar.vue`):
+  `**굵게**` `*기울임*` `~~취소선~~` `==형광펜==` `` `코드` `` · 줄 앞에 `# ` 크게 / `## ` 조금 크게 / `-# ` 작게 · `> 인용` · `- 목록` · 링크.
+  이미지·표·HTML 은 안 됨 (허용한 태그만 남김). 서버는 글자 그대로 저장.
+- **고치기**: 내 일반 메시지만 [수정] → 내용·표정 변경, 모두에게 바로 반영(`message:updated`), '(수정됨)' 표시 (`edited_at`).
 
 ## 공간 (roomspace)
 `server/src/chat/spaces.js` 에 한 줄 추가하면 새 네임스페이스가 생깁니다. 방(`chat_rooms.space`)·명령어·모듈이 공간마다 따로입니다.
@@ -87,7 +96,8 @@ export default { name: 'attendance', messageTypes: { attendance: AttendanceMessa
 | `chat.roomsChanged()` · `chat.roomDeleted(roomId, 이유)` | 방 목록 새로고침 / 방이 지워짐 → 들어와 있던 사람 내보냄 |
 | `chat.space` · `chat.store` · `chat.pool` · `chat.nsp` · `chat.io` | 공간 이름 · DB 함수 · DB 커넥션 풀 · Socket.IO 네임스페이스(`/chat`) · 서버 |
 
-`ctx = { user: { id, username, name(캐릭터 이름 없으면 아이디), role, isAdmin }, room, socket, reply(text), args, argText }`
+`ctx = { user: { id, username, name(캐릭터 이름 없으면 아이디), role, isAdmin }, room, socket, faceId(고른 표정), reply(text), args, argText }`
+(명령어가 돌려준 메시지도 고른 표정으로 올라감 — 바꾸려면 `{ faceId: null, ... }`)
 
 ### 사이트의 다른 기능에서 채팅으로 보내기
 ```js
@@ -105,7 +115,8 @@ await getChat()?.sendSystem(1, '이벤트가 시작되었습니다!');   // 1 = 
 | `room:delete { roomId }` | `room:members { roomId, members }` (가입자) |
 | `room:enter { roomId }` → `{ room, messages, hasMore, users, members, commands }` | `typing { roomId, userId, name }` |
 | `room:history { roomId, beforeId }` → `{ messages, hasMore }` | `rooms:changed` (목록 다시 불러오기) |
-| `message:send { roomId, text }` · `message:delete { messageId }` · `typing { roomId }` | `room:closed { roomId, reason }` (방이 사라짐·내가 나감) |
+| `message:send { roomId, text, faceId }` · `message:edit { messageId, text, faceId }` | `room:closed { roomId, reason }` (방이 사라짐·내가 나감) |
+| `message:delete { messageId }` · `typing { roomId }` | `message:updated { ...메시지 }` (누가 고침) |
 
 ## 누가 쓸 수 있나
 - 로그인한 **멤버·관리자** (`index.js` 의 `CHAT_ROLES` — 신청자도 쓰게 하려면 `'applicant'` 추가)

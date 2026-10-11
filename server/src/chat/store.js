@@ -185,34 +185,58 @@ const toMessage = (r) => ({
   type: r.type,
   body: r.is_deleted ? null : r.body,
   data: r.is_deleted ? null : parseJson(r.data),
+  // 말할 때 고른 표정(두상) — character_faces 에서 찾아 붙임 (표정을 지웠으면 null)
+  face: r.face_id && r.face_image ? { id: r.face_id, code: r.face_code, name: r.face_name, image: r.face_image } : null,
   deleted: !!r.is_deleted,
+  editedAt: r.edited_at || null,
   createdAt: r.created_at,
 });
 
-const MESSAGE_COLUMNS = 'id, room_id, user_id, author_name, author_role, type, body, data, is_deleted, created_at';
+const MESSAGE_SELECT = `SELECT m.id, m.room_id, m.user_id, m.author_name, m.author_role, m.type, m.body, m.data, m.is_deleted, m.edited_at, m.created_at,
+         m.face_id, f.code AS face_code, f.name AS face_name, f.image AS face_image
+    FROM chat_messages m LEFT JOIN character_faces f ON f.id = m.face_id`;
+const getMessage = async (id, conn = pool) => {
+  const [rows] = await conn.execute(`${MESSAGE_SELECT} WHERE m.id = ?`, [id]);
+  return rows[0] ? toMessage(rows[0]) : null;
+};
 
 // 기록 (beforeId 보다 이전 것, 최신부터 limit 개) — 오래된 것이 앞. hasMore: 더 이전 기록이 있는지
 async function getHistory(roomId, { beforeId = null, limit = HISTORY_LIMIT } = {}, conn = pool) {
   const [rows] = await conn.query(
-    `SELECT ${MESSAGE_COLUMNS} FROM chat_messages
-      WHERE room_id = ?${beforeId ? ' AND id < ?' : ''} ORDER BY id DESC LIMIT ?`,
+    `${MESSAGE_SELECT}
+      WHERE m.room_id = ?${beforeId ? ' AND m.id < ?' : ''} ORDER BY m.id DESC LIMIT ?`,
     beforeId ? [roomId, beforeId, limit + 1] : [roomId, limit + 1],
   );
   const hasMore = rows.length > limit;
   return { messages: rows.slice(0, limit).reverse().map(toMessage), hasMore };
 }
 
-// 저장 → 저장된 메시지. user 가 없으면 시스템 메시지
-async function saveMessage({ roomId, user = null, type = 'text', body = null, data = null }, conn = pool) {
+// 저장 → 저장된 메시지. user 가 없으면 시스템 메시지. faceId: 고른 표정 (확인은 부르는 쪽 — faces.ownFaceId)
+async function saveMessage({ roomId, user = null, type = 'text', body = null, data = null, faceId = null }, conn = pool) {
   if (!/^[a-z][a-z0-9_]{0,29}$/.test(type)) throw new Error(`chat: 잘못된 메시지 type (${type})`);
   const text = body === null ? null : String(body).slice(0, MAX_BODY * 2);
   const [result] = await conn.execute(
-    'INSERT INTO chat_messages (room_id, user_id, author_name, author_role, type, body, data) VALUES (?, ?, ?, ?, ?, ?, ?)',
-    [roomId, user?.id ?? null, user?.name ?? null, user?.role ?? null, type, text, data === null ? null : JSON.stringify(data)],
+    'INSERT INTO chat_messages (room_id, user_id, author_name, author_role, face_id, type, body, data) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+    [roomId, user?.id ?? null, user?.name ?? null, user?.role ?? null, user ? faceId : null, type, text, data === null ? null : JSON.stringify(data)],
   );
-  const [rows] = await conn.execute(`SELECT ${MESSAGE_COLUMNS} FROM chat_messages WHERE id = ?`, [result.insertId]);
-  return toMessage(rows[0]);
+  return getMessage(result.insertId, conn);
 }
+
+// 고치기 (내 일반 메시지만) — { body, faceId } → 고친 메시지. 가입한 방인지는 부르는 쪽에서 확인
+async function editMessage(user, messageId, { body, faceId }, conn = pool) {
+  const [rows] = await conn.execute('SELECT id, room_id, user_id, type, is_deleted FROM chat_messages WHERE id = ?', [Number(messageId) || 0]);
+  const m = rows[0];
+  if (!m || m.is_deleted) throw new HttpError(404, '없는 메시지입니다.');
+  if (m.user_id !== user.id) throw new HttpError(403, '내 메시지만 고칠 수 있습니다.');
+  if (m.type !== 'text') throw new HttpError(400, '일반 메시지만 고칠 수 있습니다. (명령어 결과 등은 불가)');
+  await conn.execute('UPDATE chat_messages SET body = ?, face_id = ?, edited_at = NOW() WHERE id = ?', [body, faceId, m.id]);
+  return getMessage(m.id, conn);
+}
+
+const messageRoomId = async (messageId, conn = pool) => {
+  const [[row]] = await conn.execute('SELECT room_id FROM chat_messages WHERE id = ?', [Number(messageId) || 0]);
+  return row?.room_id ?? null;
+};
 
 // 삭제 (본인 메시지 또는 관리자) → 삭제된 메시지 { id, roomId }
 async function deleteMessage(user, messageId, conn = pool) {
@@ -227,5 +251,5 @@ async function deleteMessage(user, messageId, conn = pool) {
 module.exports = {
   MAX_BODY, HISTORY_LIMIT, MAX_OWNED_ROOMS, isChatEnabled,
   listRooms, getRoomFor, listMembers, parseRoomInput, createRoom, joinRoom, isMember, leaveRoom, deleteRoom, deleteEmptyRooms, cleanupAfterUserDelete,
-  getHistory, saveMessage, deleteMessage, toRoom,
+  getHistory, getMessage, saveMessage, editMessage, messageRoomId, deleteMessage, toRoom,
 };

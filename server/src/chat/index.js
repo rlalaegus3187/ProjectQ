@@ -19,11 +19,13 @@
 //   room:delete   { roomId }              → { }            (방장·관리자, 상시 방은 관리자만)
 //   room:enter    { roomId }              → { room, messages, hasMore, users, members, commands }   (가입한 방만, 최신 20개)
 //   room:history  { roomId, beforeId }    → { messages, hasMore }   (위로 스크롤하면 이전 20개)
-//   message:send  { roomId, text }        → { }            ('/' 로 시작하면 명령어 — 모듈이 등록)
+//   message:send  { roomId, text, faceId } → { }           ('/' 로 시작하면 명령어 — 모듈이 등록, faceId: 고른 표정(두상), 없으면 기본)
+//   message:edit  { messageId, text, faceId } → { }        (내 일반 메시지 고치기 — 내용·표정)
 //   message:delete { messageId }          → { }            (내 메시지 / 관리자는 모두)
+//   본문은 마크다운(굵게·기울임·크게·작게 등) 그대로 저장 → 화면이 안전하게 바꿔서 보여줌 (client/src/markdown/render.js renderChat)
 //   typing        { roomId }                                (입력 중 표시, 응답 없음)
 // 서버 → 클라이언트
-//   message:new { ...메시지 } · message:deleted { id, roomId } · message:notice { text } (나에게만, 저장 안 됨)
+//   message:new { ...메시지 } · message:updated { ...메시지 } (고침) · message:deleted { id, roomId } · message:notice { text } (나에게만, 저장 안 됨)
 //   room:users { roomId, users } · room:members { roomId, members } · typing { roomId, userId, name }
 //   rooms:changed (방 목록이 바뀜 → 다시 불러오기) · room:closed { roomId, reason } (방이 사라졌거나 내가 나감 → 방에서 내보냄)
 //
@@ -36,6 +38,7 @@ const { HttpError } = require('../errors');
 const { isSiteClosed } = require('../settings');
 const config = require('../config');
 const store = require('./store');
+const faces = require('../faces');
 const { remoteChat } = require('./bridge');
 const SPACES = require('./spaces');
 
@@ -263,7 +266,14 @@ function setupSpace(io, space) {
       return store.getHistory(room.id, { beforeId: Number(beforeId) || null });
     }));
 
-    socket.on('message:send', handler(async ({ roomId, text }) => {
+    const parseBody = (text) => {
+      const body = String(text ?? '').trim();
+      if (!body) throw new HttpError(400, '내용을 입력해주세요.');
+      if (body.length > store.MAX_BODY) throw new HttpError(400, `메시지는 ${store.MAX_BODY}자 이내로 보내주세요.`);
+      return body;
+    };
+
+    socket.on('message:send', handler(async ({ roomId, text, faceId }) => {
       const now = Date.now();
       while (sent.length && now - sent[0] > RATE.perMs) sent.shift();
       if (sent.length >= RATE.count) throw new HttpError(429, '메시지를 너무 빨리 보내고 있습니다. 잠시 후 다시 보내주세요.');
@@ -272,10 +282,9 @@ function setupSpace(io, space) {
       const user = await freshUser();
       const room = await memberRoom(user, roomId);
       if (socket.data.roomId !== room.id) throw new HttpError(400, '먼저 채팅방에 들어가주세요.');
-      const body = String(text ?? '').trim();
-      if (!body) throw new HttpError(400, '내용을 입력해주세요.');
-      if (body.length > store.MAX_BODY) throw new HttpError(400, `메시지는 ${store.MAX_BODY}자 이내로 보내주세요.`);
-      const ctx = { user, room, socket, reply: (t) => api.notice(socket, t) };
+      const body = parseBody(text);
+      const face = await faces.ownFaceId(user.id, faceId);
+      const ctx = { user, room, socket, faceId: face, reply: (t) => api.notice(socket, t) };
 
       // 명령어
       let msg = { type: 'text', body, data: null };
@@ -292,11 +301,20 @@ function setupSpace(io, space) {
         msg = await fn(msg, ctx);
         if (!msg) return {};
       }
-      const saved = await post(room.id, { ...msg, user });
+      const saved = await post(room.id, { faceId: face, ...msg, user });
       for (const fn of hooks.after) {
         try { await fn(saved, ctx); } catch (err) { console.error('[chat] afterMessage 오류', err); }
       }
       return {};
+    }));
+
+    socket.on('message:edit', handler(async ({ messageId, text, faceId }) => {
+      const user = await freshUser();
+      const roomId = await store.messageRoomId(messageId);
+      if (!roomId) throw new HttpError(404, '없는 메시지입니다.');
+      await memberRoom(user, roomId);
+      const updated = await store.editMessage(user, messageId, { body: parseBody(text), faceId: await faces.ownFaceId(user.id, faceId) });
+      nsp.to(roomKey(roomId)).emit('message:updated', updated);
     }));
 
     socket.on('message:delete', handler(async ({ messageId }) => {

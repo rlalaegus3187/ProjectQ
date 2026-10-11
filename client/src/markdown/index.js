@@ -7,6 +7,6 @@
 //   <MarkdownView :source="text" />        표시
 //
 // 사용자가 쓴 글이 HTML 이 되므로, v-html 에는 반드시 renderMarkdown 결과(또는 MarkdownView)만 쓰세요.
-export { renderMarkdown } from './render';
+export { renderMarkdown, renderChat } from './render';
 export { default as MarkdownEditor } from './MarkdownEditor.vue';
 export { default as MarkdownView } from './MarkdownView.vue';

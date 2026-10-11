@@ -19,3 +19,10 @@
 .my-titles li.main { background: var(--color-primary-soft); border-radius: 8px; padding: 10px 12px; }
 .my-title-info { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
 .my-title-info .badge { margin-left: 6px; }
+
+/* 표정 (채팅 두상, components/FaceList.vue) */
+.face-grid { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 12px; }
+.face-grid li { display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 10px; border: 1px solid var(--color-border-light); border-radius: 10px; text-align: center; }
+.face-grid img { width: 88px; height: 88px; object-fit: cover; border-radius: 8px; }
+.face-grid code { font-size: 12px; }
+.face-grid .row-actions { display: flex; gap: 4px; }
